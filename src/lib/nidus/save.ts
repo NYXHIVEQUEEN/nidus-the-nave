@@ -1,0 +1,155 @@
+import { defaultState } from "./content";
+import type { GameState } from "./types";
+
+const KEY = "nidus.save.v1";
+const BAK = "nidus.save.v1.bak";
+const SAVE_VERSION = 1;
+
+function migrate(raw: GameState): GameState {
+  const base = defaultState();
+  const merged = {
+    ...base,
+    ...raw,
+    swarm: { ...base.swarm, ...raw.swarm },
+    rooms: { ...base.rooms, ...raw.rooms },
+    tech: { ...base.tech, ...raw.tech },
+    casteLevel: { ...base.casteLevel, ...raw.casteLevel },
+    hullMark: { ...base.hullMark, ...raw.hullMark },
+    casteXp: { ...base.casteXp, ...(raw as GameState).casteXp },
+  };
+  merged.version = SAVE_VERSION;
+  if (typeof merged.hiveRank !== "number") merged.hiveRank = 0;
+  if (!merged.casteXp) merged.casteXp = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
+  if (!merged.pendingGift) merged.pendingGift = null;
+  if (!merged.lastSaveAt) merged.lastSaveAt = 0;
+  if (!merged.slagAt) merged.slagAt = 0;
+  if (typeof merged.autoBuild !== "boolean") merged.autoBuild = false;
+  if (typeof merged.autoRaid !== "boolean") merged.autoRaid = false;
+  if (typeof merged.autoRite !== "boolean") merged.autoRite = false;
+  if (typeof merged.scripts !== "boolean") merged.scripts = false;
+  if (!merged.hiveName) merged.hiveName = "NAVE-1";
+  if (!merged.orders) merged.orders = [];
+  if (!merged.salvage) merged.salvage = { ice: 0, plate: 0, rose: 0, bone: 0, core: 0 };
+  if (!merged.raidCount) merged.raidCount = {};
+  if (typeof merged.berthExtra !== "number") merged.berthExtra = 0;
+  if (typeof merged.eventUntil !== "number") merged.eventUntil = 0;
+  if (!merged.eventKind) merged.eventKind = "";
+  if (!merged.log) merged.log = [];
+  if (!merged.rankingRoom) merged.rankingRoom = null;
+  for (const id of Object.keys(merged.rooms) as (keyof typeof merged.rooms)[]) {
+    const room = merged.rooms[id];
+    if (typeof room.rank !== "number") room.rank = room.built ? 1 : 0;
+    if (typeof room.rankWork !== "number") room.rankWork = 0;
+  }
+  if (merged.raid) {
+    const r = merged.raid;
+    merged.raid = {
+      ...r,
+      watching: r.watching ?? false,
+      boostUntil: r.boostUntil ?? 0,
+      beat: r.beat ?? "",
+      hp: r.hp ?? 40,
+      hpMax: r.hpMax ?? 40,
+      hull: r.hull ?? 40,
+      hullMax: r.hullMax ?? 40,
+    };
+  }
+  return merged;
+}
+
+export function loadSave(): GameState {
+  if (typeof window === "undefined") return defaultState();
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return defaultState();
+    const parsed = JSON.parse(raw) as GameState;
+    return migrate(parsed);
+  } catch {
+    try {
+      const bak = localStorage.getItem(BAK);
+      if (bak) return migrate(JSON.parse(bak) as GameState);
+    } catch {
+      /* fall through */
+    }
+    return defaultState();
+  }
+}
+
+export function writeSave(state: GameState) {
+  if (typeof window === "undefined") return;
+  try {
+    const payload = JSON.stringify({ ...state, version: SAVE_VERSION, lastSaveAt: Date.now() });
+    const prev = localStorage.getItem(KEY);
+    if (prev) localStorage.setItem(BAK, prev);
+    localStorage.setItem(KEY, payload);
+  } catch {
+    /* private mode */
+  }
+}
+
+export function requestPersist() {
+  if (typeof navigator === "undefined" || !navigator.storage?.persist) return;
+  void navigator.storage.persist();
+}
+
+export function exportSave(state: GameState) {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "nidus-hive.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function importSave(raw: string): GameState | null {
+  try {
+    const parsed = JSON.parse(raw) as GameState;
+    if (!parsed || typeof parsed !== "object") return null;
+    return migrate(parsed);
+  } catch {
+    return null;
+  }
+}
+
+export function wipeSave() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(KEY);
+  localStorage.removeItem(BAK);
+}
+
+const SLOT = (i: number) => `nidus.slot.${i}`;
+
+export function writeSlot(i: number, state: GameState) {
+  if (typeof window === "undefined") return false;
+  try {
+    localStorage.setItem(SLOT(i), JSON.stringify({ ...state, lastSaveAt: Date.now() }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function readSlot(i: number): GameState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(SLOT(i));
+    if (!raw) return null;
+    return migrate(JSON.parse(raw) as GameState);
+  } catch {
+    return null;
+  }
+}
+
+export function slotStamp(i: number): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(SLOT(i));
+    if (!raw) return null;
+    const p = JSON.parse(raw) as GameState;
+    return p.hiveName || "HIVE";
+  } catch {
+    return null;
+  }
+}
+

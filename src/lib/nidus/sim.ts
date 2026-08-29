@@ -1,0 +1,630 @@
+import type { BriefCard, Caste, GameState, Order, RaidId, RoomId, SalvageId } from "./types";
+import {
+  RAIDS,
+  ROOMS,
+  TECH,
+  berthCap,
+  candidateToMind,
+  chargeCap,
+  expandCost,
+  offlineCapSec,
+  oreCap,
+  partsCap,
+  printCost,
+  raidNeed,
+  raidUnlocked,
+  rankCost,
+  rates,
+  rollCandidates,
+  rollOrders,
+  throneCap,
+  totalSwarm,
+} from "./content";
+import { nextBuild, nextRaid, nextRite, pickPrintCaste } from "./advisor";
+import { casteXpNeed, computeHiveRank, cookUnlocked, moltCost, RANK_MAX, roomUnlocked, SALVAGE_COOK, techUnlocked } from "./progress";
+import { freshRaidBars, markUp, tickBattle } from "./fleet";
+import { rand } from "./rng";
+
+function cloneState<T>(s: T): T {
+  return JSON.parse(JSON.stringify(s, (_k, v) => (typeof v === "function" ? undefined : v))) as T;
+}
+
+function pushBrief(s: GameState, card: Omit<BriefCard, "id">) {
+  s.briefing = [{ id: `b-${s.rng}-${s.briefing.length}`, ...card }, ...s.briefing].slice(0, 8);
+}
+
+function pushLog(s: GameState, line: string) {
+  s.log = [{ t: Date.now(), line }, ...(s.log ?? [])].slice(0, 24);
+}
+
+function credit(s: GameState, kind: Order["kind"], target = "any", n = 1) {
+  if (!s.orders) s.orders = [];
+  for (const o of s.orders) {
+    if (o.have >= o.need) continue;
+    if (o.kind !== kind) continue;
+    if (o.target !== "any" && o.target !== target) continue;
+    o.have += n;
+    if (o.have >= o.need) {
+      s.ore += o.reward.ore;
+      s.parts += o.reward.parts;
+      s.spark += o.reward.spark;
+      s.echo += o.reward.echo ?? 0;
+      pushBrief(s, { kind: "order", headline: o.label, line: "Cut paid.", stamp: "DONE" });
+      pushLog(s, `${o.label} paid.`);
+    }
+  }
+  s.orders = s.orders.filter((o) => o.have < o.need);
+  const rolled = rollOrders(s);
+  s.orders = rolled.orders;
+  s.rng = rolled.rng;
+}
+
+function grantCasteXp(s: GameState, caste: Caste, n = 1) {
+  if (!s.casteXp) s.casteXp = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
+  s.casteXp[caste] = (s.casteXp[caste] ?? 0) + n;
+  let guard = 0;
+  while (guard++ < 8 && s.casteXp[caste] >= casteXpNeed(s.casteLevel[caste])) {
+    s.casteXp[caste] -= casteXpNeed(s.casteLevel[caste]);
+    s.casteLevel[caste] += 1;
+    pushBrief(s, { kind: "build", headline: caste.toUpperCase(), line: `Caste marked L${s.casteLevel[caste]}.`, stamp: `L${s.casteLevel[caste]}` });
+    pushLog(s, `${caste} L${s.casteLevel[caste]}.`);
+  }
+}
+
+function clampRes(s: GameState) {
+  s.ore = Math.max(0, Math.min(s.ore, oreCap(s)));
+  s.parts = Math.max(0, Math.min(s.parts, partsCap(s)));
+  s.charge = Math.max(0, Math.min(s.charge, chargeCap(s)));
+}
+
+/** Sim pipeline (architecture): res → rooms → rites → spark → print → scripts → battle → clamp. View never writes this. */
+export function applyTick(s: GameState, now: number): GameState {
+  const next: GameState = cloneState(s);
+  const raw = (now - next.lastTick) / 1000;
+  const dt = Math.min(Math.max(0, raw), offlineCapSec(next));
+  if (dt <= 0) {
+    next.lastTick = now;
+    return next;
+  }
+  const away = dt > 30;
+  const r = rates(next, now);
+  const oreGain = r.orePerSec * dt;
+  const partsGain = r.partsPerSec * dt;
+  const oreSpentOnParts = partsGain * 2;
+  next.ore += oreGain - oreSpentOnParts;
+  next.parts += partsGain;
+  next.charge += (r.chargeGen - r.chargeDrain) * dt;
+  next.hiveAge += dt;
+  if (next.surgeUntil > 0 && now >= next.surgeUntil) next.surgeUntil = 0;
+  if (away) {
+    next.pendingGift = {
+      ore: Math.max(2, Math.floor(oreGain * 0.55)),
+      parts: Math.max(1, Math.floor(partsGain * 0.55)),
+      spark: Math.max(2, Math.floor(r.sparkPerSec * dt * 0.62)),
+      seconds: Math.floor(dt),
+    };
+  }
+
+  if (next.queuedRoom) {
+    const spec = ROOMS.find((x) => x.id === next.queuedRoom);
+    if (spec && spec.work > 0) {
+      const room = next.rooms[next.queuedRoom];
+      const needParts = Math.max(0, spec.parts - room.progress * (spec.parts / spec.work));
+      const partDrain = Math.min(next.parts, (spec.parts / spec.work) * r.buildPerSec * dt);
+      if (needParts <= 0.2 || next.parts > 0) {
+        room.progress += r.buildPerSec * dt;
+        next.parts -= partDrain * 0.35;
+        if (room.progress >= spec.work) {
+          room.progress = spec.work;
+          room.built = true;
+          pushBrief(next, {
+            kind: "build",
+            headline: spec.label,
+            line: "Node snapped to the nave.",
+            stamp: "RAISED",
+          });
+          next.queuedRoom = ROOMS.find((x) => !next.rooms[x.id].built && x.id !== "foundry")?.id ?? null;
+          credit(next, "build", spec.id);
+          pushLog(next, `${spec.label} lit.`);
+        }
+      }
+    }
+  }
+
+  if (next.rankingRoom) {
+    const spec = ROOMS.find((x) => x.id === next.rankingRoom);
+    const room = next.rankingRoom ? next.rooms[next.rankingRoom] : null;
+    const cost = next.rankingRoom ? rankCost({ ...next, rooms: { ...next.rooms, [next.rankingRoom]: { ...next.rooms[next.rankingRoom], rank: next.rooms[next.rankingRoom].rank } } }, next.rankingRoom) : null;
+    if (spec && room && room.built && (room.rank ?? 0) < RANK_MAX) {
+      const workNeed = Math.ceil(spec.work * 0.42 * ((room.rank ?? 0) + 1));
+      const partDrain = Math.min(next.parts, (spec.parts / Math.max(1, spec.work)) * r.buildPerSec * dt);
+      room.rankWork = (room.rankWork ?? 0) + r.buildPerSec * dt;
+      next.parts -= partDrain * 0.25;
+      if (room.rankWork >= workNeed) {
+        room.rank = (room.rank ?? 0) + 1;
+        room.rankWork = 0;
+        pushBrief(next, { kind: "build", headline: spec.label, line: `Rank ${room.rank} inlaid.`, stamp: `R${room.rank}` });
+        pushLog(next, `${spec.label} rank ${room.rank}.`);
+        next.rankingRoom = null;
+        void cost;
+      }
+    } else {
+      next.rankingRoom = null;
+    }
+  }
+
+  if (next.activeTech) {
+    const spec = TECH.find((t) => t.id === next.activeTech);
+    if (spec && !next.tech[spec.id].done) {
+      next.tech[spec.id].progress += r.labPerSec * dt;
+      if (next.tech[spec.id].progress >= spec.work) {
+        next.tech[spec.id].progress = spec.work;
+        next.tech[spec.id].done = true;
+        if (spec.id === "teeth") next.casteLevel.miner += 1;
+        if (spec.id === "heat") next.casteLevel.fab += 1;
+        if (spec.id === "hands") next.casteLevel.builder += 1;
+        if (spec.id === "wick") next.casteLevel.lab += 1;
+        if (spec.id === "claws") next.casteLevel.striker += 1;
+        if (spec.id === "orevein") next.casteLevel.miner += 1;
+        if (spec.id === "partmill") next.casteLevel.fab += 1;
+        if (spec.id === "ribcage") next.casteLevel.builder += 1;
+        if (spec.id === "glassmind") next.casteLevel.lab += 1;
+        if (spec.id === "stingplus") next.casteLevel.striker += 1;
+        pushBrief(next, { kind: "build", headline: spec.label, line: "Inlaid in gold.", stamp: "KNOWN" });
+        next.activeTech = TECH.find((t) => !next.tech[t.id].done && techUnlocked(next, t.id).ok)?.id ?? null;
+      }
+    }
+  }
+
+  if (!next.waking) {
+    next.spark += r.sparkPerSec * dt;
+    if (next.spark >= next.sparkNeed && next.minds.filter((m) => m.alive).length < 6) {
+      next.spark = 0;
+      next.sparkNeed = Math.round(next.sparkNeed * 1.55 + 12);
+      const rolled = rollCandidates(next);
+      next.waking = rolled.waking;
+      next.rng = rolled.rng;
+      pushBrief(next, { kind: "wake", headline: "SOMEONE WOKE", line: "Three bodies. Pick one." });
+    }
+  }
+
+  if (next.autoPrint) {
+    if (next.scripts) next.printCaste = pickPrintCaste(next);
+    let guard = 0;
+    while (guard++ < 40 && totalSwarm(next) < berthCap(next)) {
+      const cost = printCost(next);
+      if (next.ore < cost.ore || next.parts < cost.parts) break;
+      next.ore -= cost.ore;
+      next.parts -= cost.parts;
+      next.swarm[next.printCaste] += 1;
+      next.printed += 1;
+      grantCasteXp(next, next.printCaste);
+      if (next.tech.printfocus?.done && totalSwarm(next) < berthCap(next)) {
+        next.swarm[next.printCaste] += 1;
+        grantCasteXp(next, next.printCaste);
+      }
+      if (next.tech.stamp2?.done && totalSwarm(next) < berthCap(next)) {
+        next.swarm[next.printCaste] += 1;
+        grantCasteXp(next, next.printCaste);
+      }
+      credit(next, "print", next.printCaste);
+    }
+  }
+
+  if ((next.scripts || next.autoBuild) && !next.queuedRoom) {
+    const id = nextBuild(next);
+    if (id) next.queuedRoom = id;
+  }
+  if ((next.scripts || next.autoRite) && next.rooms.lab.built && !next.activeTech) {
+    const id = nextRite(next);
+    if (id) next.activeTech = id;
+  }
+
+  if (next.raid) {
+    tickBattle(next, dt, now);
+    if (next.raid.hp <= 0 || next.raid.hull <= 0 || now >= next.raid.endsAt) {
+      resolveRaid(next, now);
+    }
+  } else if (next.scripts || next.autoRaid) {
+    const id = nextRaid(next);
+    if (id) {
+      const launched = sendRaid(next, id, now);
+      next.raid = launched.raid;
+      next.rng = launched.rng;
+      next.swarm = launched.swarm;
+    }
+  }
+
+  clampRes(next);
+  if (away && next.briefing.length) next.showBrief = true;
+  next.lastTick = now;
+  next.hiveRank = computeHiveRank(next);
+
+  if (!next.orders) next.orders = [];
+  if (next.orders.length < 3) {
+    const rolled = rollOrders(next);
+    next.orders = rolled.orders;
+    next.rng = rolled.rng;
+  }
+
+  if (!next.eventUntil) next.eventUntil = now + 70000;
+  if (now >= next.eventUntil) {
+    const gap = next.tech.pulsar?.done ? 52000 : 85000;
+    const roll = rand(next.rng);
+    next.rng = roll.seed;
+    const kinds = ["PULSAR", "GROAN", "TIDE", "WHISPER", "FURNACE", "ROSE", "ECLIPSE"] as const;
+    const kind = kinds[Math.floor(roll.n * kinds.length)] ?? "PULSAR";
+    next.eventKind = kind;
+    next.eventUntil = now + gap;
+    if (kind === "PULSAR") {
+      next.charge += 16 + (next.rooms.solar.rank ?? 0) * 5;
+      pushLog(next, "Pulsar cone drinks the spine.");
+    } else if (kind === "GROAN") {
+      next.parts += 10 + next.swarm.builder;
+      pushLog(next, "Hull groans. Spare parts shake loose.");
+    } else if (kind === "TIDE") {
+      next.surgeUntil = Math.max(next.surgeUntil, now + 16000);
+      pushLog(next, "Blood tide. Short surge.");
+    } else if (kind === "FURNACE") {
+      next.ore += 12 + Math.floor(next.swarm.miner * 0.2);
+      pushLog(next, "The prow coughs slag.");
+    } else if (kind === "ROSE") {
+      next.spark += 8;
+      if (next.salvage) next.salvage.rose = (next.salvage.rose ?? 0) + (next.tech.salvage2?.done ? 1 : 0);
+      pushLog(next, "A rose opens in the cloister.");
+    } else if (kind === "ECLIPSE") {
+      next.echo += 1;
+      next.charge = Math.max(8, next.charge - 6);
+      pushLog(next, "The pulsar hides. Echo beads.");
+    } else {
+      next.spark += 6;
+      pushLog(next, "A whisper in the nerve.");
+    }
+    pushBrief(next, { kind: "event", headline: kind, line: next.log[0]?.line ?? "The nave speaks.", stamp: "EVENT" });
+    if (away) next.showBrief = true;
+  }
+
+  return next;
+}
+
+function resolveRaid(s: GameState, now: number) {
+  const run = s.raid;
+  if (!run) return;
+  const node = RAIDS.find((r) => r.id === run.node);
+  if (!node) {
+    s.raid = null;
+    return;
+  }
+  const hpFrac = run.hpMax > 0 ? run.hp / run.hpMax : 1;
+  const hullFrac = run.hullMax > 0 ? run.hull / run.hullMax : 1;
+  const power =
+    run.strikers * (s.tech.claws.done ? 1.4 : 1) * (1 + s.moltLayer * 0.2) + (s.rooms.gundeck.built ? 4 : 0);
+  const need = node.need;
+  const ratio = power / Math.max(1, need);
+  const roll = rand(s.rng);
+  s.rng = roll.seed;
+  const win = run.hp <= 0 || (run.hull > 0 && (hpFrac < hullFrac || ratio + roll.n * 0.35 > 0.85));
+  const lossFrac = win
+    ? (s.tech.raidkeep?.done ? 0.02 : s.tech.raidreturn?.done ? 0.04 : 0.08) + roll.n * 0.08
+    : 0.28 + roll.n * 0.22;
+  const dead = Math.max(0, Math.floor(run.strikers * lossFrac));
+  const mind = s.minds.find((m) => m.id === run.mindId);
+  if (win) {
+    s.ore += 40 + need * 18;
+    s.parts += 16 + need * 8;
+    s.echo += node.id === "sister" || node.id === "gate" || node.salvage === "core" ? 3 : 1;
+    if (s.rooms.crypt?.built) s.echo += 1;
+    if (s.tech.echogold?.done) s.echo += 1;
+    const extra = (s.tech.salvage?.done ? 2 : 1) + (s.tech.salvage2?.done ? 1 : 0);
+    if (!s.salvage) s.salvage = { ice: 0, plate: 0, rose: 0, bone: 0, core: 0 };
+    s.salvage[node.salvage] = (s.salvage[node.salvage] ?? 0) + extra;
+    if (!s.raidCount) s.raidCount = {};
+    s.raidCount[node.id] = (s.raidCount[node.id] ?? 0) + 1;
+    if (!s.raidCleared.includes(node.id)) s.raidCleared.push(node.id);
+    credit(s, "raid", node.id);
+    pushLog(s, `${node.label} taken. +${node.salvage}.`);
+    pushBrief(s, {
+      kind: "raid",
+      headline: node.label,
+      line: mind ? mind.line : "Wreck is ours.",
+      portrait: mind?.portrait,
+      stamp: "WON",
+    });
+    if (mind) {
+      const xpGain = 40 * (s.tech.framexp?.done ? 1.35 : 1) * (s.tech.mindxp2?.done ? 1.25 : 1) * (s.rooms.choir?.built ? 1.2 : 1);
+      mind.xp += xpGain;
+      const need = 70 + mind.level * 18;
+      if (mind.xp > need) {
+        mind.level += 1;
+        mind.xp = 0;
+      }
+    }
+    if (roll.n > 0.82 && mind) mind.wounded = true;
+  } else {
+    pushBrief(s, {
+      kind: "raid",
+      headline: node.label,
+      line: "Bloodied. We pull back.",
+      portrait: mind?.portrait,
+      stamp: "BLOODIED",
+    });
+    if (mind) {
+      const death = rand(s.rng);
+      s.rng = death.seed;
+      if (death.n > 0.7) {
+        mind.alive = false;
+        mind.seated = false;
+        s.echo += s.tech.echogold?.done ? 6 : s.tech.echoyield?.done ? 4 : 2;
+        if (s.rooms.crypt?.built) s.echo += 1;
+        pushBrief(s, {
+          kind: "death",
+          headline: mind.name,
+          line: "Pew goes dark.",
+          portrait: mind.portrait,
+          stamp: "FALLEN",
+        });
+      } else mind.wounded = true;
+    }
+  }
+  s.swarm.striker = Math.max(0, s.swarm.striker - dead);
+  s.raid = null;
+  s.showBrief = true;
+  s.lastTick = now;
+}
+
+export function tryPrint(s: GameState): GameState {
+  const next = cloneState(s);
+  const cost = printCost(next);
+  if (next.ore < cost.ore || next.parts < cost.parts) return next;
+  if (totalSwarm(next) >= berthCap(next)) return next;
+  next.ore -= cost.ore;
+  next.parts -= cost.parts;
+  next.swarm[next.printCaste] += 1;
+  next.printed += 1;
+  grantCasteXp(next, next.printCaste);
+  credit(next, "print", next.printCaste);
+  if (next.tech.printfocus?.done && totalSwarm(next) < berthCap(next)) {
+    next.swarm[next.printCaste] += 1;
+    grantCasteXp(next, next.printCaste);
+  }
+  if (next.tech.stamp2?.done && totalSwarm(next) < berthCap(next)) {
+    next.swarm[next.printCaste] += 1;
+    grantCasteXp(next, next.printCaste);
+  }
+  return next;
+}
+
+export function queueRoom(s: GameState, id: RoomId): GameState {
+  const next = cloneState(s);
+  const spec = ROOMS.find((r) => r.id === id);
+  if (!spec) return next;
+  const room = next.rooms[id];
+  if (room.built) {
+    if ((room.rank ?? 0) >= RANK_MAX) return next;
+    next.rankingRoom = id;
+    return next;
+  }
+  if (!roomUnlocked(next, id).ok) return next;
+  next.queuedRoom = id;
+  return next;
+}
+
+export function chooseWake(s: GameState, index: number): GameState {
+  const next = cloneState(s);
+  if (!next.waking || !next.waking[index]) return next;
+  const made = candidateToMind(next.waking[index], next.rng);
+  next.rng = made.seed;
+  const seatedCount = next.minds.filter((m) => m.alive && m.seated).length;
+  made.mind.seated = seatedCount < throneCap(next);
+  next.minds.push(made.mind);
+  next.selectedMind = made.mind.id;
+  next.waking = null;
+  next.tab = "minds";
+  credit(next, "wake", made.mind.frame);
+  pushBrief(next, {
+    kind: "wake",
+    headline: made.mind.name,
+    line: made.mind.line,
+    portrait: made.mind.portrait,
+    stamp: made.mind.frame.toUpperCase(),
+  });
+  return next;
+}
+
+export function assignJob(s: GameState, mindId: string, job: GameState["minds"][0]["job"]): GameState {
+  const next = cloneState(s);
+  const m = next.minds.find((x) => x.id === mindId);
+  if (m && m.alive) m.job = job;
+  return next;
+}
+
+export function toggleSeat(s: GameState, mindId: string): GameState {
+  const next = cloneState(s);
+  const m = next.minds.find((x) => x.id === mindId);
+  if (!m || !m.alive) return next;
+  if (m.seated) m.seated = false;
+  else if (next.minds.filter((x) => x.alive && x.seated).length < throneCap(next)) m.seated = true;
+  return next;
+}
+
+export function unmake(s: GameState, mindId: string): GameState {
+  const next = cloneState(s);
+  const m = next.minds.find((x) => x.id === mindId);
+  if (!m || !m.alive) return next;
+  m.alive = false;
+  m.seated = false;
+  next.echo += m.rarity === "gold" || m.rarity === "relic" ? 4 : 2;
+  pushBrief(next, {
+    kind: "death",
+    headline: m.name,
+    line: "Melted for Echo.",
+    portrait: m.portrait,
+    stamp: "UNMADE",
+  });
+  if (next.selectedMind === mindId) next.selectedMind = next.minds.find((x) => x.alive)?.id ?? null;
+  return next;
+}
+
+export function sendRaid(s: GameState, node: RaidId, now: number): GameState {
+  const next = cloneState(s);
+  if (next.raid) return next;
+  const spec = RAIDS.find((r) => r.id === node);
+  if (!spec || !raidUnlocked(next, node)) return next;
+  const need = raidNeed(next, node);
+  if (next.swarm.striker < need) return next;
+  const captain = next.minds.find((m) => m.alive && m.job === "raid") ?? null;
+  const bars = freshRaidBars(next, node, need);
+  next.raid = {
+    node,
+    startedAt: now,
+    endsAt: now + spec.seconds * 1000,
+    strikers: need,
+    mindId: captain?.id ?? null,
+    ...bars,
+    watching: false,
+    boostUntil: 0,
+    beat: "ORBIT",
+  };
+  return next;
+}
+
+export function watchRaid(s: GameState, on: boolean): GameState {
+  const next = cloneState(s);
+  if (next.raid) next.raid.watching = on;
+  if (on) next.tab = "raid";
+  return next;
+}
+
+export function boostRaid(s: GameState, now: number): GameState {
+  const next = cloneState(s);
+  if (!next.raid) return next;
+  if (now < next.raid.boostUntil) return next;
+  if (next.charge < 8) return next;
+  next.charge -= 8;
+  next.raid.boostUntil = now + 20000;
+  next.raid.beat = "COMMAND";
+  return next;
+}
+
+export function upMark(s: GameState, caste: GameState["printCaste"]): GameState {
+  const next = cloneState(s);
+  const before = next.hullMark[caste];
+  markUp(next, caste);
+  if (next.hullMark[caste] !== before) credit(next, "mark", caste);
+  return next;
+}
+
+export function startSurge(s: GameState, now: number): GameState {
+  const next = cloneState(s);
+  if (now < next.surgeUntil) return next;
+  const dur = next.tech.longsurge?.done ? 58000 : next.tech.surgeplus.done ? 45000 : 32000;
+  next.surgeUntil = now + dur;
+  credit(next, "surge");
+  return next;
+}
+
+export function molt(s: GameState): GameState {
+  const next = cloneState(s);
+  if (!next.rooms.reliquary.built || !next.tech.moltlock.done) return next;
+  const cost = moltCost(next);
+  if (next.echo < cost) return next;
+  next.echo -= cost;
+  next.moltLayer += 1;
+  for (const m of next.minds) {
+    if (m.alive) {
+      m.level += 1;
+      m.wounded = false;
+    }
+  }
+  pushBrief(next, { kind: "molt", headline: "MOLT", line: "A new layer of nerve.", stamp: `LAYER ${next.moltLayer}` });
+  next.showBrief = true;
+  next.hiveRank = computeHiveRank(next);
+  return next;
+}
+
+export function setTech(s: GameState, id: (typeof TECH)[number]["id"]): GameState {
+  const next = cloneState(s);
+  if (!next.rooms.lab.built) return next;
+  if (next.tech[id].done) return next;
+  if (!techUnlocked(next, id).ok) return next;
+  next.activeTech = id;
+  return next;
+}
+
+export function claimGift(s: GameState): GameState {
+  const next = cloneState(s);
+  if (!next.pendingGift) return next;
+  next.ore += next.pendingGift.ore;
+  next.parts += next.pendingGift.parts;
+  next.spark += next.pendingGift.spark;
+  next.pendingGift = null;
+  clampRes(next);
+  return next;
+}
+
+export function tapSlag(s: GameState, now: number): GameState {
+  const next = cloneState(s);
+  if (now < next.slagAt) return next;
+  next.slagAt = now + (next.tech.slagvein?.done ? 3800 : next.tech.slagplus?.done ? 4800 : 6000);
+  next.ore += 6 + Math.floor(next.swarm.miner * 0.18) + (next.tech.slagplus?.done ? 4 : 0) + (next.tech.slagvein?.done ? 5 : 0);
+  next.spark += next.tech.slagplus?.done ? 1.4 : 0.8;
+  credit(next, "slag");
+  clampRes(next);
+  return next;
+}
+
+export function expandBerth(s: GameState): GameState {
+  const next = cloneState(s);
+  const cost = expandCost(next);
+  if (next.ore < cost.ore || next.parts < cost.parts) return next;
+  next.ore -= cost.ore;
+  next.parts -= cost.parts;
+  next.berthExtra = (next.berthExtra ?? 0) + cost.add;
+  credit(next, "expand");
+  pushLog(next, `Berths +${cost.add}. Cap ${berthCap(next)}.`);
+  pushBrief(next, { kind: "build", headline: "BERTHS", line: `Pop cap ${berthCap(next)}.`, stamp: "OPEN" });
+  return next;
+}
+
+export function healMind(s: GameState, mindId: string): GameState {
+  const next = cloneState(s);
+  const m = next.minds.find((x) => x.id === mindId);
+  if (!m || !m.alive || !m.wounded) return next;
+  const cost = next.tech.flesh2?.done ? 2 : next.tech.mindheal?.done ? 4 : 8;
+  if (next.charge < cost) return next;
+  next.charge -= cost;
+  m.wounded = false;
+  pushLog(next, `${m.name} stitched.`);
+  return next;
+}
+
+export function promoteMind(s: GameState, mindId: string): GameState {
+  const next = cloneState(s);
+  const m = next.minds.find((x) => x.id === mindId);
+  if (!m || !m.alive) return next;
+  if (next.echo < 3) return next;
+  next.echo -= 3;
+  m.level += 1;
+  m.xp = 0;
+  pushLog(next, `${m.name} marked L${m.level}.`);
+  return next;
+}
+
+export function cookSalvage(s: GameState, id: SalvageId): GameState {
+  const next = cloneState(s);
+  if (!next.salvage) next.salvage = { ice: 0, plate: 0, rose: 0, bone: 0, core: 0 };
+  const spec = SALVAGE_COOK[id];
+  if (!spec || !cookUnlocked(next, id)) return next;
+  if ((next.salvage[id] ?? 0) < spec.need) return next;
+  next.salvage[id] -= spec.need;
+  const rich = next.tech.salvage2?.done ? 1.35 : 1;
+  if (spec.ore) next.ore += Math.round(spec.ore * rich);
+  if (spec.parts) next.parts += Math.round(spec.parts * rich);
+  if (spec.spark) next.spark += Math.round(spec.spark * rich);
+  if (spec.echo) next.echo += spec.echo + (next.tech.echogold?.done ? 1 : 0);
+  if (spec.charge) next.charge += Math.round(spec.charge * rich);
+  pushLog(next, `${spec.label} ${id}.`);
+  pushBrief(next, { kind: "loot", headline: spec.label, line: spec.line, stamp: id.toUpperCase() });
+  clampRes(next);
+  return next;
+}

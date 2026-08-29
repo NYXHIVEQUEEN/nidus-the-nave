@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0c0a09" />
+  <title>HIVE MIND NIDUS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=IBM+Plex+Sans:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="hull"></canvas>
+    <div class="shade"></div>
+    <div class="hud">
+      <div class="bar">
+        <div class="chip" title="Ice and wreck slag. Miners make this."><p>ORE</p><b id="ore">0</b><small id="oreSub">0/m</small><div class="meter"><i id="oreM"></i></div></div>
+        <div class="chip" title="Fabs chew ore into parts. Rooms and prints eat this."><p>PARTS</p><b id="parts">0</b><small id="partsSub">0/m</small><div class="meter"><i id="partsM"></i></div></div>
+        <div class="chip" title="Spine blood. Low charge starves every rate."><p>CHARGE</p><b id="charge">0</b><div class="meter venom"><i id="chargeM"></i></div></div>
+        <div class="chip" title="Fills while the swarm works. Full bar wakes a mind."><p>SPARK</p><b id="spark">0</b><div class="meter venom"><i id="sparkM"></i></div></div>
+        <div class="chip" id="echoWrap" title="Residue of fallen minds. Fuel for molt."><p>ECHO</p><b id="echo">0</b></div>
+        <i id="saveDot" class="save-dot"></i>
+      </div>
+      <div class="stage">
+        <div id="toast" class="toast hidden"></div>
+        <div id="hullStage">
+          <div class="row">
+            <button class="ghost" id="spinBtn" title="Idle orbit. Tap to freeze the nave.">SPIN<span class="why">orbit</span></button>
+            <button class="ghost" id="riteBtn" title="Lab rites, save slots, and the dictionary.">RITE<span class="why">lab / save</span></button>
+            <button class="ghost" id="frameBtn" title="Reset camera to a wide view of the station.">FRAME<span class="why">reset cam</span></button>
+          </div>
+          <p id="goal" class="goal display">RAISE THE SOLAR SPINE</p>
+          <p id="hint" class="hint">No spine, no blood.</p>
+          <div id="rooms" class="rooms"></div>
+          <div class="row" style="margin-top:.4rem">
+            <button class="act" id="surgeBtn" title="Short scream. All rates spike for 30s.">SURGE<span class="why">5× rates</span></button>
+            <button class="ghost" id="slagBtn" title="Tap the hull for spare ore. Seven second cool.">SLAG<span class="why">tap ore</span></button>
+            <button class="ghost" id="hiveBtn" title="Autopilot. Prints, raises, rites, and raids without a guide.">HIVE<span class="why">autopilot</span></button>
+          </div>
+          <p id="footer" class="hint"></p>
+          <div id="settings" class="settings hidden">
+            <div class="row" style="justify-content:space-between">
+              <span class="display" style="color:var(--gilt);font-size:.7rem">RITE</span>
+              <button class="ghost" id="closeSet">CLOSE</button>
+            </div>
+            <p class="display" style="color:var(--gilt);font-size:.65rem">LOCAL</p>
+            <label>MUSIC<input id="setMusic" type="range" min="0" max="1" step="0.01" /></label>
+            <label>SFX<input id="setSfx" type="range" min="0" max="1" step="0.01" /></label>
+            <label>SPIN<input id="setSpin" type="range" min="0.15" max="2" step="0.01" /></label>
+            <div class="grid2" style="margin:.5rem 0">
+              <button class="ghost" id="togHive">HIVE</button>
+              <button class="ghost" id="togPrint">PRINT</button>
+              <button class="ghost" id="togBuild">BUILD</button>
+              <button class="ghost" id="togRaid">RAID</button>
+              <button class="ghost" id="togHints">HINTS</button>
+              <button class="ghost" id="togReduce">REDUCE</button>
+            </div>
+            <p class="display" style="color:var(--gilt);font-size:.65rem">SAVE</p>
+            <input id="hiveName" type="text" maxlength="16" />
+            <button class="act" id="saveNow">SAVE HIVE</button>
+            <div id="pews" class="row" style="margin:.4rem 0"></div>
+            <p class="display" style="color:var(--gilt);font-size:.65rem">RITES</p>
+            <div id="techs" class="grid2" style="margin:.4rem 0"></div>
+            <button class="ghost" id="moltBtn">MOLT</button>
+            <button class="ghost" id="exportBtn">EXPORT</button>
+            <button class="ghost" id="copyBtn">COPY JSON</button>
+            <button class="ghost" id="importBtn">IMPORT</button>
+            <input id="importFile" type="file" accept="application/json,.json" hidden />
+            <button class="ghost" id="newHive">NEW HIVE</button>
+            <p class="hint">Rules of Engagement — Nytheria Nyx. Local only.</p>
+            <p class="display" style="color:var(--gilt);font-size:.65rem">CODEX</p>
+            <div id="codex"></div>
+          </div>
+        </div>
+        <div id="forgeStage" class="hidden">
+          <div class="panel">
+            <p class="display" style="color:var(--gilt);font-size:.7rem;margin:.2rem 0">SWARM</p>
+            <div id="castes" class="castes"></div>
+            <p id="forgeMeta" class="hint"></p>
+          </div>
+          <div class="row" style="margin-top:.4rem">
+            <button class="act" id="printBtn" title="Stamp one drone of the selected caste. Costs ore and parts.">PRINT<span class="why">stamp a body</span></button>
+            <button class="ghost" id="autoBtn" title="Keep printing while you are gone.">AUTO<span class="why">idle print</span></button>
+          </div>
+        </div>
+        <div id="raidStage" class="hidden">
+          <div class="panel row" style="justify-content:space-between;align-items:center">
+            <div><p id="markName" class="display" style="margin:0;color:var(--gilt)">DART</p><small id="markMeta"></small></div>
+            <button class="ghost" id="markBtn"><span id="markCost">MARK</span></button>
+          </div>
+          <div id="well" class="panel hidden" style="margin-top:.4rem">
+            <p id="wellBeat" class="display" style="color:var(--venom);font-size:.7rem">ORBIT</p>
+            <label>WRECK</label><div class="hp"><i id="wreckBar"></i></div>
+            <label>FLEET</label><div class="fl"><i id="fleetBar"></i></div>
+            <div class="row">
+              <button class="ghost" id="watchBtn">WATCH</button>
+              <button class="ghost" id="boostBtn">BOOST 8c</button>
+            </div>
+            <p class="hint">Leave the well — orbit keeps fighting.</p>
+          </div>
+          <div id="nodes" style="margin-top:.4rem;display:flex;flex-direction:column;gap:.4rem"></div>
+        </div>
+        <div id="mindsStage" class="hidden">
+          <p id="mindEmpty" class="panel">Work. SPARK fills. Someone wakes.</p>
+          <div id="mindLive" class="hidden">
+            <div class="panel">
+              <p id="mindMeta" class="display" style="color:var(--gilt);font-size:.65rem;margin:0"></p>
+              <h2 id="mindName" class="display" style="margin:.2rem 0"></h2>
+              <p id="mindLine"></p>
+              <p id="mindFracture" class="hint"></p>
+            </div>
+            <div id="mindRow" class="row" style="margin:.4rem 0;overflow-x:auto"></div>
+            <div id="jobs" class="castes"></div>
+            <div class="row" style="margin-top:.4rem">
+              <button class="ghost" id="seatBtn">SEAT</button>
+              <button class="ghost" id="meltBtn">UNMAKE</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <nav class="tabs">
+        <button data-tab="hull" class="on" title="Station, rooms, surge.">HULL<span class="why">station</span></button>
+        <button data-tab="forge" title="Print drones and open berths.">FORGE<span class="why">print</span></button>
+        <button data-tab="raid" title="Send strikers at wrecks.">RAID<span class="why">wrecks</span><span id="pingRaid" class="ping hidden"></span></button>
+        <button data-tab="minds" title="Wake and seat commanders.">MINDS<span class="why">command</span><span id="pingMinds" class="ping hidden"></span></button>
+      </nav>
+    </div>
+    <div id="titleScreen" class="title">
+      <p class="display kicker">HIVE MIND</p>
+      <h1 class="display">NIDUS</h1>
+      <p class="tag">LIGHTBRINGER. NIGHTQUEEN. UNYIELDING.</p>
+      <p id="recap" class="recap hidden"></p>
+      <div class="boot">
+        <div class="row" style="justify-content:space-between;color:var(--gilt);font-size:.65rem;letter-spacing:.2em">
+          <span id="bootLabel">BINDING</span><span id="bootPct">0%</span>
+        </div>
+        <div class="track"><i id="bootFill"></i></div>
+      </div>
+      <div class="row title-acts">
+        <button class="act hidden" id="continueBtn">CONTINUE</button>
+        <button class="ghost" id="wakeBtn" disabled>…</button>
+      </div>
+      <p class="credit">Rules of Engagement — Nytheria Nyx</p>
+    </div>
+    <div id="moltCeremony" class="modal hidden">
+      <div class="panel">
+        <p class="display" style="color:var(--gilt);font-size:.7rem">SOFT MOLT</p>
+        <p id="moltLine" class="display" style="font-size:1.3rem">A NEW LAYER OF NERVE</p>
+        <p class="hint">Rates climb. Minds keep their names. The nave sheds a skin.</p>
+        <button class="act" id="moltOk">HOLD THE LAYER</button>
+      </div>
+    </div>
+    <div id="gift" class="modal hidden">
+      <div class="panel">
+        <p class="display" style="color:var(--gilt);font-size:.7rem">IDLE CUT</p>
+        <p id="giftLine" class="display" style="font-size:1.4rem"></p>
+        <p id="giftSpark" style="color:var(--venom)"></p>
+        <button class="act" id="claimBtn">CLAIM</button>
+      </div>
+    </div>
+    <div id="wakeCards" class="modal hidden">
+      <p class="display" style="text-align:center;color:var(--gilt)">THREE BODIES. ONE STAYS.</p>
+      <div id="cards" class="cards"></div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

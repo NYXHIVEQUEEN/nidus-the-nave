@@ -1,0 +1,796 @@
+const KEY = "nidus.save.v1";
+const BAK = "nidus.save.v1.bak";
+const PREFS = "nidus.prefs.v1";
+const SLOT = (i) => `nidus.slot.${i}`;
+const MARKS = ["DART", "STING", "CORVETTE", "FRIGATE", "RELIQUARY"];
+const CASTES = ["miner", "fab", "builder", "lab", "striker"];
+const ROOMS = [
+  { id: "solar", label: "SOLAR", parts: 18, work: 20, why: "makes charge" },
+  { id: "orebay", label: "ORE BAY", parts: 22, work: 24, needs: "solar", why: "holds more ice" },
+  { id: "barracks", label: "BARRACKS", parts: 26, work: 28, needs: "solar", why: "+18 berths" },
+  { id: "lab", label: "LAB", parts: 30, work: 32, needs: "orebay", why: "unlocks rites" },
+  { id: "hangar", label: "HANGAR", parts: 36, work: 36, needs: "barracks", why: "opens wrecks" },
+  { id: "gundeck", label: "GUN DECK", parts: 40, work: 40, needs: "hangar", why: "harder raids" },
+  { id: "silo", label: "SILO", parts: 34, work: 30, needs: "orebay", why: "bigger ore cap" },
+  { id: "nerve", label: "NERVE", parts: 48, work: 44, needs: "lab", why: "+8 berths" },
+  { id: "reliquary", label: "RELIQUARY", parts: 60, work: 55, needs: "nerve", why: "echo shrine" },
+];
+const CASTES_WHY = { miner: "chips ore", fab: "chews parts", builder: "raises rooms", lab: "runs rites", striker: "eats wrecks" };
+const RAIDS = [
+  { id: "ice", label: "ICE RING", need: 2, seconds: 18, loot: [40, 16, 1] },
+  { id: "freighter", label: "DEAD FREIGHTER", need: 4, seconds: 28, needs: "hangar", loot: [90, 40, 1] },
+  { id: "gun", label: "GUN WRECK", need: 6, seconds: 36, needs: "gundeck", loot: [140, 70, 2] },
+  { id: "sister", label: "SISTER HIVE", need: 8, seconds: 48, molt: 1, loot: [220, 110, 3] },
+];
+const FRAMES = [
+  { frame: "WARDEN", job: "mine", line: "The ice belongs to us.", fracture: "Hoards the ice." },
+  { frame: "ROOK", job: "build", line: "One more rib.", fracture: "Rebuilds finished rooms." },
+  { frame: "KILN", job: "forge", line: "Heat is law.", fracture: "Burns charge greedy." },
+  { frame: "ORACLE", job: "lab", line: "The dead hive still talks.", fracture: "Research veers." },
+  { frame: "LANCER", job: "raid", line: "Send me first.", fracture: "Takes the first cut." },
+];
+const JOBS = ["mine", "forge", "build", "lab", "raid"];
+const TECH = [
+  { id: "cheapprint", label: "CHEAP PRINT", work: 80 },
+  { id: "teeth", label: "MINER TEETH", work: 100 },
+  { id: "heat", label: "FAB HEAT", work: 100 },
+  { id: "claws", label: "RAID CLAWS", work: 140 },
+  { id: "surgeplus", label: "LONG SURGE", work: 140 },
+  { id: "moltlock", label: "MOLT RITE", work: 240 },
+];
+const CODEX = [
+  ["CONTINUE", "Returning hive skips the bar. Binding is save only."],
+  ["WAKE", "New nave. Gesture unlocks sound. Textures load behind you."],
+  ["HIVE", "Autopilot. Prints, raises, rites, and raids without a guide."],
+  ["MARK", "DART to RELIQUARY. Cost shows before you spend."],
+  ["WATCH", "Orbit a wreck. BOOST spends 8 charge. Leave — it still fights."],
+  ["LOCKED", "Missing a room, mind, or molt. Short on hulls is NEED, not LOCKED."],
+  ["SLOTS", "Three pews. STASH copies. LOAD swaps. Live hive is not burned."],
+  ["SLAG", "Tap the hull. Spare ore. Seven second cool."],
+  ["SURGE", "Short scream. Rates spike. Hits Nytheria's breakdown cut."],
+  ["CLAIM", "Idle cut on return. Works even if a raid is still in the well."],
+  ["CAMERA", "Drag orbits. Pinch or wheel zooms. FRAME snaps wide. Empty glass is the view — chrome never steals the pinch."],
+];
+
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => (n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(Math.floor(n)));
+const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+const now = () => Date.now();
+
+function defaultState() {
+  const rooms = {};
+  for (const r of ROOMS) rooms[r.id] = { built: false, progress: 0 };
+  return {
+    version: 1, started: false, lastTick: now(), hiveAge: 0,
+    ore: 48, parts: 22, charge: 36, spark: 0, sparkNeed: 28, echo: 0,
+    swarm: { miner: 8, fab: 2, builder: 2, lab: 0, striker: 2 },
+    casteLevel: { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 },
+    hullMark: { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 },
+    printCaste: "miner", autoPrint: true, autoBuild: false, autoRaid: false, autoRite: false, scripts: false,
+    printed: 12, rooms, queuedRoom: "solar", raid: null, raidCleared: [],
+    tech: Object.fromEntries(TECH.map((t) => [t.id, { done: false, progress: 0 }])),
+    activeTech: null, selectedMind: null,
+    minds: [], waking: null, moltLayer: 0, surgeUntil: 0, slagAt: 0,
+    pendingGift: null, lastSaveAt: 0, hiveName: "NAVE-1", tab: "hull", lastTab: "hull", rng: 0xc0ffee,
+  };
+}
+
+function migrate(raw) {
+  const base = defaultState();
+  const s = { ...base, ...raw, swarm: { ...base.swarm, ...raw.swarm }, rooms: { ...base.rooms, ...raw.rooms },
+    casteLevel: { ...base.casteLevel, ...raw.casteLevel }, hullMark: { ...base.hullMark, ...raw.hullMark } };
+  s.autoBuild = !!s.autoBuild; s.autoRaid = !!s.autoRaid; s.autoRite = !!s.autoRite; s.scripts = !!s.scripts;
+  s.hiveName = s.hiveName || "NAVE-1";
+  s.tech = { ...Object.fromEntries(TECH.map((t) => [t.id, { done: false, progress: 0 }])), ...s.tech };
+  if (s.raid && s.raid.hpMax == null) Object.assign(s.raid, { hp: 40, hpMax: 40, hull: 40, hullMax: 40, watching: false, boostUntil: 0, beat: "ORBIT" });
+  return s;
+}
+
+function loadSave() {
+  for (const k of [KEY, KEY + ".tmp", BAK]) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (raw) return migrate(JSON.parse(raw));
+    } catch {}
+  }
+  return defaultState();
+}
+
+function writeSave(s) {
+  try {
+    const blob = JSON.stringify(s);
+    JSON.parse(blob);
+    const prev = localStorage.getItem(KEY);
+    if (prev) localStorage.setItem(BAK, prev);
+    localStorage.setItem(KEY + ".tmp", blob);
+    s.lastSaveAt = now();
+    localStorage.setItem(KEY, JSON.stringify({ ...s, lastSaveAt: s.lastSaveAt }));
+    localStorage.removeItem(KEY + ".tmp");
+    if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+  } catch (err) {
+    try { console.warn("nidus save failed", err); } catch {}
+  }
+}
+
+function loadPrefs() {
+  try { return { music: 0.62, sfx: 0.78, spin: 0.85, hints: true, reduce: false, ...JSON.parse(localStorage.getItem(PREFS) || "{}") }; }
+  catch { return { music: 0.62, sfx: 0.78, spin: 0.85, hints: true, reduce: false }; }
+}
+function writePrefs(p) { try { localStorage.setItem(PREFS, JSON.stringify(p)); } catch {} }
+
+let G = loadSave();
+let P = loadPrefs();
+let session = false;
+let lastWrite = 0;
+let spinPaused = false;
+let camReset = 0;
+
+const audio = { ctx: null, hum: null, ready: false };
+function unlockAudio() {
+  if (audio.ctx) { if (audio.ctx.state === "suspended") audio.ctx.resume(); return; }
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  audio.ctx = ctx;
+  setTimeout(() => loadHum(ctx), 2800);
+}
+async function loadHum(ctx) {
+  try {
+    const buf = await (await fetch("assets/hum.mp3")).arrayBuffer();
+    const decoded = await ctx.decodeAudioData(buf);
+    const src = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    gain.gain.value = P.music * 0.35;
+    src.buffer = decoded; src.loop = true; src.connect(gain).connect(ctx.destination); src.start();
+    audio.hum = { src, gain }; audio.ready = true;
+  } catch {}
+}
+function chime(kind) {
+  if (!audio.ctx || P.sfx <= 0) return;
+  const src = audio.ctx.createBufferSource();
+  const url = kind === "surge" ? "assets/surge.mp3" : "assets/wake.mp3";
+  fetch(url).then((r) => r.arrayBuffer()).then((b) => audio.ctx.decodeAudioData(b)).then((buf) => {
+    const g = audio.ctx.createGain();
+    g.gain.value = P.sfx * (kind === "surge" ? 0.7 : 0.45);
+    const s = audio.ctx.createBufferSource();
+    s.buffer = buf; s.connect(g).connect(audio.ctx.destination); s.start();
+  }).catch(() => {});
+}
+
+function totalSwarm(s) { return CASTES.reduce((n, c) => n + s.swarm[c], 0); }
+function berth(s) { return 20 + (s.rooms.barracks.built ? 18 : 0) + (s.rooms.nerve.built ? 8 : 0); }
+function printCost(s) { const b = Math.pow(1.12, Math.max(0, s.printed - 12)); const cheap = s.tech?.cheapprint?.done ? 0.78 : 1; return { ore: Math.ceil(5 * b * cheap), parts: Math.ceil(2 * b * cheap) }; }
+function markCost(n) { return { ore: 24 + n * 36, parts: 16 + n * 22 }; }
+function markName(n) { return MARKS[clamp(n | 0, 0, 4)]; }
+function raidOpen(s, node) {
+  if (node.needs && !s.rooms[node.needs]?.built) return false;
+  if (node.molt && s.moltLayer < node.molt) return false;
+  return true;
+}
+function rates(s, t) {
+  const surge = t < s.surgeUntil ? 5 : 1;
+  const molt = 1 + s.moltLayer * 0.25;
+  const charge = s.charge <= 1 ? 0.22 : Math.min(1, s.charge / 14);
+  const hum = 1 + Math.min(0.45, s.hiveAge / 900);
+  const lvl = (c) => Math.pow(1.1, s.casteLevel[c]);
+  return {
+    ore: s.swarm.miner * (2.6 / 60) * lvl("miner") * molt * surge * charge * hum * 1.15,
+    parts: (s.ore > 0.5 ? s.swarm.fab : 0) * (1.5 / 60) * lvl("fab") * molt * surge * charge * hum,
+    build: s.swarm.builder * (2.4 / 60) * lvl("builder") * molt * surge * charge * hum,
+    spark: totalSwarm(s) * 0.028 * hum,
+    chargeGen: 0.08 + (s.rooms.solar.built ? 0.32 : 0),
+    chargeDrain: 0.002 * totalSwarm(s),
+  };
+}
+function advise(s) {
+  if (s.waking) return { chip: "PICK A MIND", why: "Three bodies. One stays." };
+  if (s.pendingGift) return { chip: "CLAIM THE CUT", why: "Idle haul waiting." };
+  if (s.charge < 8) return { chip: "RAISE THE SOLAR SPINE", why: "Charge is starving the swarm." };
+  if (!s.rooms.solar.built) return { chip: "RAISE THE SOLAR SPINE", why: "No spine, no blood." };
+  if (s.raid) return { chip: s.raid.watching ? "COMMAND THE WELL" : "WATCH OR LEAVE — FLEET FIGHTS", why: "BOOST spends charge. Orbit keeps going." };
+  if (s.swarm.striker >= 2 && !s.raidCleared.includes("ice")) return { chip: "RAID THE ICE RING", why: "First wreck. Easy meat." };
+  if (!s.rooms.lab.built) return { chip: "RAISE THE LAB", why: "Rites lock behind glass." };
+  if (s.tech.moltlock?.done && s.echo >= 8 + s.moltLayer * 6) return { chip: "SOFT MOLT", why: "Shed the skin. Keep the names." };
+  if (!s.autoPrint) return { chip: "FLIP AUTO PRINT", why: "Stamp while you sleep." };
+  return { chip: "GROW THE SWARM", why: "Idle is the engine." };
+}
+
+function pickPrint(s) {
+  if (s.charge < 12 || !s.rooms.solar.built) return "miner";
+  if (s.parts < 8 && s.ore > 20) return "fab";
+  if (s.queuedRoom && s.swarm.builder < 4) return "builder";
+  const n = RAIDS.find((r) => raidOpen(s, r) && s.swarm.striker < r.need);
+  if (n) return "striker";
+  return s.printCaste;
+}
+
+function tickBattle(s, dt, t) {
+  const run = s.raid; if (!run) return;
+  const boosted = t < (run.boostUntil || 0);
+  const watch = run.watching ? 1.1 : 1;
+  const power = run.strikers * (1 + (s.hullMark.striker || 0) * 0.28) * (1 + s.moltLayer * 0.2);
+  run.hp = Math.max(0, run.hp - power * 0.09 * watch * (boosted ? 1.7 : 1) * dt);
+  run.hull = Math.max(0, run.hull - (run.hpMax * 0.03) * (boosted ? 0.88 : 1) * dt);
+  run.beat = run.hp <= 0 ? "BREAK" : boosted ? "COMMAND" : run.watching ? "HOLDING" : "ORBIT";
+}
+
+function resolveRaid(s) {
+  const run = s.raid; if (!run) return;
+  const node = RAIDS.find((r) => r.id === run.node);
+  const win = run.hp <= 0 || (run.hull > 0 && run.hp / run.hpMax < run.hull / run.hullMax);
+  const dead = Math.floor(run.strikers * (win ? 0.12 : 0.4));
+  s.swarm.striker = Math.max(0, s.swarm.striker - dead);
+  if (win && node) {
+    s.ore += node.loot[0]; s.parts += node.loot[1]; s.echo += node.loot[2];
+    if (!s.raidCleared.includes(node.id)) s.raidCleared.push(node.id);
+    toast(node.label, "WRECK IS OURS");
+  } else toast(node?.label || "RAID", "BLOODIED. WE PULL BACK.");
+  s.raid = null;
+}
+
+function sendRaid(id) {
+  if (G.raid) return;
+  const node = RAIDS.find((r) => r.id === id);
+  if (!node || !raidOpen(G, node) || G.swarm.striker < node.need) return;
+  const hull = Math.max(12, node.need * (8 + G.hullMark.striker * 3));
+  const hp = node.need * 9;
+  G.raid = { node: id, startedAt: now(), endsAt: now() + node.seconds * 1000, strikers: node.need, hp, hpMax: hp, hull, hullMax: hull, watching: false, boostUntil: 0, beat: "ORBIT" };
+  persist(); render();
+}
+
+function applyTick(s, t) {
+  const dt = Math.min(Math.max(0, (t - s.lastTick) / 1000), 8 * 3600);
+  if (dt <= 0) { s.lastTick = t; return s; }
+  const away = dt > 30;
+  const r = rates(s, t);
+  const oreGain = r.ore * dt, partsGain = r.parts * dt;
+  s.ore += oreGain - partsGain * 2; s.parts += partsGain;
+  s.charge = clamp(s.charge + (r.chargeGen - r.chargeDrain) * dt, 0, 80 + (s.rooms.solar.built ? 140 : 0));
+  s.hiveAge += dt;
+  if (s.surgeUntil && t >= s.surgeUntil) s.surgeUntil = 0;
+  if (away) s.pendingGift = { ore: Math.max(1, Math.floor(oreGain * 0.4)), parts: Math.max(0, Math.floor(partsGain * 0.4)), spark: Math.max(1, Math.floor(r.spark * dt * 0.5)), seconds: Math.floor(dt) };
+  if (s.queuedRoom) {
+    const spec = ROOMS.find((x) => x.id === s.queuedRoom);
+    const room = s.rooms[s.queuedRoom];
+    if (spec && !room.built) {
+      room.progress += r.build * dt;
+      if (room.progress >= spec.work) { room.built = true; room.progress = spec.work; s.queuedRoom = ROOMS.find((x) => !s.rooms[x.id].built)?.id ?? null; toast(spec.label, "NODE SNAPPED TO THE NAVE"); }
+    }
+  }
+  if (s.activeTech && s.rooms.lab?.built) {
+    const spec = TECH.find((t) => t.id === s.activeTech);
+    if (spec && s.tech[spec.id] && !s.tech[spec.id].done) {
+      s.tech[spec.id].progress += r.build * 0.65 * dt;
+      if (s.tech[spec.id].progress >= spec.work) {
+        s.tech[spec.id].done = true;
+        if (spec.id === "teeth") s.casteLevel.miner += 1;
+        if (spec.id === "heat") s.casteLevel.fab += 1;
+        if (spec.id === "claws") s.casteLevel.striker += 1;
+        toast(spec.label, "INLAID IN GOLD");
+        s.activeTech = TECH.find((t) => !s.tech[t.id].done)?.id ?? null;
+      }
+    }
+  }
+  if (!s.waking) {
+    s.spark += r.spark * dt;
+    if (s.spark >= s.sparkNeed && s.minds.length < 6) {
+      s.spark = 0; s.sparkNeed = Math.round(s.sparkNeed * 1.85 + 18);
+      s.waking = FRAMES.map((f, i) => ({ ...f, name: ["Husk", "Vesper", "Rib", "Cinder", "Nave"][i] + "-" + ((s.rng + i) % 9) }));
+    }
+  }
+  if (s.autoPrint || s.scripts) {
+    if (s.scripts) s.printCaste = pickPrint(s);
+    let g = 0;
+    while (g++ < 20 && totalSwarm(s) < berth(s)) {
+      const c = printCost(s);
+      if (s.ore < c.ore || s.parts < c.parts) break;
+      s.ore -= c.ore; s.parts -= c.parts; s.swarm[s.printCaste] += 1; s.printed += 1;
+    }
+  }
+  if ((s.scripts || s.autoBuild) && !s.queuedRoom) s.queuedRoom = ROOMS.find((x) => !s.rooms[x.id].built && (!x.needs || s.rooms[x.needs].built))?.id ?? null;
+  if ((s.scripts || s.autoRite) && s.rooms.lab?.built && !s.activeTech) s.activeTech = TECH.find((t) => !s.tech[t.id].done)?.id ?? null;
+  if (s.raid) {
+    tickBattle(s, dt, t);
+    if (s.raid.hp <= 0 || s.raid.hull <= 0 || t >= s.raid.endsAt) resolveRaid(s);
+  } else if (s.scripts || s.autoRaid) {
+    const n = RAIDS.find((r) => raidOpen(s, r) && s.swarm.striker >= r.need);
+    if (n) sendRaid(n.id);
+  }
+  s.ore = Math.max(0, s.ore); s.parts = Math.max(0, s.parts);
+  s.lastTick = t;
+  return s;
+}
+
+function persist() { writeSave(G); lastWrite = now(); $("saveDot")?.classList.add("on"); }
+
+function toast(h, l) {
+  const el = $("toast");
+  el.innerHTML = `<p class="display" style="margin:0;color:var(--gilt);font-size:.65rem">${h}</p><p style="margin:.2rem 0 0">${l}</p>`;
+  el.classList.remove("hidden");
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.add("hidden"), 2800);
+}
+
+/* ---------- boot (non-blocking) ---------- */
+function hasHive() {
+  try { const r = JSON.parse(localStorage.getItem(KEY) || "null"); return !!(r && r.started); } catch { return false; }
+}
+
+function paintTitle() {
+  $("titleScreen").classList.remove("hidden");
+  const bound = hasHive();
+  $("continueBtn").classList.toggle("hidden", !bound);
+  $("wakeBtn").textContent = bound ? "NEW NAVE" : "WAKE";
+  $("wakeBtn").disabled = false;
+  $("bootLabel").textContent = bound ? "HIVE BOUND" : "READY";
+  $("bootPct").textContent = "100%";
+  $("bootFill").style.width = "100%";
+  const recap = $("recap");
+  if (bound && recap) {
+    const s = loadSave();
+    recap.classList.remove("hidden");
+    recap.textContent = `${s.hiveName || "NAVE"} · L${s.moltLayer || 0} · ${CASTES.reduce((n, c) => n + (s.swarm?.[c] || 0), 0)} DRONES`;
+  }
+  const img = new Image();
+  img.onload = () => { $("titleScreen").style.backgroundImage = `url(assets/sky.jpg)`; };
+  img.src = "assets/sky.jpg";
+}
+
+function enter(isNew) {
+  unlockAudio();
+  if (isNew) {
+    if (hasHive() && !confirm("Burn this hive? Export first if you want it.")) return;
+    G = defaultState(); G.started = true; writeSave(G);
+  } else {
+    G = loadSave(); G.started = true; applyTick(G, now());
+    if (G.lastTab) G.tab = G.lastTab;
+  }
+  session = true;
+  $("titleScreen").classList.add("hidden");
+  $("app").classList.toggle("reduce", P.reduce);
+  render();
+  loop();
+  setTimeout(() => chime("wake"), 80);
+}
+
+function loop() {
+  G = applyTick(G, now());
+  renderLight();
+  if (now() - lastWrite > 4000) persist();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- render ---------- */
+function render() {
+  renderBar();
+  renderStage();
+  $("pingMinds").classList.toggle("hidden", !G.waking);
+  $("pingRaid").classList.toggle("hidden", !G.raid);
+  document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === G.tab));
+  $("gift").classList.toggle("hidden", !G.pendingGift);
+  $("wakeCards").classList.toggle("hidden", !G.waking);
+  if (G.pendingGift) {
+    $("giftLine").textContent = `${fmt(G.pendingGift.ore)} ORE · ${fmt(G.pendingGift.parts)} PARTS`;
+    $("giftSpark").textContent = `+${G.pendingGift.spark} SPARK · ${G.pendingGift.seconds}s`;
+  }
+  if (G.waking) {
+    $("cards").innerHTML = G.waking.map((c, i) => `<button class="card" data-pick="${i}"><b class="display">${c.frame}</b><p>${c.name}</p><small>${c.line}</small></button>`).join("");
+  }
+}
+
+function renderBar() {
+  const r = rates(G, now());
+  $("ore").textContent = fmt(G.ore);
+  $("parts").textContent = fmt(G.parts);
+  $("charge").textContent = fmt(G.charge);
+  $("spark").textContent = G.waking ? "WOKE" : String(Math.floor(G.spark));
+  $("oreSub").textContent = fmt(r.ore * 60) + "/m";
+  $("partsSub").textContent = fmt(r.parts * 60) + "/m";
+  $("oreM").style.width = clamp(G.ore / 400, 0, 1) * 100 + "%";
+  $("partsM").style.width = clamp(G.parts / 220, 0, 1) * 100 + "%";
+  $("chargeM").style.width = clamp(G.charge / 80, 0, 1) * 100 + "%";
+  $("sparkM").style.width = clamp(G.spark / G.sparkNeed, 0, 1) * 100 + "%";
+  $("echoWrap").classList.toggle("hidden", G.echo <= 0);
+  $("echo").textContent = G.echo;
+  $("saveDot").classList.toggle("on", now() - G.lastSaveAt < 6000);
+}
+
+function renderLight() {
+  renderBar();
+  if (G.tab === "raid" && G.raid) updateRaidBars();
+}
+
+function renderStage() {
+  const t = G.tab;
+  $("hullStage").classList.toggle("hidden", t !== "hull");
+  $("forgeStage").classList.toggle("hidden", t !== "forge");
+  $("raidStage").classList.toggle("hidden", t !== "raid");
+  $("mindsStage").classList.toggle("hidden", t !== "minds");
+  if (t === "hull") renderHull();
+  if (t === "forge") renderForge();
+  if (t === "raid") renderRaid();
+  if (t === "minds") renderMinds();
+}
+
+function setVerb(id, verb, why) {
+  const el = $(id);
+  if (!el) return;
+  const extra = el.querySelector(".ping");
+  el.innerHTML = `${verb}<span class="why">${why}</span>`;
+  if (extra) el.appendChild(extra);
+}
+
+function renderHull() {
+  const a = advise(G);
+  $("goal").textContent = a.chip;
+  $("hint").textContent = a.why;
+  $("hint").classList.toggle("hidden", !P.hints);
+  setVerb("spinBtn", spinPaused ? "HOLD" : "SPIN", spinPaused ? "freeze nave" : "idle orbit");
+  $("spinBtn").classList.toggle("on", !spinPaused);
+  $("hiveBtn").classList.toggle("act", G.scripts);
+  $("hiveBtn").classList.toggle("venom", G.scripts);
+  setVerb("hiveBtn", "HIVE", G.scripts ? "mind is running" : "run without you");
+  setVerb("surgeBtn", now() < G.surgeUntil ? "SURGING" : "SURGE", now() < G.surgeUntil ? "rates hot" : "5× rates 30s");
+  $("slagBtn").disabled = now() < G.slagAt;
+  setVerb("slagBtn", "SLAG", now() < G.slagAt ? "cooling" : "tap spare ore");
+  $("rooms").innerHTML = ROOMS.map((r) => {
+    const st = G.rooms[r.id];
+    const locked = r.needs && !G.rooms[r.needs].built;
+    const cls = st.built ? "lit" : G.queuedRoom === r.id ? "q" : "";
+    const state = st.built ? "LIT" : locked ? `NEED ${r.needs.toUpperCase()}` : Math.floor((st.progress / r.work) * 100) + "% · " + r.parts + "p";
+    const title = st.built ? `${r.label} is lit — ${r.why}.` : locked ? `Raise ${r.needs} first.` : `RAISE ${r.label} — ${r.why}. Costs ${r.parts} parts.`;
+    return `<button class="room ${cls}" data-room="${r.id}" title="${title}" ${st.built || locked ? "disabled" : ""}><b class="display" style="font-size:.62rem">${r.label}</b><span class="why">${r.why}</span><div>${state}</div></button>`;
+  }).join("");
+  $("footer").textContent = `${totalSwarm(G)} DRONES · ${G.minds.length} MINDS · L${G.moltLayer}${G.scripts ? " · MIND ON" : ""}`;
+}
+
+function renderForge() {
+  $("castes").innerHTML = CASTES.map((c) => `<button class="caste ${G.printCaste === c ? "on" : ""}" data-caste="${c}" title="PRINT ${c.toUpperCase()} — ${CASTES_WHY[c]}. Stock ${G.swarm[c]}."><span class="display">${c.slice(0, 4).toUpperCase()}</span><b>${G.swarm[c]}</b><span class="why">${CASTES_WHY[c]}</span></button>`).join("");
+  const c = printCost(G);
+  $("forgeMeta").textContent = `${totalSwarm(G)} / ${berth(G)} BERTHS · PRINT ${c.ore} ORE · ${c.parts} PARTS`;
+  $("autoBtn").classList.toggle("venom", G.autoPrint);
+}
+
+function raidCopy(node) {
+  if (!raidOpen(G, node)) {
+    if (node.needs && !G.rooms[node.needs]?.built) return `LOCKED · NEED ${node.needs.toUpperCase()}`;
+    if (node.molt) return `LOCKED · NEED MOLT`;
+    return "LOCKED";
+  }
+  if (G.swarm.striker < node.need) return `NEED ${node.need} ${markName(G.hullMark.striker)}`;
+  return `${node.need} ${markName(G.hullMark.striker)} · ${node.seconds}s`;
+}
+
+function renderRaid() {
+  const mk = G.hullMark.striker;
+  const cost = markCost(mk);
+  $("markName").textContent = markName(mk);
+  $("markMeta").textContent = `${G.swarm.striker} HULLS · MK ${mk + 1}`;
+  $("markCost").textContent = mk >= 4 ? "MAX" : `MARK ${cost.parts}p / ${cost.ore}o`;
+  $("markBtn").disabled = mk >= 4 || G.ore < cost.ore || G.parts < cost.parts;
+  $("well").classList.toggle("hidden", !G.raid);
+  if (G.raid) {
+    const node = RAIDS.find((r) => r.id === G.raid.node);
+    $("wellBeat").textContent = `${G.raid.beat} · ${node.label}`;
+    setVerb("watchBtn", G.raid.watching ? "WATCHING" : "WATCH", G.raid.watching ? "in the well" : "see the fight");
+    setVerb("boostBtn", now() < G.raid.boostUntil ? "COMMAND" : "BOOST", now() < G.raid.boostUntil ? "burst live" : "8 charge burst");
+    $("boostBtn").disabled = now() < G.raid.boostUntil || G.charge < 8;
+    updateRaidBars();
+  }
+  $("nodes").innerHTML = RAIDS.map((n) => `<button class="node ${raidOpen(G, n) ? "" : "dim"}" data-raid="${n.id}" title="RAID ${n.label} — send ${n.need} strikers for ${n.seconds}s. Loot ore, parts, spark." ${G.raid || !raidOpen(G, n) || G.swarm.striker < n.need ? "disabled" : ""}><b class="display">${n.label}</b><span class="why">loot wreck</span><div>${raidCopy(n)}${G.raidCleared.includes(n.id) ? " · CLEARED" : ""}</div></button>`).join("");
+}
+
+function updateRaidBars() {
+  if (!G.raid) return;
+  $("wreckBar").style.width = clamp(G.raid.hp / G.raid.hpMax, 0, 1) * 100 + "%";
+  $("fleetBar").style.width = clamp(G.raid.hull / G.raid.hullMax, 0, 1) * 100 + "%";
+}
+
+function renderMinds() {
+  if (!G.minds.length) { $("mindEmpty").classList.remove("hidden"); $("mindLive").classList.add("hidden"); return; }
+  $("mindEmpty").classList.add("hidden"); $("mindLive").classList.remove("hidden");
+  if (!G.selectedMind) G.selectedMind = G.minds[0].name;
+  const m = G.minds.find((x) => x.name === G.selectedMind) || G.minds[0];
+  G.selectedMind = m.name;
+  $("mindName").textContent = m.name;
+  $("mindLine").textContent = m.line;
+  $("mindMeta").textContent = `${m.frame} · L${m.level || 1}`;
+  $("mindFracture").textContent = `${m.fracture || ""} · ${m.seated ? "SEATED" : "PACING"}`;
+  $("mindRow").innerHTML = G.minds.map((x) => `<button class="ghost ${x.name === m.name ? "on" : ""}" data-mind="${x.name}">${x.frame[0]}</button>`).join("");
+  const jobWhy = { mine: "more ore", forge: "more parts", build: "faster rooms", lab: "faster rites", raid: "harder wrecks" };
+  $("jobs").innerHTML = JOBS.map((j) => `<button class="caste ${m.job === j ? "on" : ""}" data-job="${j}" title="SEAT ${j.toUpperCase()} — ${jobWhy[j]}.">${j.toUpperCase()}<span class="why">${jobWhy[j]}</span></button>`).join("");
+  setVerb("seatBtn", m.seated ? "UNSEAT" : "SEAT", m.seated ? "let them pace" : "lock the job");
+}
+
+function renderSettings() {
+  $("setMusic").value = P.music; $("setSfx").value = P.sfx; $("setSpin").value = P.spin;
+  $("hiveName").value = G.hiveName;
+  $("togHive").classList.toggle("venom", G.scripts);
+  $("togPrint").classList.toggle("venom", G.autoPrint);
+  $("togBuild").classList.toggle("venom", G.autoBuild);
+  $("togRaid").classList.toggle("venom", G.autoRaid);
+  $("togHints").classList.toggle("venom", P.hints);
+  $("togReduce").classList.toggle("venom", P.reduce);
+  $("pews").innerHTML = [0, 1, 2].map((i) => {
+    let name = null;
+    try { const r = JSON.parse(localStorage.getItem(SLOT(i)) || "null"); name = r && r.hiveName; } catch {}
+    return `<div class="pew"><p class="display" style="font-size:.6rem;color:var(--gilt)">${name || "PEW " + (i + 1)}</p><button class="ghost" data-stash="${i}">STASH</button><button class="ghost" data-load="${i}" ${name ? "" : "disabled"}>LOAD</button></div>`;
+  }).join("");
+  $("codex").innerHTML = CODEX.map(([t, b]) => `<div class="panel" style="margin-top:.4rem"><p class="display" style="margin:0;color:var(--gilt);font-size:.65rem">${t}</p><p style="margin:.25rem 0 0;font-size:.85rem">${b}</p></div>`).join("");
+  if ($("techs")) {
+    $("techs").innerHTML = TECH.map((t) => {
+      const st = G.tech[t.id] || { done: false, progress: 0 };
+      const pct = st.done ? "DONE" : Math.floor((st.progress / t.work) * 100) + "%";
+      return `<button class="ghost ${st.done ? "on" : ""}" data-tech="${t.id}" ${!G.rooms.lab.built || st.done ? "disabled" : ""}>${t.label}<br>${pct}</button>`;
+    }).join("");
+  }
+  if ($("moltBtn")) {
+    const need = 8 + G.moltLayer * 6;
+    $("moltBtn").textContent = `MOLT ${G.echo}/${need}`;
+    $("moltBtn").disabled = !G.tech.moltlock?.done || G.echo < need;
+  }
+}
+
+/* ---------- canvas station ---------- */
+const cvs = $("hull");
+const ctx = cvs.getContext("2d");
+const view = $("viewHit") || cvs;
+const CAM_START = 7.1;
+const CAM_MIN = 3.2;
+const CAM_MAX = 12.5;
+const CAM_SLOP = 8;
+let cam = {
+  a: 0.4, d: CAM_START, dragging: false, armed: false,
+  lx: 0, ly: 0, sx: 0, sy: 0, t0: 0, holdAge: 0,
+  pointers: new Map(), pinch0: 0, d0: CAM_START, mid0: null,
+};
+function camDist(pts) {
+  const a = pts[0], b = pts[1];
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+function camMid(pts) {
+  return { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+}
+function uiOwns(el) {
+  if (!el || el === view || el === cvs) return false;
+  return Boolean(el.closest && el.closest("button, input, label, .settings, .panel, .rooms, .tabs, .bar, .modal, .title"));
+}
+function resize() {
+  const dpr = Math.min(devicePixelRatio || 1, 1.6);
+  cvs.width = innerWidth * dpr; cvs.height = innerHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener("resize", resize); resize();
+
+view.addEventListener("pointerdown", (e) => {
+  if (uiOwns(e.target)) return;
+  e.preventDefault();
+  cam.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  try { view.setPointerCapture(e.pointerId); } catch {}
+  if (cam.pointers.size === 1) {
+    cam.armed = true;
+    cam.dragging = false;
+    cam.lx = cam.sx = e.clientX;
+    cam.ly = cam.sy = e.clientY;
+    cam.t0 = performance.now();
+    cam.holdAge = 0;
+  } else if (cam.pointers.size >= 2) {
+    cam.dragging = false;
+    cam.armed = false;
+    const pts = [...cam.pointers.values()];
+    cam.pinch0 = camDist(pts);
+    cam.d0 = cam.d;
+    cam.mid0 = camMid(pts);
+  }
+});
+function endPtr(e) {
+  cam.pointers.delete(e.pointerId);
+  if (cam.pointers.size < 2) { cam.pinch0 = 0; cam.mid0 = null; }
+  if (cam.pointers.size === 0) { cam.dragging = false; cam.armed = false; }
+}
+view.addEventListener("pointerup", endPtr);
+view.addEventListener("pointercancel", endPtr);
+view.addEventListener("pointermove", (e) => {
+  if (!cam.pointers.has(e.pointerId)) return;
+  cam.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (cam.pointers.size >= 2 && cam.pinch0 > 8) {
+    const pts = [...cam.pointers.values()];
+    const ratio = cam.pinch0 / Math.max(12, camDist(pts));
+    cam.d = clamp(cam.d0 * ratio, CAM_MIN, CAM_MAX);
+    return;
+  }
+  if (!cam.armed && !cam.dragging) return;
+  const dx = e.clientX - cam.sx;
+  const dy = e.clientY - cam.sy;
+  if (!cam.dragging && Math.hypot(dx, dy) < CAM_SLOP) return;
+  cam.dragging = true;
+  const held = performance.now() - cam.t0;
+  const boost = 1 + 1.25 * Math.min(1, Math.max(0, (held - 180) / 420));
+  cam.a += (e.clientX - cam.lx) * 0.0048 * boost;
+  cam.lx = e.clientX;
+  cam.ly = e.clientY;
+});
+view.addEventListener("wheel", (e) => {
+  if (uiOwns(e.target)) return;
+  e.preventDefault();
+  let y = e.deltaY;
+  if (e.deltaMode === 1) y *= 16;
+  if (e.deltaMode === 2) y *= 16 * 24;
+  if (e.ctrlKey) y *= 8;
+  cam.d = clamp(cam.d * Math.exp(y * 0.0018), CAM_MIN, CAM_MAX);
+}, { passive: false });
+view.addEventListener("gesturestart", (e) => { e.preventDefault(); cam.d0 = cam.d; }, { passive: false });
+view.addEventListener("gesturechange", (e) => {
+  e.preventDefault();
+  const scale = e.scale || 1;
+  cam.d = clamp(cam.d0 / Math.max(0.12, scale), CAM_MIN, CAM_MAX);
+}, { passive: false });
+view.addEventListener("gestureend", (e) => { e.preventDefault(); }, { passive: false });
+
+const sky = new Image(); sky.src = "assets/sky.jpg";
+const sky2 = new Image(); sky2.src = "assets/sky2.jpg";
+const STARS = Array.from({ length: 48 }, (_, i) => ({ x: (i * 97) % 1000 / 1000, y: (i * 53) % 700 / 700, s: 0.4 + (i % 4) * 0.35 }));
+function draw() {
+  const w = innerWidth, h = innerHeight, t = performance.now();
+  ctx.fillStyle = "#07060c"; ctx.fillRect(0, 0, w, h);
+  const plate = sky.complete && sky.naturalWidth ? sky : (sky2.complete && sky2.naturalWidth ? sky2 : null);
+  if (plate) { ctx.globalAlpha = 0.88; ctx.drawImage(plate, 0, 0, w, h); ctx.globalAlpha = 1; }
+  ctx.fillStyle = "rgba(232,220,200,.55)";
+  STARS.forEach((st) => { ctx.globalAlpha = 0.25 + Math.sin(t / 700 + st.x * 8) * 0.2; ctx.fillRect(st.x * w, st.y * h * 0.7, st.s, st.s); });
+  ctx.globalAlpha = 1;
+  const cx = w * 0.5, cy = h * 0.36;
+  const pulse = 0.72 + Math.sin(t / 420) * 0.16 + Math.sin(t / 160) * 0.04;
+  const px = cx + 168, py = cy - 210;
+  const g = ctx.createRadialGradient(px, py, 1, px, py, 64);
+  g.addColorStop(0, `rgba(255,246,220,${0.88 * pulse})`);
+  g.addColorStop(0.2, `rgba(255,170,80,${0.32 * pulse})`);
+  g.addColorStop(1, "rgba(255,140,40,0)");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, 64, 0, Math.PI * 2); ctx.fill();
+  const cone = ctx.createLinearGradient(px, py, cx, cy);
+  cone.addColorStop(0, `rgba(255,216,168,${0.16 * pulse})`);
+  cone.addColorStop(1, "rgba(255,180,90,0)");
+  ctx.strokeStyle = cone; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(cx, cy); ctx.stroke();
+  ctx.save();
+  ctx.translate(cx, cy);
+  if (!spinPaused && !P.reduce) cam.a += 0.003 * P.spin;
+  ctx.rotate(cam.a);
+  const builtN = Object.values(G.rooms).filter((r) => r.built).length;
+  const sc = (0.78 / cam.d) * (1 + builtN * 0.018 + G.moltLayer * 0.012);
+  ctx.scale(sc, sc);
+  const far = cam.d > 5.4;
+  ctx.fillStyle = "rgba(8,6,8,.35)"; ctx.beginPath(); ctx.ellipse(0, 18, 118, 28, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#cfc3b0"; ctx.fillRect(-78, -26, 156, 52);
+  ctx.fillStyle = "#2a2220"; ctx.fillRect(-70, -18, 140, 36);
+  ctx.fillStyle = "#7a1f2b"; ctx.fillRect(78, -12, 42, 24);
+  ctx.fillStyle = "#c4a574"; ctx.fillRect(-10, -58, 20, 32);
+  ctx.fillStyle = "#1faf5b"; ctx.fillRect(-68, 8, 16, 8);
+  if (!far) {
+    ctx.strokeStyle = "rgba(196,165,116,.75)"; ctx.lineWidth = 2.5;
+    for (let i = -56; i <= 56; i += 16) { ctx.beginPath(); ctx.moveTo(i, -26); ctx.quadraticCurveTo(i + 8, -50, i + 16, -26); ctx.stroke(); }
+    ctx.fillStyle = "rgba(255,210,140,.35)"; ctx.fillRect(-6, -20, 8, 8);
+  }
+  const built = ROOMS.filter((r) => G.rooms[r.id].built);
+  built.forEach((r, i) => {
+    const ang = (i / Math.max(1, built.length)) * Math.PI * 2 + t / 18000;
+    const x = Math.cos(ang) * 96, y = Math.sin(ang) * 40;
+    ctx.fillStyle = r.id === "solar" ? "#e8c070" : r.id === "gundeck" ? "#7a1f2b" : "#c4a574";
+    ctx.fillRect(x - 9, y - 9, 18, 18);
+    if (!far) { ctx.fillStyle = "rgba(31,175,91,.7)"; ctx.fillRect(x - 3, y - 3, 6, 6); }
+  });
+  if (G.raid) {
+    const n = Math.min(10, G.raid.strikers);
+    for (let i = 0; i < n; i++) {
+      const a = t / 680 + i * 0.7;
+      const x = Math.cos(a) * 138, y = Math.sin(a) * 54;
+      ctx.fillStyle = "#8dffb2"; ctx.fillRect(x - 3, y - 5, 6, 11);
+      if (G.raid.watching || t < (G.raid.boostUntil || 0)) {
+        ctx.strokeStyle = "rgba(196,90,74,.55)"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(Math.cos(a + 0.4) * 40, Math.sin(a + 0.4) * 16); ctx.stroke();
+      }
+    }
+    ctx.strokeStyle = "rgba(122,31,43,.35)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(0, 0, 138, 54, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
+  requestAnimationFrame(draw);
+}
+
+/* ---------- events ---------- */
+$("continueBtn").onclick = () => enter(false);
+$("wakeBtn").onclick = () => enter(!hasHive() ? false : true);
+document.querySelector(".tabs").onclick = (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  G.tab = b.dataset.tab; G.lastTab = G.tab; render(); persist();
+};
+$("rooms").onclick = (e) => { const b = e.target.closest("[data-room]"); if (!b) return; G.queuedRoom = b.dataset.room; persist(); render(); };
+$("spinBtn").onclick = () => { spinPaused = !spinPaused; renderHull(); };
+$("frameBtn").onclick = () => { cam.a = 0.4; cam.d = CAM_START; };
+$("riteBtn").onclick = () => { $("settings").classList.toggle("hidden"); renderSettings(); };
+$("closeSet").onclick = () => $("settings").classList.add("hidden");
+$("surgeBtn").onclick = () => { if (now() < G.surgeUntil) return; G.surgeUntil = now() + (G.tech.surgeplus?.done ? 45000 : 30000); chime("surge"); persist(); render(); };
+$("cards").addEventListener("click", () => {});
+document.addEventListener("click", (e) => {
+  const mind = e.target.closest("[data-mind]");
+  if (mind) { G.selectedMind = mind.dataset.mind; renderMinds(); }
+  const job = e.target.closest("[data-job]");
+  if (job) {
+    const m = G.minds.find((x) => x.name === G.selectedMind);
+    if (m) { m.job = job.dataset.job; persist(); renderMinds(); }
+  }
+  const tech = e.target.closest("[data-tech]");
+  if (tech && G.rooms.lab.built) { G.activeTech = tech.dataset.tech; persist(); renderSettings(); }
+});
+if ($("seatBtn")) $("seatBtn").onclick = () => {
+  const m = G.minds.find((x) => x.name === G.selectedMind); if (!m) return;
+  m.seated = !m.seated; persist(); renderMinds();
+};
+if ($("meltBtn")) $("meltBtn").onclick = () => {
+  const i = G.minds.findIndex((x) => x.name === G.selectedMind); if (i < 0) return;
+  G.echo += 2; G.minds.splice(i, 1); G.selectedMind = G.minds[0]?.name || null; persist(); render();
+};
+if ($("moltBtn")) $("moltBtn").onclick = () => {
+  const need = 8 + G.moltLayer * 6;
+  if (!G.tech.moltlock?.done || G.echo < need) return;
+  G.echo -= need; G.moltLayer += 1; G.minds.forEach((m) => { m.level = (m.level || 1) + 1; }); persist();
+  if ($("moltLine")) $("moltLine").textContent = `LAYER ${G.moltLayer}`;
+  $("moltCeremony")?.classList.remove("hidden");
+  toast("MOLT", "A NEW LAYER OF NERVE"); render();
+};
+if ($("importBtn")) $("importBtn").onclick = () => $("importFile").click();
+if ($("importFile")) $("importFile").onchange = async (e) => {
+  const f = e.target.files?.[0]; if (!f) return;
+  try { G = migrate(JSON.parse(await f.text())); G.started = true; applyTick(G, now()); writeSave(G); render(); toast("SAVE", "IMPORTED"); }
+  catch { toast("SAVE", "BAD JSON"); }
+};
+$("slagBtn").onclick = () => { if (now() < G.slagAt) return; G.ore += 6; G.spark += 1; G.slagAt = now() + 7000; persist(); render(); };
+$("hiveBtn").onclick = () => { G.scripts = !G.scripts; if (G.scripts) { G.autoPrint = G.autoBuild = G.autoRaid = G.autoRite = true; } persist(); render(); };
+$("castes").onclick = (e) => { const b = e.target.closest("[data-caste]"); if (!b) return; G.printCaste = b.dataset.caste; renderForge(); };
+$("printBtn").onclick = () => {
+  const c = printCost(G); if (G.ore < c.ore || G.parts < c.parts || totalSwarm(G) >= berth(G)) return;
+  G.ore -= c.ore; G.parts -= c.parts; G.swarm[G.printCaste] += 1; G.printed += 1; persist(); render();
+};
+$("autoBtn").onclick = () => { G.autoPrint = !G.autoPrint; persist(); render(); };
+$("nodes").onclick = (e) => { const b = e.target.closest("[data-raid]"); if (!b) return; sendRaid(b.dataset.raid); };
+$("watchBtn").onclick = () => { if (G.raid) { G.raid.watching = !G.raid.watching; persist(); renderRaid(); } };
+$("boostBtn").onclick = () => { if (!G.raid || G.charge < 8 || now() < G.raid.boostUntil) return; G.charge -= 8; G.raid.boostUntil = now() + 20000; G.raid.beat = "COMMAND"; persist(); renderRaid(); };
+$("markBtn").onclick = () => {
+  const n = G.hullMark.striker, c = markCost(n);
+  if (n >= 4 || G.ore < c.ore || G.parts < c.parts) return;
+  G.ore -= c.ore; G.parts -= c.parts; G.hullMark.striker += 1; persist(); render();
+};
+$("claimBtn").onclick = () => { if (!G.pendingGift) return; G.ore += G.pendingGift.ore; G.parts += G.pendingGift.parts; G.spark += G.pendingGift.spark; G.pendingGift = null; persist(); render(); };
+$("cards").onclick = (e) => {
+  const b = e.target.closest("[data-pick]"); if (!b || !G.waking) return;
+  const c = G.waking[+b.dataset.pick]; G.minds.push({ ...c, seated: G.minds.length === 0 }); G.waking = null; G.tab = "minds"; persist(); render();
+};
+$("saveNow").onclick = () => persist();
+$("exportBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify(G, null, 2)], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "nidus-hive.json"; a.click();
+};
+$("copyBtn").onclick = async () => { try { await navigator.clipboard.writeText(JSON.stringify(G)); toast("SAVE", "JSON COPIED"); } catch { $("exportBtn").click(); } };
+$("newHive").onclick = () => { if (confirm("Burn this hive?")) { localStorage.removeItem(KEY); location.reload(); } };
+$("hiveName").onchange = () => { G.hiveName = $("hiveName").value.slice(0, 16) || "NAVE-1"; persist(); };
+$("setMusic").oninput = (e) => { P.music = +e.target.value; if (audio.hum) audio.hum.gain.gain.value = P.music * 0.35; writePrefs(P); };
+$("setSfx").oninput = (e) => { P.sfx = +e.target.value; writePrefs(P); };
+$("setSpin").oninput = (e) => { P.spin = +e.target.value; writePrefs(P); };
+$("togHive").onclick = () => { G.scripts = !G.scripts; persist(); renderSettings(); render(); };
+$("togPrint").onclick = () => { G.autoPrint = !G.autoPrint; persist(); renderSettings(); };
+$("togBuild").onclick = () => { G.autoBuild = !G.autoBuild; persist(); renderSettings(); };
+$("togRaid").onclick = () => { G.autoRaid = !G.autoRaid; persist(); renderSettings(); };
+$("togHints").onclick = () => { P.hints = !P.hints; writePrefs(P); renderSettings(); renderHull(); };
+$("togReduce").onclick = () => { P.reduce = !P.reduce; writePrefs(P); $("app").classList.toggle("reduce", P.reduce); renderSettings(); };
+$("pews").onclick = (e) => {
+  const st = e.target.dataset.stash, ld = e.target.dataset.load;
+  if (st != null) { localStorage.setItem(SLOT(+st), JSON.stringify(G)); renderSettings(); toast("PEW", "STASHED"); }
+  if (ld != null) {
+    const raw = localStorage.getItem(SLOT(+ld)); if (!raw) return;
+    G = migrate(JSON.parse(raw)); applyTick(G, now()); writeSave(G); render(); toast("PEW", "LOADED");
+  }
+};
+function flush() { if (session || G.started) persist(); }
+document.addEventListener("visibilitychange", () => { if (document.hidden) flush(); else { G = applyTick(G, now()); render(); } });
+addEventListener("pagehide", flush);
+addEventListener("beforeunload", flush);
+
+if ($("moltOk")) $("moltOk").onclick = () => $("moltCeremony").classList.add("hidden");
+paintTitle();
+draw();
+if (G.started) { /* title still shows CONTINUE; do not auto-enter */ }

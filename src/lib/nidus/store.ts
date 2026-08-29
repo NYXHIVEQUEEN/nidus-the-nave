@@ -1,0 +1,245 @@
+import { create } from "zustand";
+import type { Caste, Job, RaidId, RoomId, SalvageId, Tab, TechId } from "./types";
+import { defaultState } from "./content";
+import {
+  applyTick,
+  assignJob,
+  boostRaid,
+  chooseWake,
+  claimGift,
+  molt,
+  promoteMind,
+  queueRoom,
+  sendRaid,
+  setTech,
+  startSurge,
+  tapSlag,
+  toggleSeat,
+  tryPrint,
+  unmake,
+  upMark,
+  watchRaid,
+  expandBerth,
+  healMind,
+  cookSalvage,
+} from "./sim";
+import { exportSave, importSave, loadSave, readSlot, requestPersist, wipeSave, writeSave, writeSlot } from "./save";
+import type { GameState } from "./types";
+
+type Store = GameState & {
+  hydrate: () => void;
+  tick: (now: number) => void;
+  start: () => void;
+  setTab: (tab: Tab) => void;
+  setPrintCaste: (c: Caste) => void;
+  toggleAuto: () => void;
+  print: () => void;
+  queue: (id: RoomId) => void;
+  pickWake: (i: number) => void;
+  selectMind: (id: string) => void;
+  setJob: (id: string, job: Job) => void;
+  seat: (id: string) => void;
+  melt: (id: string) => void;
+  launchRaid: (id: RaidId) => void;
+  surge: () => void;
+  doMolt: () => void;
+  research: (id: TechId) => void;
+  dismissBrief: () => void;
+  saveNow: () => void;
+  download: () => void;
+  importHive: (raw: string) => boolean;
+  claimIdle: () => void;
+  slag: () => void;
+  resetHive: () => void;
+  toggleScripts: () => void;
+  toggleAutoBuild: () => void;
+  toggleAutoRaid: () => void;
+  toggleAutoRite: () => void;
+  watchWell: (on: boolean) => void;
+  boostWell: () => void;
+  markHull: (c: Caste) => void;
+  stashSlot: (i: number) => void;
+  loadSlot: (i: number) => boolean;
+  renameHive: (name: string) => void;
+  expandPop: () => void;
+  heal: (id: string) => void;
+  promote: (id: string) => void;
+  cook: (id: SalvageId) => void;
+};
+
+let lastWrite = 0;
+
+function pickGame(s: Store): GameState {
+  const game = { ...(s as unknown as Record<string, unknown>) };
+  for (const key of Object.keys(game)) {
+    if (typeof game[key] === "function") delete game[key];
+  }
+  return game as unknown as GameState;
+}
+
+export const useNidus = create<Store>((set, get) => ({
+  ...defaultState(),
+  hydrate: () => {
+    requestPersist();
+    const loaded = loadSave();
+    const ticked = applyTick(loaded, Date.now());
+    set(ticked);
+  },
+  tick: (now) => {
+    const next = applyTick(pickGame(get()), now);
+    set(next);
+    if (now - lastWrite > 4000) {
+      lastWrite = now;
+      writeSave(next);
+    }
+  },
+  start: () => {
+    set({ started: true, lastTick: Date.now() });
+    lastWrite = Date.now();
+    writeSave({ ...pickGame(get()), started: true, lastTick: Date.now() });
+  },
+  setTab: (tab) => set({ tab }),
+  setPrintCaste: (printCaste) => set({ printCaste }),
+  toggleAuto: () => {
+    set({ autoPrint: !get().autoPrint });
+    writeSave(pickGame(get()));
+  },
+  print: () => {
+    set(tryPrint(get()));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  queue: (id) => {
+    set(queueRoom(get(), id));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  pickWake: (i) => {
+    set(chooseWake(get(), i));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  selectMind: (selectedMind) => set({ selectedMind }),
+  setJob: (id, job) => {
+    set(assignJob(get(), id, job));
+    writeSave(pickGame(get()));
+  },
+  seat: (id) => {
+    set(toggleSeat(get(), id));
+    writeSave(pickGame(get()));
+  },
+  melt: (id) => {
+    set(unmake(get(), id));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  launchRaid: (id) => {
+    set(sendRaid(get(), id, Date.now()));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  surge: () => {
+    set(startSurge(get(), Date.now()));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  doMolt: () => {
+    set(molt(get()));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  research: (id) => {
+    set(setTech(get(), id));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  dismissBrief: () => set({ showBrief: false }),
+  saveNow: () => {
+    const g = { ...pickGame(get()), lastSaveAt: Date.now() };
+    set({ lastSaveAt: g.lastSaveAt });
+    writeSave(g);
+    lastWrite = Date.now();
+  },
+  download: () => exportSave(pickGame(get())),
+  importHive: (raw) => {
+    const loaded = importSave(raw);
+    if (!loaded) return false;
+    set({ ...loaded, started: true });
+    writeSave({ ...loaded, started: true, lastSaveAt: Date.now() });
+    return true;
+  },
+  claimIdle: () => {
+    set(claimGift(get()));
+    writeSave(pickGame(get()));
+  },
+  slag: () => {
+    set(tapSlag(get(), Date.now()));
+    writeSave(pickGame(get()));
+  },
+  resetHive: () => {
+    wipeSave();
+    set({ ...defaultState(), started: true });
+  },
+  toggleScripts: () => {
+    const on = !get().scripts;
+    set({ scripts: on, autoPrint: on || get().autoPrint, autoBuild: on, autoRaid: on, autoRite: on });
+    writeSave(pickGame(get()));
+  },
+  toggleAutoBuild: () => {
+    set({ autoBuild: !get().autoBuild });
+    writeSave(pickGame(get()));
+  },
+  toggleAutoRaid: () => {
+    set({ autoRaid: !get().autoRaid });
+    writeSave(pickGame(get()));
+  },
+  toggleAutoRite: () => {
+    set({ autoRite: !get().autoRite });
+    writeSave(pickGame(get()));
+  },
+  watchWell: (on) => {
+    set(watchRaid(get(), on));
+    writeSave(pickGame(get()));
+  },
+  boostWell: () => {
+    set(boostRaid(get(), Date.now()));
+    writeSave(pickGame(get()));
+  },
+  markHull: (c) => {
+    set(upMark(get(), c));
+    writeSave(pickGame(get()));
+  },
+  stashSlot: (i) => {
+    writeSlot(i, pickGame(get()));
+  },
+  loadSlot: (i) => {
+    const loaded = readSlot(i);
+    if (!loaded) return false;
+    const ticked = applyTick(loaded, Date.now());
+    set({ ...ticked, started: true });
+    writeSave({ ...ticked, started: true, lastSaveAt: Date.now() });
+    return true;
+  },
+  renameHive: (hiveName) => {
+    set({ hiveName: hiveName.slice(0, 16) || "NAVE-1" });
+    writeSave(pickGame(get()));
+  },
+  expandPop: () => {
+    set(expandBerth(get()));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  heal: (id) => {
+    set(healMind(get(), id));
+    writeSave(pickGame(get()));
+  },
+  promote: (id) => {
+    set(promoteMind(get(), id));
+    writeSave(pickGame(get()));
+  },
+  cook: (id) => {
+    set(cookSalvage(get(), id));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+}));

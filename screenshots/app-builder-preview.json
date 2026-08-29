@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "NIDUS",
+      "hasCanvas": false,
+      "bodyTextLen": 68,
+      "bodyTextHash": "1181a24c626212154efb8f5c39346405e54bac6fb956c9972db5525f8de80b27",
+      "bodyTextPrefix": "? HIVE MIND NIDUS LIGHTBRINGER. NIGHTQUEEN. UNYIELDING. BINDING ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "NIDUS",
+      "hasCanvas": false,
+      "bodyTextLen": 68,
+      "bodyTextHash": "1181a24c626212154efb8f5c39346405e54bac6fb956c9972db5525f8de80b27",
+      "bodyTextPrefix": "? HIVE MIND NIDUS LIGHTBRINGER. NIGHTQUEEN. UNYIELDING. BINDING ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}
