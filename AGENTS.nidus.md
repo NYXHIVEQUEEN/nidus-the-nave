@@ -104,13 +104,16 @@ typed “save”. A green overhaul that never left the sandbox is a lost build.
 - OrbitControls: drag to rotate, SPIN/HOLD, speed in LOCAL. Hull itself
   does not yaw.
 - Save/EXPORT/IMPORT in RITE → SAVE. Confirm before burn.
-- Boot bar preloads portraits + hull textures, then enables WAKE.
-- Playtests: WAKE → PRINT → SURGE → RAID → RITE tabs, screenshot hull,
+- Boot bar preloads portraits + hull textures, then enables WAKE. A live hive
+  **RETURN**s — never dump a started save to a new-session title.
+- Hull tap looks the camera at that annex (`lookAtRoom`). Gift looks at prow.
+- Canvas `frameloop` pauses while the tab is hidden.
+- Playtests: WAKE/RETURN → PRINT → SURGE → RAID → RITE tabs, screenshot hull,
   assert no `pageerror`. Keep the save.
 - Green pass → GitHub snapshot the same turn. Do not leave a build only in
   the sandbox.
 - Persist unit tests in `src/lib/nidus/persist.test.ts` prove migrate does
-  not wipe ore/rooms/minds. Run them after any `save.ts` / `progress.ts` edit.
+  not wipe ore/rooms/minds/`started`. Run them after any `save.ts` / `progress.ts` edit.
 
 ## Graphics contract (cathedral pass)
 

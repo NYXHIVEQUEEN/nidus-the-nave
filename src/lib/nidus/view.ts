@@ -16,6 +16,8 @@ export type ViewPrefs = {
   camPull: boolean;
   autoHide: boolean;
   watchNave: boolean;
+  lookId: string;
+  lookUntil: number;
   seenHelp: Partial<Record<HelpId, boolean>>;
 };
 
@@ -48,6 +50,8 @@ let prefs: ViewPrefs = {
   camPull: false,
   autoHide: true,
   watchNave: false,
+  lookId: "",
+  lookUntil: 0,
   seenHelp: {},
 };
 
@@ -77,6 +81,8 @@ function read() {
       camPull: Boolean(parsed.camPull),
       autoHide: parsed.autoHide !== false,
       watchNave: Boolean(parsed.watchNave),
+      lookId: typeof parsed.lookId === "string" ? parsed.lookId : "",
+      lookUntil: typeof parsed.lookUntil === "number" ? parsed.lookUntil : 0,
       seenHelp: parsed.seenHelp && typeof parsed.seenHelp === "object" ? parsed.seenHelp : {},
     };
   } catch {
@@ -123,6 +129,10 @@ export function toggleSpinPaused() {
 
 export function bumpCam() {
   patchPrefs({ camGen: prefs.camGen + 1 });
+}
+
+export function lookAtRoom(id: string) {
+  patchPrefs({ lookId: id === "foundry" ? "prow" : id, lookUntil: Date.now() + 3400, watchNave: false });
 }
 
 export function applyCamPreset(id: CamPresetId) {

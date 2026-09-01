@@ -1,32 +1,33 @@
-# NIDUS snapshot — 2026-08-28 grown annex watch pass
+# NIDUS snapshot — 2026-09-01 watchable 10
 
-GitHub: `3752494` on `NYXHIVEQUEEN/nidus` `main`.
-Pre-pass SAVE stamp: `f51957b`.
+GitHub: pending SHA on `NYXHIVEQUEEN/nidus` `main`.
+Pre-pass SAVE stamp: `c0dd518` (SAVE.md) / local `4d1cec6`.
 **No hive wipe.** `sim.ts` / `save.ts` / `store.ts` / `content.ts` / `progress.ts` / `types.ts` untouched.
 `migrate()` still merges rooms/techs/casteXp/hiveRank.
 
 ## Ten improvements
 
-1. Annexes dock on socket radials (grown out of the nave, not world-axis bricks).
-2. Purpose silhouettes: crown / hopper / spindle / blister / maw / lance / dome / hearth / lantern / arcade / bell / coffer / ossuary / bowl / needle / apse. No box/octa/tetra room bodies.
-3. Instanced iron tendons hull → annex so modules do not float.
-4. Instanced gilt sap beads along those tendons (hive looks fed).
-5. Ghost next-unlock is a gilt silhouette of that annex, not a wire octa.
-6. HIDE watch orbit: slower auto-rotate, heavier damping, furnace/motes stay lit.
-7. Molt patina: gilt waist ring + nave emissive scales with molt layer.
-8. CLAIM bloom: pending gift stokes the furnace; overlay names the three held stats.
-9. HULL chips keep room `bonus`; **NEXT GROWS · room · purpose** under the row.
-10. Far LOD + `document.hidden` skip tendon/sap/drone instance work. `__nidusPerf` still `{ calls, triangles, frameMs }`.
+1. **RETURN** — a live hive never dumps to WAKE. Title says RETURN; boot auto-seats; `start()` writes `started` so the next load remembers.
+2. **Look-at camera** — hull tap lerps Orbit target to that annex for 3.4s. Gift looks at the prow furnace. Drag cancels. Foundry maps to prow.
+3. **Hull strip with purpose** — built + open + one locked tease + `+N NESTS`. Purpose `bonus` on every chip. `NEXT GROWS · room · purpose` under the row.
+4. **Come-back CLAIM** — idle gift overlay names the cut in one line. CLAIM chip in the resource bar. Furnace still blooms.
+5. **First-pointer audio unlock** — auto-seat still sings on iOS; no silent RETURN.
+6. **Canvas pause** — `frameloop="never"` while the tab is hidden. Battery + heat stay down so watching stays cheap.
+7. **Surge trauma** — presentation-only camera kick (trauma²) on SURGE, lighter on PRINT. Sim unchanged.
+8. **Annex LOD group** — docks live in `annexRef` so far LOD actually hides them. Unused `struts` ref dropped (tendons already bind hull → annex).
+9. **Sap crawl** — gilt beads travel hull → annex along tendons. Hive looks fed, not bolted on.
+10. **Rank collars** — each Dock gets its room rank. Ranking a room grows a gilt ring on that annex, so unlocks have a body.
 
 ## Playtest (no `localStorage.clear()`, no NEW HIVE)
 
-- WAKE → seated existing hive (ore 2.3K, 17 rooms, `.bak` present)
-- HULL: chips show purpose; `NEXT GROWS · NERVE · +thrones +pop`
-- FORGE PRINT dart
-- HIDE watchNave true
-- `__nidusPerf.calls` ≈ 50 (target <100)
-- persist tests 3/3
+- Boot auto-seated existing hive (ore held, `.bak` present, canvas up)
+- HULL: FOUNDRY / SOLAR SPINE / ORE BAY tease / `+14 NESTS` / `NEXT GROWS · SOLAR SPINE · +charge /s`
+- Look-at: `lookId === "solar"` after tapping the spine
+- FORGE PRINT path + SURGE (SURGING gilt/venom)
+- Solar finished in-session → ORE BAY / BARRACKS / LAB opened (nested unlocks)
+- `__nidusPerf.calls` = 30 (target <100)
+- persist tests 4/4 including `started`
 - typecheck clean
-- production build green
+- production build green, smoke matches baseline, no pageerrors
 
 Player keys stay in the browser. No wipe. Nested unlocks stay gated.

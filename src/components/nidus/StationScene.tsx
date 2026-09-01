@@ -1,4 +1,4 @@
-import { useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Stars, useTexture } from "@react-three/drei";
 import type { Group, InstancedMesh, PointLight, MeshStandardMaterial, MeshBasicMaterial, Texture, SpotLight } from "three";
@@ -19,12 +19,13 @@ import {
 } from "three";
 import { useNidus } from "@/lib/nidus/store";
 import { ROOMS } from "@/lib/nidus/content";
-import { CAM_DEFAULT, CAM_MAX, CAM_MIN, camPosition, getPrefs, subscribeSpin } from "@/lib/nidus/view";
+import { CAM_DEFAULT, CAM_MAX, CAM_MIN, camPosition, getPrefs, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
 
 const dummy = new Obj3D();
 const Y_UP = new Vector3(0, 1, 0);
 const _dir = new Vector3();
 const _quat = new Quaternion();
+const _look = new Vector3();
 const BLOOD = "#7a1f2b";
 const GILT = "#c4a574";
 const VENOM = "#1faf5b";
@@ -47,6 +48,7 @@ const SOCKETS: Record<string, [number, number, number]> = {
   apse: [0, 1.12, 0.36],
   spire: [0, 0.58, -2.02],
   crucible: [0.4, -0.26, 0.54],
+  prow: [0, 0.04, 2.15],
 };
 
 function useSpin() {
@@ -220,7 +222,8 @@ const KIND: Record<string, AnnexKind> = {
   apse: "apse",
 };
 
-function Dock({ id, children }: { id: string; children: ReactNode }) {
+function Dock({ id, rank = 0, children }: { id: string; rank?: number; children: ReactNode }) {
+  const r = Math.max(0, Math.min(5, rank));
   return (
     <Grow>
       <group position={SOCKETS[id]} quaternion={RADIAL[id]}>
@@ -228,6 +231,12 @@ function Dock({ id, children }: { id: string; children: ReactNode }) {
           <torusGeometry args={[0.115, 0.016, 5, 12]} />
           <meshStandardMaterial color="#3a342e" metalness={0.88} roughness={0.28} />
         </mesh>
+        {r > 0 && (
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.06 + r * 0.018, 0]}>
+            <torusGeometry args={[0.1 + r * 0.016, 0.01, 5, 12]} />
+            <meshStandardMaterial color={GILT} metalness={0.86} roughness={0.26} emissive={GILT} emissiveIntensity={0.2 + r * 0.12} toneMapped={false} />
+          </mesh>
+        )}
         {children}
       </group>
     </Grow>
@@ -303,6 +312,32 @@ function Hull() {
   });
   const watchNave = useSpin().watchNave;
   const giftOpen = useNidus((s) => Boolean(s.pendingGift));
+  const seatedN = useNidus((s) => s.minds.reduce((n, m) => n + (m.alive && m.seated ? 1 : 0), 0));
+  const printCaste = useNidus((s) => s.printCaste);
+  const queueProg = useNidus((s) => {
+    const id = s.queuedRoom;
+    if (!id) return 0;
+    const spec = ROOMS.find((r) => r.id === id);
+    const st = s.rooms[id];
+    if (!spec || !st) return 0;
+    return Math.min(1, st.progress / Math.max(1, spec.work));
+  });
+  const solarRank = useNidus((s) => s.rooms.solar.rank ?? 0);
+  const orebayRank = useNidus((s) => s.rooms.orebay.rank ?? 0);
+  const siloRank = useNidus((s) => s.rooms.silo.rank ?? 0);
+  const barracksRank = useNidus((s) => s.rooms.barracks.rank ?? 0);
+  const hangarRank = useNidus((s) => s.rooms.hangar.rank ?? 0);
+  const gundeckRank = useNidus((s) => s.rooms.gundeck.rank ?? 0);
+  const labRank = useNidus((s) => s.rooms.lab.rank ?? 0);
+  const nerveRank = useNidus((s) => s.rooms.nerve.rank ?? 0);
+  const reliquaryRank = useNidus((s) => s.rooms.reliquary.rank ?? 0);
+  const cloisterRank = useNidus((s) => s.rooms.cloister?.rank ?? 0);
+  const choirRank = useNidus((s) => s.rooms.choir?.rank ?? 0);
+  const vaultRank = useNidus((s) => s.rooms.vault?.rank ?? 0);
+  const cryptRank = useNidus((s) => s.rooms.crypt?.rank ?? 0);
+  const apseRank = useNidus((s) => s.rooms.apse?.rank ?? 0);
+  const spireRank = useNidus((s) => s.rooms.spire?.rank ?? 0);
+  const crucibleRank = useNidus((s) => s.rooms.crucible?.rank ?? 0);
 
   const { plate, glass, grate, filigree, blood, hazard, arch, sleep, rift, titans, rivet, giltMap, rose, voidMap, ember, bone } = useHullTextures();
   const drones = useRef<InstancedMesh>(null);
@@ -314,6 +349,13 @@ function Hull() {
   const relicRef = useRef<Group>(null);
   const labRef = useRef<Group>(null);
   const gunRef = useRef<Group>(null);
+  const siloRef = useRef<Group>(null);
+  const choirRef = useRef<Group>(null);
+  const hopperChip = useRef<Group>(null);
+  const annexRef = useRef<Group>(null);
+  const windows = useRef<InstancedMesh>(null);
+  const queueFill = useRef<Group>(null);
+  const printDartMat = useRef<MeshBasicMaterial>(null);
   const ringRef = useRef<Group>(null);
   const scaffoldRef = useRef<Group>(null);
   const rayRef = useRef<MeshStandardMaterial>(null);
@@ -410,6 +452,7 @@ function Hull() {
     const d = Math.min(delta, 0.1);
     const t = state.clock.elapsedTime;
     const hidden = typeof document !== "undefined" && document.hidden;
+    if (hidden) return;
     const dist = state.camera.position.length();
     const far = dist > 16 + roomsLit * 0.2;
     const mid = dist > 11;
@@ -423,7 +466,13 @@ function Hull() {
     if (stationRef.current) {
       stationRef.current.visible = !watching;
       const grow = 1.38 + roomsLit * 0.035 + molt * 0.07;
-      stationRef.current.scale.setScalar(grow);
+      const breath = surging ? 1 + Math.sin(t * 3.4) * 0.018 : 1;
+      stationRef.current.scale.setScalar(grow * breath);
+    }
+    if (annexRef.current) {
+      const p = getPrefs();
+      const looking = Boolean(p.lookId) && Date.now() < p.lookUntil;
+      annexRef.current.visible = (!far || watchNave || looking) && !watching;
     }
     if (ringRef.current) {
       ringRef.current.visible = !far;
@@ -447,8 +496,11 @@ function Hull() {
       rayRef.current.opacity = mid ? 0 : 0.07 + glow * 0.08 + Math.sin(t * 1.4) * 0.02;
     }
     if (solarRef.current) solarRef.current.rotation.y += d * 0.35;
+    if (siloRef.current) siloRef.current.rotation.y += d * 0.55;
+    if (choirRef.current) choirRef.current.rotation.x = Math.sin(t * 2.2) * 0.14;
+    if (hopperChip.current) hopperChip.current.position.y = 0.22 - ((t * 0.65) % 1) * 0.18;
     if (nerveRef.current) {
-      const s = 1 + Math.sin(t * 2.6) * 0.08 + sparkFill * 0.14;
+      const s = 1 + Math.sin(t * 2.6) * 0.08 + sparkFill * 0.14 + seatedN * 0.05;
       nerveRef.current.scale.setScalar(s);
     }
     if (relicRef.current) relicRef.current.rotation.y += d * 0.7;
@@ -467,6 +519,14 @@ function Hull() {
       printDart.current.position.set(0.18 + (1 - k) * 1.4, 0.04 + k * 0.12, 0.08);
       printDart.current.rotation.z = (1 - k) * 1.2;
       printDart.current.scale.setScalar(0.45 + k * 0.7);
+    }
+    if (printDartMat.current) {
+      printDartMat.current.color.set(printCaste === "lab" ? VENOM : printCaste === "striker" || printCaste === "fab" ? BLOOD : GILT);
+    }
+    if (queueFill.current) {
+      const on = Boolean(queued);
+      queueFill.current.visible = on;
+      queueFill.current.scale.set(1, 0.08 + queueProg * 0.92, 1);
     }
     if (hangarGlow.current) {
       hangarGlow.current.emissiveIntensity = raiding ? 0.9 + Math.sin(t * 6) * 0.35 : 0.12;
@@ -619,9 +679,9 @@ function Hull() {
         const n = tendonTargets.length;
         for (let i = 0; i < 12; i++) {
           const p = tendonTargets[i % n];
-          const u = (t * 0.28 + i * 0.09) % 1;
-          dummy.position.set(p[0] * (0.42 + u * 0.62), p[1] * (0.42 + u * 0.62), p[2] * (0.42 + u * 0.62));
-          dummy.scale.setScalar(0.55 + (1 - u) * 0.7 + sparkFill * 0.2);
+          const life = (t * (0.28 + (i % 4) * 0.05) + i * 0.17) % 1;
+          dummy.position.set(p[0] * (0.18 + life * 0.82), p[1] * (0.18 + life * 0.82), p[2] * (0.18 + life * 0.82));
+          dummy.scale.setScalar(0.4 + (1 - life) * 0.9 + sparkFill * 0.2);
           dummy.quaternion.identity();
           dummy.updateMatrix();
           sp.setMatrixAt(i, dummy.matrix);
@@ -810,8 +870,9 @@ function Hull() {
         )}
       </group>
 
+      <group ref={annexRef}>
       {solar && (
-        <Dock id="solar">
+        <Dock id="solar" rank={solarRank}>
           <mesh position={[0, 0.04, 0]}>
             <cylinderGeometry args={[0.07, 0.1, 0.12, 8]} />
             <meshStandardMaterial map={plate} color="#e8d4a8" metalness={0.55} roughness={0.36} emissive={gilt} emissiveIntensity={0.7} />
@@ -827,7 +888,7 @@ function Hull() {
         </Dock>
       )}
       {silo && (
-        <Dock id="silo">
+        <Dock id="silo" rank={siloRank}>
           <mesh position={[0, 0.18, 0]}>
             <cylinderGeometry args={[0.09, 0.13, 0.4, 8]} />
             <meshStandardMaterial map={plate} color={BONE} metalness={0.6} roughness={0.45} />
@@ -839,7 +900,7 @@ function Hull() {
         </Dock>
       )}
       {orebay && (
-        <Dock id="orebay">
+        <Dock id="orebay" rank={orebayRank}>
           <mesh geometry={hopperGeo}>
             <meshStandardMaterial map={grate} color={BONE} metalness={0.62} roughness={0.4} />
           </mesh>
@@ -850,7 +911,7 @@ function Hull() {
         </Dock>
       )}
       {barracks && (
-        <Dock id="barracks">
+        <Dock id="barracks" rank={barracksRank}>
           <mesh geometry={blisterGeo}>
             <meshStandardMaterial map={plate} color={BONE} metalness={0.55} roughness={0.46} />
           </mesh>
@@ -861,7 +922,7 @@ function Hull() {
         </Dock>
       )}
       {hangar && (
-        <Dock id="hangar">
+        <Dock id="hangar" rank={hangarRank}>
           <mesh position={[0, 0.1, 0]}>
             <cylinderGeometry args={[0.22, 0.28, 0.22, 8]} />
             <meshStandardMaterial map={grate} color={BONE} metalness={0.58} roughness={0.42} />
@@ -873,7 +934,7 @@ function Hull() {
         </Dock>
       )}
       {gundeck && (
-        <Dock id="gundeck">
+        <Dock id="gundeck" rank={gundeckRank}>
           <group ref={gunRef}>
             <mesh position={[0, 0.08, 0]}>
               <cylinderGeometry args={[0.1, 0.12, 0.18, 8]} />
@@ -894,7 +955,7 @@ function Hull() {
         </Dock>
       )}
       {lab && (
-        <Dock id="lab">
+        <Dock id="lab" rank={labRank}>
           <mesh position={[0, 0.08, 0]}>
             <cylinderGeometry args={[0.1, 0.12, 0.14, 8]} />
             <meshStandardMaterial map={plate} color="#b8d4c0" metalness={0.5} roughness={0.4} emissive={venom} emissiveIntensity={0.35} />
@@ -908,7 +969,7 @@ function Hull() {
         </Dock>
       )}
       {nerve && (
-        <Dock id="nerve">
+        <Dock id="nerve" rank={nerveRank}>
           <mesh position={[0, 0.05, 0]}>
             <cylinderGeometry args={[0.09, 0.11, 0.1, 8]} />
             <meshStandardMaterial map={plate} color="#e8d4a8" metalness={0.55} roughness={0.4} />
@@ -930,7 +991,7 @@ function Hull() {
         </group>
       )}
       {reliquary && (
-        <Dock id="reliquary">
+        <Dock id="reliquary" rank={reliquaryRank}>
           <group ref={relicRef}>
             <mesh position={[0, 0.06, 0]}>
               <cylinderGeometry args={[0.07, 0.09, 0.1, 8]} />
@@ -944,7 +1005,7 @@ function Hull() {
         </Dock>
       )}
       {cloister && (
-        <Dock id="cloister">
+        <Dock id="cloister" rank={cloisterRank}>
           <mesh position={[0, 0.12, 0]}>
             <cylinderGeometry args={[0.11, 0.13, 0.24, 8]} />
             <meshStandardMaterial map={rose} color={VENOM} metalness={0.45} roughness={0.38} emissive={venom} emissiveIntensity={0.85} toneMapped={false} />
@@ -952,7 +1013,7 @@ function Hull() {
         </Dock>
       )}
       {choir && (
-        <Dock id="choir">
+        <Dock id="choir" rank={choirRank}>
           <mesh position={[0, 0.16, 0]}>
             <cylinderGeometry args={[0.05, 0.13, 0.32, 7]} />
             <meshStandardMaterial map={giltMap} color={GILT} metalness={0.62} roughness={0.32} emissive={gilt} emissiveIntensity={0.9} />
@@ -960,7 +1021,7 @@ function Hull() {
         </Dock>
       )}
       {vault && (
-        <Dock id="vault">
+        <Dock id="vault" rank={vaultRank}>
           <mesh position={[0, 0.1, 0]}>
             <cylinderGeometry args={[0.14, 0.16, 0.2, 8]} />
             <meshStandardMaterial map={voidMap} color="#cfc3b2" metalness={0.72} roughness={0.32} />
@@ -968,7 +1029,7 @@ function Hull() {
         </Dock>
       )}
       {crypt && (
-        <Dock id="crypt">
+        <Dock id="crypt" rank={cryptRank}>
           <mesh position={[0, 0.14, 0]}>
             <capsuleGeometry args={[0.1, 0.16, 4, 8]} />
             <meshStandardMaterial map={ember} color={BLOOD} metalness={0.5} roughness={0.4} emissive={bloodC} emissiveIntensity={0.55} />
@@ -976,14 +1037,14 @@ function Hull() {
         </Dock>
       )}
       {crucible && (
-        <Dock id="crucible">
+        <Dock id="crucible" rank={crucibleRank}>
           <mesh geometry={bowlGeo}>
             <meshStandardMaterial map={ember} color="#c45a4a" metalness={0.55} roughness={0.36} emissive={bloodC} emissiveIntensity={1.1} toneMapped={false} />
           </mesh>
         </Dock>
       )}
       {spire && (
-        <Dock id="spire">
+        <Dock id="spire" rank={spireRank}>
           <mesh position={[0, 0.22, 0]}>
             <coneGeometry args={[0.08, 0.48, 6]} />
             <meshStandardMaterial map={giltMap} color={GILT} metalness={0.7} roughness={0.28} emissive={gilt} emissiveIntensity={0.9} />
@@ -991,7 +1052,7 @@ function Hull() {
         </Dock>
       )}
       {apse && (
-        <Dock id="apse">
+        <Dock id="apse" rank={apseRank}>
           <mesh geometry={apseGeo}>
             <meshStandardMaterial map={rose} color={BLOOD} metalness={0.48} roughness={0.36} emissive={bloodC} emissiveIntensity={1.2} toneMapped={false} />
           </mesh>
@@ -1016,6 +1077,7 @@ function Hull() {
           </mesh>
         </group>
       )}
+      </group>
 
       <group ref={printDart} visible={false}>
         <mesh rotation={[0, 0, -Math.PI / 2]}>
@@ -1179,6 +1241,10 @@ function Rig() {
   const prefs = useSpin();
   const lastCam = useRef(-1);
   const lastDist = useRef(-1);
+  const ctl = useRef<{ target: Vector3; autoRotate: boolean } | null>(null);
+  const trauma = useRef(0);
+  const lastSurge = useRef(0);
+  const lastPrinted = useRef(-1);
   const roomsLit = useNidus(
     (s) =>
       Number(s.rooms.solar.built) +
@@ -1192,10 +1258,13 @@ function Rig() {
       Number(s.rooms.reliquary.built),
   );
   const molt = useNidus((s) => s.moltLayer);
+  const surgeUntil = useNidus((s) => s.surgeUntil);
+  const printed = useNidus((s) => s.printed);
   const extent = 1 + roomsLit * 0.55 + molt * 0.85;
   const touched = useRef(0);
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.1);
+    const t = state.clock.elapsedTime;
     const cam = state.camera;
     if ("fov" in cam && Math.abs((cam.fov as number) - prefs.camFov) > 0.04) {
       cam.fov = prefs.camFov;
@@ -1210,18 +1279,45 @@ function Rig() {
       cam.position.set(x, y, z);
       touched.current = performance.now();
     }
+    const p = getPrefs();
+    const looking = Boolean(p.lookId) && Date.now() < p.lookUntil;
+    const sock = looking ? SOCKETS[p.lookId] : undefined;
+    if (sock) _look.set(sock[0], sock[1] * 0.85, sock[2]);
+    else _look.set(0, 0.05, 0);
+    if (surgeUntil > Date.now() && surgeUntil !== lastSurge.current) {
+      lastSurge.current = surgeUntil;
+      trauma.current = Math.min(1, trauma.current + 0.62);
+    }
+    if (printed !== lastPrinted.current) {
+      if (lastPrinted.current >= 0 && printed > lastPrinted.current) {
+        trauma.current = Math.min(1, trauma.current + 0.22);
+      }
+      lastPrinted.current = printed;
+    }
+    if (ctl.current) {
+      const k = 1 - Math.exp(-dt * (looking ? 3.4 : 1.8));
+      ctl.current.target.lerp(_look, k);
+      ctl.current.autoRotate = !p.spinPaused && !looking;
+    }
+    if (trauma.current > 0.01) {
+      const shake = trauma.current * trauma.current;
+      cam.position.x += Math.sin(t * 53.1) * 0.11 * shake;
+      cam.position.y += Math.sin(t * 41.7) * 0.07 * shake;
+      trauma.current = Math.max(0, trauma.current - dt * 1.45);
+    }
     if (prefs.camPull && performance.now() - touched.current > 1800) {
-      const p = cam.position;
-      const dist = p.length();
+      const pos = cam.position;
+      const dist = pos.length();
       const want = prefs.camDist;
       if (Math.abs(dist - want) > 0.08) {
         const k = 1 - Math.exp(-dt * 1.1);
-        p.multiplyScalar(1 + (want / Math.max(0.2, dist) - 1) * k);
+        pos.multiplyScalar(1 + (want / Math.max(0.2, dist) - 1) * k);
       }
     }
   });
   return (
     <OrbitControls
+      ref={ctl as never}
       enablePan={false}
       enableRotate
       enableZoom
@@ -1238,6 +1334,7 @@ function Rig() {
       touches={{ ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN }}
       onStart={() => {
         touched.current = performance.now();
+        if (getPrefs().lookId) patchPrefs({ lookId: "", lookUntil: 0 });
       }}
     />
   );
@@ -1246,8 +1343,16 @@ function Rig() {
 export function StationScene() {
   const mobile = typeof window !== "undefined" && window.innerWidth < 500;
   const start = camPosition(CAM_DEFAULT);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    const on = () => setPaused(typeof document !== "undefined" && document.hidden);
+    on();
+    document.addEventListener("visibilitychange", on);
+    return () => document.removeEventListener("visibilitychange", on);
+  }, []);
   return (
     <Canvas
+      frameloop={paused ? "never" : "always"}
       camera={{ position: start, fov: 46, near: 0.8, far: 260 }}
       dpr={mobile ? [1, 1.3] : [1, 1.65]}
       gl={{ antialias: !mobile, alpha: false, powerPreference: "high-performance" }}

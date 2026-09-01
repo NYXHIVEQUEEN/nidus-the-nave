@@ -52,7 +52,7 @@ import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALV
 import { StationMount } from "./StationMount";
 import { SettingsPanel } from "./SettingsPanel";
 import { GoalDock, GuideSheet, LeftRail, Whisper, muteToggle, useIdleChrome, useSyncPrefs } from "./HiveChrome";
-import { getPrefs, getSpinPaused, helpSeen, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
+import { getPrefs, getSpinPaused, helpSeen, lookAtRoom, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
 import type { Caste, Rarity } from "@/lib/nidus/types";
 
 const rarityColor: Record<Rarity, string> = {
@@ -66,6 +66,19 @@ function pulse(on: boolean) {
   return on ? "nidus-pulse" : "";
 }
 
+function peekHive(): { started: boolean; name: string } {
+  if (typeof window === "undefined") return { started: false, name: "" };
+  try {
+    const raw = localStorage.getItem("nidus.save.v1");
+    if (!raw) return { started: false, name: "" };
+    const p = JSON.parse(raw) as { started?: boolean; hiveName?: string; ore?: number; printed?: number };
+    const started = Boolean(p.started) || (typeof p.ore === "number" && p.ore > 0) || Boolean(p.printed);
+    return { started, name: p.hiveName || "NAVE-1" };
+  } catch {
+    return { started: false, name: "" };
+  }
+}
+
 export function NidusApp() {
   const hydrate = useNidus((s) => s.hydrate);
   const tick = useNidus((s) => s.tick);
@@ -76,7 +89,8 @@ export function NidusApp() {
   const showBrief = useNidus((s) => s.showBrief);
   const gift = useNidus((s) => s.pendingGift);
   const [boot, setBoot] = useState<BootState>(BOOT_IDLE);
-  const [session, setSession] = useState(false);
+  const peek = peekHive();
+  const [session, setSession] = useState(peek.started);
 
   useEffect(() => {
     hydrate();
@@ -114,10 +128,19 @@ export function NidusApp() {
     };
   }, [hydrate, tick, saveNow]);
 
+  useEffect(() => {
+    if (boot.ready && peek.started) {
+      if (!started) start();
+      setSession(true);
+    }
+  }, [boot.ready, peek.started, started, start]);
+
   if (!boot.ready || !session) {
     return (
       <TitleScreen
         boot={boot}
+        returning={peek.started}
+        hiveName={peek.name}
         onWake={() => {
           unlockAudio();
           chime("wake");
@@ -133,7 +156,17 @@ export function NidusApp() {
   );
 }
 
-function TitleScreen({ boot, onWake }: { boot: BootState; onWake: () => void }) {
+function TitleScreen({
+  boot,
+  onWake,
+  returning,
+  hiveName,
+}: {
+  boot: BootState;
+  onWake: () => void;
+  returning: boolean;
+  hiveName: string;
+}) {
   const canWake = boot.ready;
   const [ask, setAsk] = useState(false);
   return (
@@ -155,12 +188,14 @@ function TitleScreen({ boot, onWake }: { boot: BootState; onWake: () => void }) 
         </div>
       )}
       <div className="relative z-10 flex w-full flex-col items-center gap-2 px-6 pb-10 pt-8">
-        <p className="font-display text-[0.65rem] tracking-[0.55em] text-gilt">HIVE MIND</p>
+        <p className="font-display text-[0.65rem] tracking-[0.55em] text-gilt">{returning ? hiveName : "HIVE MIND"}</p>
         <h1 className="font-display text-5xl font-black tracking-[0.28em] text-bone">NIDUS</h1>
-        <p className="max-w-[16rem] text-center text-sm tracking-[0.18em] text-muted">LIGHTBRINGER. NIGHTQUEEN. UNYIELDING.</p>
+        <p className="max-w-[16rem] text-center text-sm tracking-[0.18em] text-muted">
+          {returning ? "THE NAVE HELD. YOU NEVER LEFT." : "LIGHTBRINGER. NIGHTQUEEN. UNYIELDING."}
+        </p>
         <div className="mt-3 w-full max-w-xs">
           <div className="mb-1 flex items-center justify-between font-display text-[0.6rem] tracking-[0.28em] text-gilt">
-            <span>{boot.label}</span>
+            <span>{returning ? "RETURNING" : boot.label}</span>
             <span className="tabular-nums">{boot.pct}%</span>
           </div>
           <div className="h-1.5 w-full overflow-hidden border border-gilt/40 bg-iron" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={boot.pct} aria-label="Loading">
@@ -168,7 +203,7 @@ function TitleScreen({ boot, onWake }: { boot: BootState; onWake: () => void }) 
           </div>
         </div>
         <button type="button" disabled={!canWake} onClick={onWake} className={cn("mt-3 min-h-11 min-w-40 border border-gilt/50 bg-void/60 px-10 py-2 font-display text-sm tracking-[0.35em] text-gilt disabled:border-iron disabled:text-muted", canWake && "nidus-pulse")}>
-          {canWake ? "WAKE" : "…"}
+          {canWake ? (returning ? "RETURN" : "WAKE") : "…"}
         </button>
       </div>
     </div>
@@ -199,6 +234,12 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
     whispered.add(tab);
     if (!helpSeen(tab)) setWhisper(firstWhisper(tab));
   }, [tab, prefs.hints, whispered]);
+
+  useEffect(() => {
+    const on = () => unlockAudio();
+    window.addEventListener("pointerdown", on, { once: true });
+    return () => window.removeEventListener("pointerdown", on);
+  }, []);
 
   const openView = () => {
     bump();
@@ -278,6 +319,8 @@ function ResourceBar({ compact }: { compact: boolean }) {
   const hiveRank = useNidus((s) => s.hiveRank);
   const waking = useNidus((s) => s.waking);
   const lastSaveAt = useNidus((s) => s.lastSaveAt);
+  const gift = useNidus((s) => s.pendingGift);
+  const claim = useNidus((s) => s.claimIdle);
   const s = useNidus();
   const r = rates(s, Date.now());
   const fresh = Date.now() - lastSaveAt < 6000;
@@ -305,6 +348,20 @@ function ResourceBar({ compact }: { compact: boolean }) {
           <button type="button" className="text-left" onClick={() => setOpen(open === "ECHO" ? null : "ECHO")}>
             <p className="text-[0.55rem] tracking-[0.18em] text-muted">ECHO</p>
             <p className="font-display text-xs tabular-nums text-gilt">{echo}</p>
+          </button>
+        )}
+        {gift && (
+          <button
+            type="button"
+            className="nidus-pulse min-w-[3.2rem] text-left"
+            title="Idle cut waiting"
+            onClick={() => {
+              claim();
+              chime("wake");
+            }}
+          >
+            <p className="text-[0.55rem] tracking-[0.18em] text-gilt">CLAIM</p>
+            <p className="font-display text-[0.62rem] tabular-nums text-bone">{fmt(gift.ore)}</p>
           </button>
         )}
         <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", fresh ? "bg-venom" : "bg-iron")} title="autosave" />
@@ -389,6 +446,16 @@ function HullTab({ verb }: { verb: string }) {
   const s = useNidus();
   const full = packed(s);
   const nextRoom = ROOMS.find((r) => r.id !== "foundry" && !rooms[r.id].built && !roomLockWhy(s, r.id));
+  const [why, setWhy] = useState<string | null>(null);
+  const strip = ROOMS.filter((r) => {
+    if (r.id === "foundry") return true;
+    const st = rooms[r.id];
+    if (st?.built || queued === r.id) return true;
+    return !roomLockWhy(s, r.id);
+  });
+  const tease = ROOMS.find((r) => !strip.some((x) => x.id === r.id) && Boolean(roomLockWhy(s, r.id)));
+  const shown = tease ? [...strip, tease] : strip;
+  const nested = ROOMS.length - shown.length;
 
   return (
     <div className="pointer-events-none flex flex-col justify-end gap-1.5 p-2">
@@ -407,7 +474,7 @@ function HullTab({ verb }: { verb: string }) {
       )}
       <div className="pointer-events-auto overflow-x-auto">
         <div className="flex gap-1.5">
-          {ROOMS.map((r) => {
+          {shown.map((r) => {
             const st = rooms[r.id];
             const lock = roomLockWhy(s, r.id);
             const ranking = s.rankingRoom === r.id;
@@ -418,6 +485,8 @@ function HullTab({ verb }: { verb: string }) {
                 disabled={Boolean(lock) || ((st.rank ?? 0) >= RANK_MAX && st.built)}
                 title={lock || r.bonus}
                 onClick={() => {
+                  lookAtRoom(r.id);
+                  setWhy(`${r.label} · ${r.bonus}`);
                   queue(r.id);
                   chime("snap");
                 }}
@@ -437,16 +506,15 @@ function HullTab({ verb }: { verb: string }) {
                       ? lock
                       : `${Math.floor((st.progress / r.work) * 100)}%`}
                 </p>
-                {!st.built && !lock && (
-                  <p className="max-w-[6.4rem] truncate text-[0.5rem] tracking-[0.04em] text-gilt-dim">{r.bonus}</p>
-                )}
-                {st.built && (
-                  <p className="max-w-[6.4rem] truncate text-[0.5rem] tracking-[0.04em] text-gilt-dim">{r.bonus}</p>
-                )}
+                <p className="max-w-[6.4rem] truncate text-[0.5rem] tracking-[0.04em] text-gilt-dim">{r.bonus}</p>
               </button>
             );
           })}
+          {nested > 0 && (
+            <p className="self-center px-1 font-display text-[0.5rem] tracking-[0.14em] text-muted">+{nested} NESTS</p>
+          )}
         </div>
+        {why && <p className="px-1 pt-1 text-center text-[0.65rem] text-gilt">{why}</p>}
       </div>
       <div className="pointer-events-auto flex gap-1.5">
         <button
@@ -836,28 +904,19 @@ function WakeOverlay() {
 function GiftOverlay() {
   const gift = useNidus((s) => s.pendingGift);
   const claim = useNidus((s) => s.claimIdle);
+  useEffect(() => {
+    lookAtRoom("prow");
+  }, []);
   if (!gift) return null;
   return (
-    <div className="absolute inset-0 z-30 flex items-end justify-center bg-void/75 p-4" data-chrome>
-      <div className="w-full max-w-sm border border-gilt bg-nave p-3 nidus-pulse">
-        <p className="font-display text-[0.65rem] tracking-[0.28em] text-gilt">WHILE YOU SLEPT · {fmtTime(gift.seconds)}</p>
-        <p className="mt-1 text-[0.7rem] text-muted">The hive held this. Claim it and the furnace drinks.</p>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          <div className="border border-border bg-void/50 px-1.5 py-1">
-            <p className="text-[0.5rem] tracking-[0.16em] text-muted">ORE</p>
-            <p className="font-display text-lg tabular-nums text-bone">{fmt(gift.ore)}</p>
-          </div>
-          <div className="border border-border bg-void/50 px-1.5 py-1">
-            <p className="text-[0.5rem] tracking-[0.16em] text-muted">PARTS</p>
-            <p className="font-display text-lg tabular-nums text-gilt">{fmt(gift.parts)}</p>
-          </div>
-          <div className="border border-border bg-void/50 px-1.5 py-1">
-            <p className="text-[0.5rem] tracking-[0.16em] text-muted">SPARK</p>
-            <p className="font-display text-lg tabular-nums text-venom">+{gift.spark}</p>
-          </div>
-        </div>
+    <div className="absolute inset-0 z-30 flex items-end justify-center bg-void/55 p-4" data-chrome>
+      <div className="w-full max-w-sm border border-gilt bg-nave/95 p-3 nidus-pulse">
+        <p className="font-display text-[0.65rem] tracking-[0.28em] text-gilt">THE HIVE HELD · {fmtTime(gift.seconds)}</p>
+        <p className="mt-1 font-display text-lg tabular-nums text-bone">
+          {fmt(gift.ore)} ORE · {fmt(gift.parts)} PARTS · +{gift.spark} SPARK
+        </p>
         <button type="button" className="nidus-cut nidus-cut-on mt-3 min-h-11 w-full font-display tracking-[0.28em] text-bone" onClick={() => { claim(); chime("wake"); }}>
-          CLAIM THE CUT
+          CLAIM
         </button>
       </div>
     </div>

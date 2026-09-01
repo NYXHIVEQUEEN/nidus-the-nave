@@ -75,3 +75,19 @@ test("defaultState is a fresh husk not a shared wipe template", () => {
   a.ore = 99;
   assert.notEqual(b.ore, 99);
 });
+
+test("importSave keeps started so RETURN does not dump a live hive", () => {
+  const raw = JSON.stringify({
+    version: 1,
+    started: true,
+    ore: 412,
+    printed: 3,
+    hiveName: "NAVE-1",
+  });
+  const s = importSave(raw);
+  assert.ok(s);
+  assert.equal(s.started, true);
+  assert.equal(s.ore, 412);
+  assert.equal(s.printed, 3);
+  assert.equal(s.hiveName, "NAVE-1");
+});
