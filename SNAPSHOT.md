@@ -1,7 +1,7 @@
 # NIDUS snapshot — 2026-09-01 quality 50 + loop 10
 
-GitHub: `NYXHIVEQUEEN/nidus` `main` (SHA stamped after push).
-Pre-pass watchable 10: `887a030` / local `7631989`.
+GitHub: `NYXHIVEQUEEN/nidus` `main` @ `527d8ef`.
+Pre-pass watchable 10: `887a030` / remote `7064688`.
 **No hive wipe.** `migrate()` still merges rooms/techs/casteXp/hiveRank/started plus mercy/streak.
 
 Playtest (no `localStorage.clear()`, no NEW HIVE):
