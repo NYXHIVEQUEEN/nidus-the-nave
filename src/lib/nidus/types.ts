@@ -217,4 +217,7 @@ export type GameState = {
   lastSaveAt: number;
   slagAt: number;
   pendingGift: { ore: number; parts: number; spark: number; seconds: number } | null;
+  mercySurge: boolean;
+  returnStreak: number;
+  lastReturnAt: number;
 };

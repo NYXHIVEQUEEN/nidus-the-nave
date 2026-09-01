@@ -97,12 +97,27 @@ export function applyTick(s: GameState, now: number): GameState {
   next.hiveAge += dt;
   if (next.surgeUntil > 0 && now >= next.surgeUntil) next.surgeUntil = 0;
   if (away) {
+    const generous = next.hiveAge < 8 * 3600 ? 0.7 : 0.62;
+    let oreCut = Math.max(2, Math.floor(oreGain * generous));
+    let partsCut = Math.max(1, Math.floor(partsGain * generous));
+    let sparkCut = Math.max(2, Math.floor(r.sparkPerSec * dt * 0.68));
+    if (dt > 1800) {
+      if (now - (next.lastReturnAt || 0) < 86_400_000) next.returnStreak = (next.returnStreak || 0) + 1;
+      else next.returnStreak = 1;
+      next.lastReturnAt = now;
+      const streak = Math.min(5, Math.max(0, (next.returnStreak || 1) - 1));
+      const mul = 1 + streak * 0.08;
+      oreCut = Math.floor(oreCut * mul);
+      partsCut = Math.floor(partsCut * mul);
+      sparkCut = Math.floor(sparkCut * mul);
+    }
     next.pendingGift = {
-      ore: Math.max(2, Math.floor(oreGain * 0.55)),
-      parts: Math.max(1, Math.floor(partsGain * 0.55)),
-      spark: Math.max(2, Math.floor(r.sparkPerSec * dt * 0.62)),
+      ore: oreCut,
+      parts: partsCut,
+      spark: sparkCut,
       seconds: Math.floor(dt),
     };
+    next.mercySurge = true;
   }
 
   if (next.queuedRoom) {
@@ -123,7 +138,7 @@ export function applyTick(s: GameState, now: number): GameState {
             line: "Node snapped to the nave.",
             stamp: "RAISED",
           });
-          next.queuedRoom = ROOMS.find((x) => !next.rooms[x.id].built && x.id !== "foundry")?.id ?? null;
+          next.queuedRoom = nextBuild(next);
           credit(next, "build", spec.id);
           pushLog(next, `${spec.label} lit.`);
         }
@@ -376,7 +391,16 @@ export function tryPrint(s: GameState): GameState {
   const next = cloneState(s);
   const cost = printCost(next);
   if (next.ore < cost.ore || next.parts < cost.parts) return next;
-  if (totalSwarm(next) >= berthCap(next)) return next;
+  if (totalSwarm(next) >= berthCap(next)) {
+    next.ore -= cost.ore * 0.4;
+    next.parts -= cost.parts * 0.4;
+    next.spark += 0.55;
+    grantCasteXp(next, next.printCaste);
+    credit(next, "print", next.printCaste);
+    pushLog(next, "Packed stamp. Spark, no body.");
+    clampRes(next);
+    return next;
+  }
   next.ore -= cost.ore;
   next.parts -= cost.parts;
   next.swarm[next.printCaste] += 1;
@@ -474,10 +498,12 @@ export function sendRaid(s: GameState, node: RaidId, now: number): GameState {
   if (next.swarm.striker < need) return next;
   const captain = next.minds.find((m) => m.alive && m.job === "raid") ?? null;
   const bars = freshRaidBars(next, node, need);
+  const firstIce = node === "ice" && !next.raidCleared.includes("ice");
+  const wait = spec.seconds * (firstIce ? 0.78 : 1);
   next.raid = {
     node,
     startedAt: now,
-    endsAt: now + spec.seconds * 1000,
+    endsAt: now + wait * 1000,
     strikers: need,
     mindId: captain?.id ?? null,
     ...bars,
@@ -517,8 +543,10 @@ export function upMark(s: GameState, caste: GameState["printCaste"]): GameState 
 export function startSurge(s: GameState, now: number): GameState {
   const next = cloneState(s);
   if (now < next.surgeUntil) return next;
+  const mercy = next.mercySurge;
   const dur = next.tech.longsurge?.done ? 58000 : next.tech.surgeplus.done ? 45000 : 32000;
-  next.surgeUntil = now + dur;
+  next.surgeUntil = now + Math.round(dur * (mercy ? 1.35 : 1));
+  next.mercySurge = false;
   credit(next, "surge");
   return next;
 }
@@ -557,6 +585,8 @@ export function claimGift(s: GameState): GameState {
   next.ore += next.pendingGift.ore;
   next.parts += next.pendingGift.parts;
   next.spark += next.pendingGift.spark;
+  next.charge += chargeCap(next) * 0.18;
+  next.mercySurge = true;
   next.pendingGift = null;
   clampRes(next);
   return next;
@@ -568,6 +598,12 @@ export function tapSlag(s: GameState, now: number): GameState {
   next.slagAt = now + (next.tech.slagvein?.done ? 3800 : next.tech.slagplus?.done ? 4800 : 6000);
   next.ore += 6 + Math.floor(next.swarm.miner * 0.18) + (next.tech.slagplus?.done ? 4 : 0) + (next.tech.slagvein?.done ? 5 : 0);
   next.spark += next.tech.slagplus?.done ? 1.4 : 0.8;
+  const cap = oreCap(next);
+  if (next.ore > cap * 0.9) {
+    const cook = Math.min(12, next.ore - cap * 0.82);
+    next.ore -= cook;
+    next.parts += cook * 0.45;
+  }
   credit(next, "slag");
   clampRes(next);
   return next;

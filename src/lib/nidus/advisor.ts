@@ -7,6 +7,8 @@ export type Advice = { chip: string; why: string; verb: string };
 export function advise(s: GameState): Advice {
   if (s.waking) return { chip: "PICK A MIND", why: "Three bodies. One stays.", verb: "WAKE" };
   if (s.pendingGift) return { chip: "CLAIM THE CUT", why: "Idle haul waiting.", verb: "CLAIM" };
+  if (s.mercySurge && Date.now() >= s.surgeUntil && s.charge >= 8)
+    return { chip: "MERCY SURGE", why: "Comeback scream. Lasts longer.", verb: "SURGE" };
   if (s.charge < 8) return { chip: "RAISE THE SOLAR SPINE", why: "Charge is starving the swarm.", verb: "BUILD" };
   if (!s.rooms.solar.built) return { chip: "RAISE THE SOLAR SPINE", why: "No spine, no blood.", verb: "BUILD" };
   if (s.raid) {

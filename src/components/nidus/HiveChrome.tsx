@@ -165,11 +165,13 @@ export function GoalDock({
   stage,
   collapsed,
   onExpand,
+  verb,
 }: {
   goal: string;
   stage: { n: number; of: number; name: string };
   collapsed: boolean;
   onExpand: () => void;
+  verb?: string;
 }) {
   return (
     <button
@@ -180,11 +182,13 @@ export function GoalDock({
         "pointer-events-auto mx-auto flex max-w-[22rem] items-center gap-2 border border-gilt/35 bg-nave/80 px-2 py-1",
         collapsed && "mb-1",
       )}
+      aria-label={verb ? `${goal}. ${verb}` : goal}
     >
       <span className="font-display text-[0.58rem] tabular-nums tracking-[0.16em] text-gilt">
         {stage.n}/{stage.of} {stage.name}
       </span>
       <span className="min-w-0 flex-1 truncate text-center font-display text-[0.65rem] tracking-[0.18em] text-gilt">{goal}</span>
+      {verb && <span className="shrink-0 font-display text-[0.5rem] tracking-[0.14em] text-muted">{verb}</span>}
       {collapsed && <ChevronUp className="size-3 shrink-0 text-muted" />}
     </button>
   );

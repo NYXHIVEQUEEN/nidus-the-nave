@@ -95,25 +95,30 @@ typed “save”. A green overhaul that never left the sandbox is a lost build.
 
 ## Successes (keep doing)
 
-- Four-tab HUD + one gold **goal chip**. Always a next verb.
+- Four-tab HUD + one gold **goal chip**. Always a next verb (GoalDock shows `advise().verb`).
 - Wake draft is three cards, one pick. No gacha. Fractures are the cost.
 - Idle gift on return (`pendingGift` + CLAIM) plus SLAG plus SURGE. First
-  hours are fast on purpose.
+  hours are fast on purpose. Long away banks **mercy SURGE**. Streaks stack.
+- Packed PRINT still feeds SPARK + caste XP. Never a dead stamp.
+- First Ice is a short tutorial wreck. RAID chrome lists open wrecks + two
+  locked teases, never a 13-card dump.
 - Room finish = **one visible node** on the hull. If you add a room, add a
   socket and a node.
 - OrbitControls: drag to rotate, SPIN/HOLD, speed in LOCAL. Hull itself
-  does not yaw.
+  does not yaw. Double-tap empty glass recenters NAVE.
 - Save/EXPORT/IMPORT in RITE → SAVE. Confirm before burn.
 - Boot bar preloads portraits + hull textures, then enables WAKE. A live hive
   **RETURN**s — never dump a started save to a new-session title.
 - Hull tap looks the camera at that annex (`lookAtRoom`). Gift looks at prow.
 - Canvas `frameloop` pauses while the tab is hidden.
+- `prefers-reduced-motion` skips trauma, nave breath, ray pulse, pulsar pulse.
 - Playtests: WAKE/RETURN → PRINT → SURGE → RAID → RITE tabs, screenshot hull,
-  assert no `pageerror`. Keep the save.
+  assert no `pageerror`. Keep the save. Never `localStorage.clear()`.
 - Green pass → GitHub snapshot the same turn. Do not leave a build only in
   the sandbox.
 - Persist unit tests in `src/lib/nidus/persist.test.ts` prove migrate does
-  not wipe ore/rooms/minds/`started`. Run them after any `save.ts` / `progress.ts` edit.
+  not wipe ore/rooms/minds/`started`, plus mercy/overflow/first-ice/claim.
+  Run them after any `save.ts` / `sim.ts` / `progress.ts` edit.
 
 ## Graphics contract (cathedral pass)
 
@@ -121,14 +126,18 @@ The hull is a **cathedral-factory**, not a crate and not a poly pile.
 
 - **Body:** one wasp-waist `LatheGeometry` nave + keel + ridge. Rooms attach
   as modules. Do not stack octahedrons/tetrahedrons as the hull.
-- **Light:** ACES exposure ~1.28, gilt key, blood furnace, cool rim. Window
-  leaks are **three** short additive cones on the mid LOD, not a forest of
-  giant shafts. No `EffectComposer` on mobile.
+- **Light:** ACES exposure ~1.28 (Mood shifts on events: PULSAR 1.42, ECLIPSE
+  0.92). Gilt key, blood furnace, cool rim (cool rim skipped on mobile).
+  Window leaks are **three** short additive cones on the mid LOD, not a
+  forest of giant shafts. No `EffectComposer` on mobile. No pulsar shaft cone
+  on mobile.
 - **Sheet:** `.nidus-sheet` is opaque void + blur. RAID/FORGE/MINDS never
   bleed through the 3D. Collapse still slides the sheet off for idle candy.
-- **Perf:** mobile `dpr` capped, stars/embers cut, no shadows, instance
-  drones + embers. `window.__nidusPerf` reports `{ calls, triangles, frameMs }`.
+- **Perf:** mobile `dpr` capped at 1.15, desktop 1.5. Stars/embers cut, no
+  shadows, instance drones + embers + construction sparks. Anisotropy 8/2.
+  `window.__nidusPerf` reports `{ calls, triangles, frameMs }`.
   Aim under ~100 draws on a mid hive. Pause work when tab hidden.
+  Respect `prefers-reduced-motion` in the Canvas, not only CSS.
 - **Sky:** cylinder backdrop + titan spheres. Do not map 16:9 plates onto a
   full UV sphere.
 - **Growth:** each new room `Grow`s in along its socket radial. Annexes are
@@ -152,8 +161,9 @@ slot writes the live key, it does **not** wipe the other pews. `migrate()`
 merges new fields; do not bump version to add a boolean.
 
 Combat: `RaidRun` holds wreck HP + fleet hull. `tickBattle` is the well.
-WATCH only changes presentation + a small attention bonus. BOOST is charge.
-Leave the tab — the sim keeps orbiting.
+WATCH changes presentation + **18%** attention bonus. BOOST is charge.
+Leave the tab — the sim keeps orbiting. First uncleared Ice is a shorter,
+softer wreck.
 
 Do not introduce ECS. Entity count is tiny. Keep one serializable `GameState`.
 

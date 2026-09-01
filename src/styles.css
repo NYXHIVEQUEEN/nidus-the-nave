@@ -110,9 +110,10 @@
   backdrop-filter: blur(12px);
   border-top: 1px solid color-mix(in oklab, var(--color-gilt) 28%, var(--color-border));
   box-shadow: 0 -12px 28px color-mix(in oklab, var(--color-void) 70%, transparent);
-  transition:
-    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 200ms ease;
+  will-change: transform, opacity;
+  transition-property: transform, opacity;
+  transition-duration: 280ms, 200ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1), ease;
 }
 
 .nidus-sheet-hide {
@@ -151,6 +152,29 @@
   color: var(--color-void);
 }
 
+.nidus-cut:focus-visible {
+  outline: 2px solid var(--color-gilt);
+  outline-offset: 2px;
+}
+
+@keyframes nidus-cap {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.28) saturate(1.15);
+  }
+}
+
+.nidus-cap {
+  animation: nidus-cap 1.8s ease-in-out infinite;
+}
+
+.nidus-cap p:first-child {
+  color: var(--color-blood-bright);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -161,7 +185,8 @@
   .nidus-pulse,
   .nidus-whisper,
   .nidus-spark,
-  .nidus-rank {
+  .nidus-rank,
+  .nidus-cap {
     animation: none;
   }
 }

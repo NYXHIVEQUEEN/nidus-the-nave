@@ -36,8 +36,8 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
     verbs: [
       { id: "goal", label: "GOLD CHIP", line: "The one next verb." },
       { id: "rooms", label: "NODES", line: "Tap a dark room to raise it." },
-      { id: "surge", label: "SURGE", line: "Short scream. All rates spike." },
-      { id: "slag", label: "SLAG", line: "Tap ore + spark. Seven second cool." },
+      { id: "surge", label: "SURGE", line: "Short scream. Mercy after idle lasts longer." },
+      { id: "slag", label: "SLAG", line: "Tap ore + spark. Overflow cooks to parts." },
       { id: "hive", label: "HIVE", line: "Mind stamps, builds, raids for you." },
       { id: "hide", label: "EYE", line: "Folds chrome. Station stays." },
     ],
@@ -48,7 +48,7 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
     blurb: "Stamp drones. Open berths. Mark hulls.",
     verbs: [
       { id: "caste", label: "CASTE", line: "Pick who the next stamp is." },
-      { id: "print", label: "PRINT", line: "Spends ore + parts. Fills a berth." },
+      { id: "print", label: "PRINT", line: "Packed stamp still feeds SPARK." },
       { id: "auto", label: "AUTO", line: "Keeps stamping while you are gone." },
       { id: "expand", label: "EXPAND", line: "Buys pop cap. Packed swarm idles." },
       { id: "mark", label: "MARK", line: "Ranks that caste. Strikers hit harder." },
@@ -60,7 +60,7 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
     blurb: "Send strikers. The well fights without you.",
     verbs: [
       { id: "send", label: "SEND", line: "Tap an open wreck. Hulls leave." },
-      { id: "watch", label: "WATCH", line: "See the well. Leave — it still fights." },
+      { id: "watch", label: "WATCH", line: "18% faster cut. Leave — it still fights." },
       { id: "boost", label: "BOOST", line: "Spends charge. Command bonus." },
       { id: "mark", label: "MARK", line: "Bigger strikers. Harder wrecks." },
       { id: "lock", label: "LOCKED", line: "Needs a prior wreck or room." },
@@ -164,8 +164,8 @@ export function chargeStarve(s: GameState): boolean {
 export function firstWhisper(id: GuideId): string {
   if (id === "wake") return "WAKE opens the nave.";
   if (id === "hull") return "Gold chip is the next verb. ? is this screen.";
-  if (id === "forge") return "PRINT stamps. AUTO keeps going.";
-  if (id === "raid") return "Send. Leave. It still fights.";
+  if (id === "forge") return "PRINT stamps. Packed still feeds SPARK.";
+  if (id === "raid") return "First ice is a short cut. WATCH pays.";
   if (id === "minds") return "A commander multiplies one post. Seat her.";
   return "Pinch empty glass. EYE hides chrome.";
 }

@@ -52,13 +52,14 @@ export function tickBattle(s: GameState, dt: number, now: number) {
     run.hullMax = bars.hullMax;
   }
   const boosted = now < (run.boostUntil ?? 0);
-  const watch = run.watching ? 1.1 : 1;
+  const watch = run.watching ? 1.18 : 1;
   const boost = boosted ? 1.7 : 1;
   const roll = rand(s.rng);
   s.rng = roll.seed;
   const sway = 0.82 + roll.n * 0.36;
-  const atk = fleetPower(s) * 0.085 * watch * boost * sway;
-  const def = nodeArmor(run.node) * 0.034 * (boosted ? 0.88 : 1);
+  const firstIce = run.node === "ice" && !s.raidCleared.includes("ice");
+  const atk = fleetPower(s) * 0.085 * watch * boost * sway * (firstIce ? 1.12 : 1);
+  const def = nodeArmor(run.node) * (firstIce ? 0.018 : 0.034) * (boosted ? 0.88 : 1);
   run.hp = Math.max(0, run.hp - atk * dt);
   run.hull = Math.max(0, run.hull - def * dt);
   if (run.hp <= 0) run.beat = boosted ? "BREAK" : "CUT";

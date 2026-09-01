@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, useTexture } from "@react-three/drei";
 import type { Group, InstancedMesh, PointLight, MeshStandardMaterial, MeshBasicMaterial, Texture, SpotLight } from "three";
 import {
@@ -19,7 +19,7 @@ import {
 } from "three";
 import { useNidus } from "@/lib/nidus/store";
 import { ROOMS } from "@/lib/nidus/content";
-import { CAM_DEFAULT, CAM_MAX, CAM_MIN, camPosition, getPrefs, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
+import { CAM_DEFAULT, CAM_MAX, CAM_MIN, applyCamPreset, camPosition, getPrefs, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
 
 const dummy = new Obj3D();
 const Y_UP = new Vector3(0, 1, 0);
@@ -30,6 +30,10 @@ const BLOOD = "#7a1f2b";
 const GILT = "#c4a574";
 const VENOM = "#1faf5b";
 const BONE = "#d8cbb8";
+const REDUCE =
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const SOCKETS: Record<string, [number, number, number]> = {
   solar: [0, 0.9, 0],
@@ -77,15 +81,18 @@ function useHullTextures() {
   for (const t of [plate, glass, grate, filigree, blood, hazard, arch, sleep, rift, titans, rivet, giltMap, rose, voidMap, ember, bone]) {
     t.colorSpace = SRGBColorSpace;
   }
+  const ani = typeof window !== "undefined" && window.innerWidth < 500 ? 2 : 8;
   plate.wrapS = plate.wrapT = RepeatWrapping;
-  plate.anisotropy = 4;
+  plate.anisotropy = ani;
   plate.repeat.set(2.4, 3.6);
   rivet.wrapS = rivet.wrapT = RepeatWrapping;
-  rivet.anisotropy = 4;
+  rivet.anisotropy = ani;
   rivet.repeat.set(2.8, 3.2);
   bone.wrapS = bone.wrapT = RepeatWrapping;
+  bone.anisotropy = ani;
   bone.repeat.set(2.2, 2.6);
   grate.wrapS = grate.wrapT = RepeatWrapping;
+  grate.anisotropy = ani;
   grate.repeat.set(2.2, 1.6);
   glass.wrapS = glass.wrapT = RepeatWrapping;
   filigree.wrapS = filigree.wrapT = RepeatWrapping;
@@ -157,7 +164,7 @@ function Ray({
   const mat = useRef<MeshBasicMaterial>(null);
   const seed = position[0] + position[2];
   useFrame((state) => {
-    if (!mat.current) return;
+    if (REDUCE || !mat.current) return;
     const t = state.clock.elapsedTime;
     mat.current.opacity = opacity + Math.sin(t * 1.35 + seed) * opacity * 0.35;
   });
@@ -376,6 +383,7 @@ function Hull() {
   const naveMat = useRef<MeshStandardMaterial>(null);
   const tendons = useRef<InstancedMesh>(null);
   const sap = useRef<InstancedMesh>(null);
+  const buildSparks = useRef<InstancedMesh>(null);
   const printFlash = useRef(0);
   const lastPrinted = useRef(printed);
 
@@ -466,7 +474,7 @@ function Hull() {
     if (stationRef.current) {
       stationRef.current.visible = !watching;
       const grow = 1.38 + roomsLit * 0.035 + molt * 0.07;
-      const breath = surging ? 1 + Math.sin(t * 3.4) * 0.018 : 1;
+      const breath = REDUCE ? 1 : surging ? 1 + Math.sin(t * 3.4) * 0.018 : 1;
       stationRef.current.scale.setScalar(grow * breath);
     }
     if (annexRef.current) {
@@ -688,6 +696,28 @@ function Hull() {
         }
         sp.instanceMatrix.needsUpdate = true;
         sp.visible = true;
+      }
+    }
+
+    const bs = buildSparks.current;
+    if (bs) {
+      if (!queued || far || hidden) bs.visible = false;
+      else {
+        const sock = SOCKETS[queued] ?? [0, 0, 0];
+        for (let i = 0; i < 8; i++) {
+          const life = (t * (0.55 + (i % 3) * 0.08) + i * 0.21) % 1;
+          dummy.position.set(
+            sock[0] + Math.cos(t * 2 + i) * 0.12 * (1 - life),
+            sock[1] + life * 0.28,
+            sock[2] + Math.sin(t * 2 + i) * 0.12 * (1 - life),
+          );
+          dummy.scale.setScalar(0.35 + (1 - life) * 0.8);
+          dummy.quaternion.identity();
+          dummy.updateMatrix();
+          bs.setMatrixAt(i, dummy.matrix);
+        }
+        bs.instanceMatrix.needsUpdate = true;
+        bs.visible = true;
       }
     }
     const info = state.gl.info.render;
@@ -1119,6 +1149,10 @@ function Hull() {
         <sphereGeometry args={[0.022, 5, 5]} />
         <meshBasicMaterial color={GILT} transparent opacity={0.95} toneMapped={false} blending={AdditiveBlending} depthWrite={false} />
       </instancedMesh>
+      <instancedMesh ref={buildSparks} args={[undefined, undefined, 8]} visible={false}>
+        <sphereGeometry args={[0.018, 5, 5]} />
+        <meshBasicMaterial color={GILT} transparent opacity={0.9} toneMapped={false} blending={AdditiveBlending} depthWrite={false} />
+      </instancedMesh>
 
       <group ref={sparkleRef} />
       </group>
@@ -1142,7 +1176,9 @@ function Pulsar() {
   const star = useRef<Group>(null);
   const shaft = useRef<MeshBasicMaterial>(null);
   const pos: [number, number, number] = [34, 20, -30];
+  const mobile = typeof window !== "undefined" && window.innerWidth < 500;
   useFrame((state) => {
+    if (REDUCE) return;
     const t = state.clock.elapsedTime;
     const pulse = 0.74 + Math.sin(t * 1.65) * 0.16 + Math.sin(t * 7.1) * 0.05;
     if (star.current) star.current.scale.setScalar(0.9 + pulse * 0.28);
@@ -1176,18 +1212,20 @@ function Pulsar() {
         distance={100}
         decay={1.65}
       />
-      <mesh position={[17, 10, -15]} rotation={[1.05, 0.4, -0.15]}>
-        <coneGeometry args={[4.2, 18, 12, 1, true]} />
-        <meshBasicMaterial
-          ref={shaft}
-          color="#ffd8a8"
-          transparent
-          opacity={0.07}
-          depthWrite={false}
-          blending={AdditiveBlending}
-          side={DoubleSide}
-        />
-      </mesh>
+      {!mobile && (
+        <mesh position={[17, 10, -15]} rotation={[1.05, 0.4, -0.15]}>
+          <coneGeometry args={[4.2, 18, 12, 1, true]} />
+          <meshBasicMaterial
+            ref={shaft}
+            color="#ffd8a8"
+            transparent
+            opacity={0.07}
+            depthWrite={false}
+            blending={AdditiveBlending}
+            side={DoubleSide}
+          />
+        </mesh>
+      )}
     </group>
   );
 }
@@ -1286,10 +1324,10 @@ function Rig() {
     else _look.set(0, 0.05, 0);
     if (surgeUntil > Date.now() && surgeUntil !== lastSurge.current) {
       lastSurge.current = surgeUntil;
-      trauma.current = Math.min(1, trauma.current + 0.62);
+      if (!REDUCE) trauma.current = Math.min(1, trauma.current + 0.62);
     }
     if (printed !== lastPrinted.current) {
-      if (lastPrinted.current >= 0 && printed > lastPrinted.current) {
+      if (lastPrinted.current >= 0 && printed > lastPrinted.current && !REDUCE) {
         trauma.current = Math.min(1, trauma.current + 0.22);
       }
       lastPrinted.current = printed;
@@ -1299,7 +1337,7 @@ function Rig() {
       ctl.current.target.lerp(_look, k);
       ctl.current.autoRotate = !p.spinPaused && !looking;
     }
-    if (trauma.current > 0.01) {
+    if (!REDUCE && trauma.current > 0.01) {
       const shake = trauma.current * trauma.current;
       cam.position.x += Math.sin(t * 53.1) * 0.11 * shake;
       cam.position.y += Math.sin(t * 41.7) * 0.07 * shake;
@@ -1354,9 +1392,10 @@ export function StationScene() {
     <Canvas
       frameloop={paused ? "never" : "always"}
       camera={{ position: start, fov: 46, near: 0.8, far: 260 }}
-      dpr={mobile ? [1, 1.3] : [1, 1.65]}
+      dpr={mobile ? [1, 1.15] : [1, 1.5]}
       gl={{ antialias: !mobile, alpha: false, powerPreference: "high-performance" }}
       style={{ touchAction: "none", position: "absolute", inset: 0 }}
+      onDoubleClick={() => applyCamPreset("nave")}
       onCreated={({ gl, camera }) => {
         gl.setClearColor("#0e0c12");
         gl.toneMapping = ACESFilmicToneMapping;
@@ -1369,14 +1408,58 @@ export function StationScene() {
       <hemisphereLight args={["#c4b8a8", "#1a0c12", 0.7]} />
       <ambientLight intensity={0.48} />
       <directionalLight position={[6.5, 8.5, 3.2]} intensity={1.85} color={GILT} />
-      <directionalLight position={[-6, 3, -5]} intensity={0.85} color="#9ec8dc" />
+      {!mobile && <directionalLight position={[-6, 3, -5]} intensity={0.85} color="#9ec8dc" />}
       <pointLight position={[0, 1.0, 2.6]} intensity={8} color={BLOOD} distance={12} decay={2} />
       <pointLight position={[10, 5, -16]} intensity={12} color="#c4a574" distance={60} decay={2} />
-      <Stars radius={90} depth={48} count={mobile ? 90 : 180} factor={2.6} saturation={0} fade speed={0.15} />
+      <Stars radius={90} depth={48} count={mobile ? 70 : 140} factor={2.6} saturation={0} fade speed={REDUCE ? 0 : 0.15} />
+      <Mood />
       <Pulsar />
       <Hull />
       <BattleField />
       <Rig />
     </Canvas>
   );
+}
+
+function Mood() {
+  const kind = useNidus((s) => s.eventKind);
+  const gift = useNidus((s) => Boolean(s.pendingGift));
+  const surging = useNidus((s) => s.surgeUntil > Date.now());
+  const { gl, scene } = useThree();
+  useFrame(() => {
+    const fog = scene.fog as { color: Color; near: number; far: number } | null;
+    if (!fog) return;
+    if (kind === "ECLIPSE") {
+      fog.color.set("#0a0812");
+      fog.near = 36;
+      fog.far = 150;
+      gl.toneMappingExposure = 0.92;
+    } else if (kind === "PULSAR") {
+      fog.color.set("#241818");
+      fog.near = 52;
+      fog.far = 190;
+      gl.toneMappingExposure = 1.42;
+    } else if (kind === "ROSE") {
+      fog.color.set("#120814");
+      fog.near = 44;
+      fog.far = 170;
+      gl.toneMappingExposure = 1.22;
+    } else if (kind === "TIDE" || kind === "FURNACE" || surging) {
+      fog.color.set("#1a0a0c");
+      fog.near = 42;
+      fog.far = 165;
+      gl.toneMappingExposure = 1.34;
+    } else if (gift) {
+      fog.color.set("#1a1010");
+      fog.near = 46;
+      fog.far = 175;
+      gl.toneMappingExposure = 1.36;
+    } else {
+      fog.color.set("#160e16");
+      fog.near = 48;
+      fog.far = 180;
+      gl.toneMappingExposure = 1.28;
+    }
+  });
+  return null;
 }

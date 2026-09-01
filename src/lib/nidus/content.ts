@@ -264,6 +264,9 @@ export function defaultState(now = Date.now()): GameState {
     lastSaveAt: 0,
     slagAt: 0,
     pendingGift: null,
+    mercySurge: false,
+    returnStreak: 0,
+    lastReturnAt: 0,
   };
 }
 
@@ -443,7 +446,8 @@ export function rates(s: GameState, now: number) {
     (s.rooms.cloister?.built ? 1.2 : 1) *
     mark("lab") *
     jobBonus(s, "lab") *
-    hum;
+    hum *
+    (1 + s.minds.filter((m) => m.alive && m.seated).length * 0.08);
   const chargeGen =
     0.12 +
     (s.rooms.solar.built ? 0.42 : 0) +
@@ -459,6 +463,7 @@ export function nextGoal(s: GameState): string {
   if (!s.rooms.solar.built) return "RAISE THE SOLAR SPINE";
   if (s.waking) return "PICK A MIND";
   if (s.pendingGift) return "CLAIM THE CUT";
+  if (s.mercySurge) return "MERCY SURGE";
   if (s.raid) return s.raid.watching ? "COMMAND THE WELL" : "WATCH OR LEAVE — FLEET FIGHTS";
   if (totalSwarm(s) >= berthCap(s) - 1) return "OPEN BERTHS — SWARM IS PACKED";
   if (s.minds.filter((m) => m.alive).length === 0) return "FILL SPARK — SOMEONE WAKES";

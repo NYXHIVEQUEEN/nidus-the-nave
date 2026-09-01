@@ -21,6 +21,9 @@ function migrate(raw: GameState): GameState {
   if (typeof merged.hiveRank !== "number") merged.hiveRank = 0;
   if (!merged.casteXp) merged.casteXp = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
   if (!merged.pendingGift) merged.pendingGift = null;
+  if (typeof merged.mercySurge !== "boolean") merged.mercySurge = false;
+  if (typeof merged.returnStreak !== "number") merged.returnStreak = 0;
+  if (typeof merged.lastReturnAt !== "number") merged.lastReturnAt = 0;
   if (!merged.lastSaveAt) merged.lastSaveAt = 0;
   if (!merged.slagAt) merged.slagAt = 0;
   if (typeof merged.autoBuild !== "boolean") merged.autoBuild = false;
