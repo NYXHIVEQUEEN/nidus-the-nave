@@ -1,6 +1,6 @@
 # NIDUS snapshot — 2026-09-01 watchable 10
 
-GitHub: pending SHA on `NYXHIVEQUEEN/nidus` `main`.
+GitHub: `7e1263e` on `NYXHIVEQUEEN/nidus` `main`.
 Pre-pass SAVE stamp: `c0dd518` (SAVE.md) / local `4d1cec6`.
 **No hive wipe.** `sim.ts` / `save.ts` / `store.ts` / `content.ts` / `progress.ts` / `types.ts` untouched.
 `migrate()` still merges rooms/techs/casteXp/hiveRank.
