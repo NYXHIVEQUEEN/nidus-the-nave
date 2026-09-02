@@ -1,25 +1,32 @@
 import { useEffect, useState } from "react";
 import {
   Aperture,
+  BookOpen,
   ChevronUp,
   Eye,
   EyeOff,
+  FlaskConical,
   HelpCircle,
   Pause,
   RotateCw,
+  Save,
   Settings2,
+  SlidersHorizontal,
   Volume2,
   VolumeX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GUIDES, firstWhisper, type GuideId } from "@/lib/nidus/guide";
 import {
+  applyCamPreset,
+  CAM_PRESETS,
   getPrefs,
   helpSeen,
   markHelp,
   patchPrefs,
   subscribeSpin,
   toggleSpinPaused,
+  type CamPresetId,
   type HelpId,
 } from "@/lib/nidus/view";
 import { syncAudioGains } from "@/lib/nidus/audio";
@@ -58,41 +65,154 @@ export function RailBtn({
   );
 }
 
+export function StatusChip({
+  kind,
+  children,
+}: {
+  kind?: "lit" | "next" | "lock" | "well" | "open";
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className={cn(
+        "nidus-chip",
+        kind === "lit" && "nidus-chip-lit",
+        kind === "next" && "nidus-chip-next",
+        kind === "lock" && "nidus-chip-lock",
+        kind === "well" && "nidus-chip-well",
+        kind === "open" && "nidus-chip-open",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function LeftRail({
   muted,
   spinPaused,
   collapsed,
   helpPulse,
   onHelp,
-  onView,
-  onRite,
+  onRitePane,
   onMute,
   onCollapse,
+  onStay,
 }: {
   muted: boolean;
   spinPaused: boolean;
   collapsed: boolean;
   helpPulse: boolean;
   onHelp: () => void;
-  onView: () => void;
-  onRite: () => void;
+  onRitePane: (pane: "opt" | "view" | "codex" | "save") => void;
   onMute: () => void;
   onCollapse: () => void;
+  onStay: () => void;
 }) {
+  const [fly, setFly] = useState<null | "view" | "rite">(null);
+  const prefs = useSyncPrefs();
+  const presetOn = (id: CamPresetId) => {
+    const p = CAM_PRESETS[id];
+    return Math.abs(prefs.camDist - p.camDist) < 0.6 && Math.abs(prefs.camFov - p.camFov) < 1.5;
+  };
+  const openFly = (id: "view" | "rite") => {
+    onStay();
+    setFly((cur) => (cur === id ? null : id));
+  };
+
   return (
     <nav
       data-chrome
-      className="pointer-events-auto absolute left-2 top-[max(3.6rem,calc(env(safe-area-inset-top)+2.8rem))] z-20 flex flex-col gap-1"
+      className="nidus-rail pointer-events-auto absolute left-2 top-[max(3.6rem,calc(env(safe-area-inset-top)+2.8rem))] z-20 flex flex-col gap-1 overflow-visible"
     >
       <RailBtn label="?" title="This screen — verbs only." pulse={helpPulse} onClick={onHelp}>
         <HelpCircle className="size-3.5" />
       </RailBtn>
-      <RailBtn label="VIEW" title="Distance, field, shots." onClick={onView}>
-        <Aperture className="size-3.5" />
-      </RailBtn>
-      <RailBtn label="RITE" title="Lab, save pews, music." onClick={onRite}>
-        <Settings2 className="size-3.5" />
-      </RailBtn>
+      <div className="relative">
+        <RailBtn
+          label="VIEW"
+          title="Shots. Nested — CLOSE to VOID."
+          on={fly === "view"}
+          onClick={() => openFly("view")}
+        >
+          <Aperture className="size-3.5" />
+        </RailBtn>
+        {fly === "view" && (
+          <div className="nidus-fly" role="menu" aria-label="View shots">
+            {(Object.keys(CAM_PRESETS) as CamPresetId[]).map((id) => {
+              const p = CAM_PRESETS[id];
+              return (
+                <RailBtn
+                  key={id}
+                  label={p.label}
+                  title={p.why}
+                  on={presetOn(id)}
+                  onClick={() => {
+                    applyCamPreset(id);
+                    setFly(null);
+                  }}
+                >
+                  <Aperture className="size-3.5" />
+                </RailBtn>
+              );
+            })}
+            <RailBtn
+              label="LENS"
+              title="Distance, field, pinch."
+              onClick={() => {
+                setFly(null);
+                onRitePane("view");
+              }}
+            >
+              <SlidersHorizontal className="size-3.5" />
+            </RailBtn>
+          </div>
+        )}
+      </div>
+      <div className="relative">
+        <RailBtn
+          label="RITE"
+          title="Lab, pews, music. Nested."
+          on={fly === "rite"}
+          onClick={() => openFly("rite")}
+        >
+          <Settings2 className="size-3.5" />
+        </RailBtn>
+        {fly === "rite" && (
+          <div className="nidus-fly" role="menu" aria-label="Rite panes">
+            <RailBtn
+              label="LAB"
+              title="Rites and hive mind."
+              onClick={() => {
+                setFly(null);
+                onRitePane("opt");
+              }}
+            >
+              <FlaskConical className="size-3.5" />
+            </RailBtn>
+            <RailBtn
+              label="CODEX"
+              title="Dictionary. Not a lecture."
+              onClick={() => {
+                setFly(null);
+                onRitePane("codex");
+              }}
+            >
+              <BookOpen className="size-3.5" />
+            </RailBtn>
+            <RailBtn
+              label="SAVE"
+              title="Pews, export, import."
+              onClick={() => {
+                setFly(null);
+                onRitePane("save");
+              }}
+            >
+              <Save className="size-3.5" />
+            </RailBtn>
+          </div>
+        )}
+      </div>
       <RailBtn
         label={spinPaused ? "HOLD" : "SPIN"}
         title="Idle orbit. HOLD freezes the nave."
@@ -105,7 +225,10 @@ export function LeftRail({
         label={muted ? "MUTE" : "SONG"}
         title="Mute the anthem and the hive."
         on={muted}
-        onClick={onMute}
+        onClick={() => {
+          setFly(null);
+          onMute();
+        }}
       >
         {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
       </RailBtn>
@@ -113,7 +236,10 @@ export function LeftRail({
         label={collapsed ? "SHOW" : "HIDE"}
         title="Fold chrome. Watch the nave."
         on={collapsed}
-        onClick={onCollapse}
+        onClick={() => {
+          setFly(null);
+          onCollapse();
+        }}
       >
         {collapsed ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
       </RailBtn>
@@ -127,7 +253,14 @@ export function GuideSheet({ screen, onClose, className }: { screen: GuideId; on
     markHelp(screen as HelpId);
   }, [screen]);
   return (
-    <div className={cn("pointer-events-auto max-h-[56dvh] overflow-y-auto border border-gilt/40 bg-nave/95 p-3 shadow-[0_0_24px_#0c0a09]", className ?? "absolute inset-x-12 bottom-16 z-40")} data-chrome>
+    <div
+      className={cn(
+        "nidus-panel pointer-events-auto max-h-[42dvh] overflow-y-auto p-3",
+        className ??
+          "absolute left-14 top-[max(3.6rem,calc(env(safe-area-inset-top)+2.8rem))] z-40 w-[min(19rem,calc(100vw-4.2rem))]",
+      )}
+      data-chrome
+    >
       <div className="mb-2 flex items-baseline justify-between gap-2">
         <p className="font-display text-sm tracking-[0.28em] text-gilt">{g.title}</p>
         <button type="button" className="font-display text-[0.65rem] tracking-[0.18em] text-muted" onClick={onClose}>
@@ -135,10 +268,10 @@ export function GuideSheet({ screen, onClose, className }: { screen: GuideId; on
         </button>
       </div>
       <p className="mb-2 text-[0.75rem] text-bone">{g.blurb}</p>
-      <ul className="flex flex-col gap-1.5">
+      <ul className="flex flex-col gap-1">
         {g.verbs.map((v) => (
           <li key={v.id} className="flex items-baseline gap-2 border-b border-border/60 pb-1">
-            <span className="w-16 shrink-0 font-display text-[0.62rem] tracking-[0.16em] text-gilt">{v.label}</span>
+            <StatusChip>{v.label}</StatusChip>
             <span className="text-[0.75rem] text-bone">{v.line}</span>
           </li>
         ))}
@@ -179,7 +312,7 @@ export function GoalDock({
       data-chrome
       onClick={onExpand}
       className={cn(
-        "pointer-events-auto mx-auto flex max-w-[22rem] items-center gap-2 border border-gilt/35 bg-nave/80 px-2 py-1",
+        "nidus-card pointer-events-auto mx-auto flex max-w-[22rem] items-center gap-2 px-2 py-1",
         collapsed && "mb-1",
       )}
       aria-label={verb ? `${goal}. ${verb}` : goal}
@@ -188,7 +321,7 @@ export function GoalDock({
         {stage.n}/{stage.of} {stage.name}
       </span>
       <span className="min-w-0 flex-1 truncate text-center font-display text-[0.65rem] tracking-[0.18em] text-gilt">{goal}</span>
-      {verb && <span className="shrink-0 font-display text-[0.5rem] tracking-[0.14em] text-muted">{verb}</span>}
+      {verb && <StatusChip kind="open">{verb}</StatusChip>}
       {collapsed && <ChevronUp className="size-3 shrink-0 text-muted" />}
     </button>
   );

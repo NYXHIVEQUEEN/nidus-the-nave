@@ -41,7 +41,6 @@ import {
   framePost,
   gloss,
   hiveStage,
-  mindPostLine,
   packed,
   POSTS,
   raidLockWhy,
@@ -52,7 +51,7 @@ import {
 import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALVAGE_COOK } from "@/lib/nidus/progress";
 import { StationMount } from "./StationMount";
 import { SettingsPanel } from "./SettingsPanel";
-import { GoalDock, GuideSheet, LeftRail, Whisper, muteToggle, useIdleChrome, useSyncPrefs } from "./HiveChrome";
+import { GoalDock, GuideSheet, LeftRail, StatusChip, Whisper, muteToggle, useIdleChrome, useSyncPrefs } from "./HiveChrome";
 import { getPrefs, getSpinPaused, helpSeen, lookAtRoom, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
 import type { Caste, Rarity } from "@/lib/nidus/types";
 
@@ -65,6 +64,10 @@ const rarityColor: Record<Rarity, string> = {
 
 function pulse(on: boolean) {
   return on ? "nidus-pulse" : "";
+}
+
+function shortLock(why: string) {
+  return why.replace(/^NEED\s+/, "");
 }
 
 function peekHive(): { started: boolean; name: string } {
@@ -281,14 +284,9 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
     return () => window.removeEventListener("keydown", onKey);
   }, [collapsed, bump, setCollapsed, setTab]);
 
-  const openView = () => {
+  const openRitePane = (pane: "opt" | "view" | "codex" | "save") => {
     bump();
-    setRiteStart("view");
-    setRiteOpen(true);
-  };
-  const openRite = () => {
-    bump();
-    setRiteStart("opt");
+    setRiteStart(pane);
     setRiteOpen(true);
   };
 
@@ -305,8 +303,8 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
           bump();
           setGuide((g) => (g ? null : tab));
         }}
-        onView={openView}
-        onRite={openRite}
+        onRitePane={openRitePane}
+        onStay={bump}
         onMute={() => muteToggle(muted, setMuted)}
         onCollapse={() => {
           if (collapsed) bump();
@@ -338,7 +336,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
       {whisper && prefs.hints && <Whisper text={whisper} onDone={() => setWhisper(null)} />}
       {guide && <GuideSheet screen={guide} onClose={() => setGuide(null)} />}
       {riteOpen && (
-        <div className="pointer-events-auto absolute inset-x-3 bottom-16 z-30" data-chrome>
+        <div className="pointer-events-auto absolute inset-x-3 bottom-16 z-40" data-chrome>
           <SettingsPanel start={riteStart} onClose={() => setRiteOpen(false)} />
         </div>
       )}
@@ -440,7 +438,7 @@ function TabBar({ tab, setTab }: { tab: "hull" | "forge" | "raid" | "minds"; set
     { id: "minds" as const, label: "MINDS" },
   ];
   return (
-    <nav data-chrome className="pointer-events-auto grid grid-cols-4 gap-1 border-t border-border bg-nave/95 px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] pt-1.5">
+    <nav data-chrome className="pointer-events-auto relative z-30 grid grid-cols-4 gap-1 border-t border-border bg-nave/95 px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] pt-1.5">
       {tabs.map((t) => (
         <button
           key={t.id}
@@ -507,9 +505,9 @@ function HullTab({ verb }: { verb: string }) {
   return (
     <div className="pointer-events-none flex flex-col justify-end gap-1.5 p-2">
       {s.orders?.length > 0 && (
-        <div className="pointer-events-auto flex gap-1.5 overflow-x-auto">
+        <div className="pointer-events-auto nidus-strip">
           {s.orders.map((o) => (
-            <div key={o.id} className="min-w-32 shrink-0 border border-gilt/30 bg-nave/80 px-1.5 py-1">
+            <div key={o.id} className="nidus-card min-w-32 px-1.5 py-1">
               <p className="font-display text-[0.55rem] tracking-[0.14em] text-gilt">{o.label}</p>
               <p className="text-[0.6rem] text-muted">{o.hint}</p>
               <div className="mt-0.5 h-0.5 bg-iron">
@@ -519,12 +517,25 @@ function HullTab({ verb }: { verb: string }) {
           ))}
         </div>
       )}
-      <div className="pointer-events-auto overflow-x-auto">
-        <div className="flex gap-1.5">
+      <div className="pointer-events-auto">
+        <div className="nidus-strip">
           {shown.map((r) => {
             const st = rooms[r.id];
             const lock = roomLockWhy(s, r.id);
             const ranking = s.rankingRoom === r.id;
+            const isNext = nextRoom?.id === r.id;
+            const chipKind = st.built ? "lit" : lock ? "lock" : isNext || queued === r.id ? "next" : "open";
+            const chip = st.built
+              ? ranking
+                ? `R${st.rank ?? 0}…`
+                : `R${st.rank ?? 0}`
+              : lock
+                ? shortLock(lock)
+                : queued === r.id
+                  ? "QUEUE"
+                  : isNext
+                    ? "NEXT"
+                    : `${Math.floor((st.progress / r.work) * 100)}%`;
             return (
               <button
                 key={r.id}
@@ -538,22 +549,15 @@ function HullTab({ verb }: { verb: string }) {
                   chime("snap");
                 }}
                 className={cn(
-                  "nidus-cut min-w-[4.6rem] shrink-0 px-1.5 py-1.5 text-left",
-                  st.built ? "nidus-cut-gilt" : queued === r.id ? "text-venom" : lock ? "text-iron" : "text-bone",
-                  pulse(nextRoom?.id === r.id && verb === "BUILD"),
+                  "nidus-card w-[5.5rem] min-h-[4.4rem] px-1.5 py-1.5 text-left",
+                  st.built && "nidus-card-on",
+                  lock && "nidus-card-lock",
+                  pulse(isNext && verb === "BUILD"),
                 )}
               >
-                <p className="font-display text-[0.58rem] tracking-[0.14em]">{r.label}</p>
-                <p className="text-[0.58rem] tabular-nums text-muted">
-                  {st.built
-                    ? ranking
-                      ? `R${st.rank ?? 0}…`
-                      : `R${st.rank ?? 0}`
-                    : lock
-                      ? lock
-                      : `${Math.floor((st.progress / r.work) * 100)}%`}
-                </p>
-                <p className="max-w-[6.4rem] truncate text-[0.5rem] tracking-[0.04em] text-gilt-dim">{r.bonus}</p>
+                <StatusChip kind={chipKind}>{chip}</StatusChip>
+                <p className="mt-1 font-display text-[0.58rem] leading-tight tracking-[0.12em]">{r.label}</p>
+                <p className="truncate text-[0.5rem] tracking-[0.04em] text-gilt-dim">{r.bonus}</p>
               </button>
             );
           })}
@@ -563,7 +567,7 @@ function HullTab({ verb }: { verb: string }) {
         </div>
         {why && <p className="px-1 pt-1 text-center text-[0.65rem] text-gilt">{why}</p>}
       </div>
-      <div className="pointer-events-auto flex gap-1.5">
+      <div className="pointer-events-auto nidus-actions">
         <button
           type="button"
           disabled={surging}
@@ -584,21 +588,24 @@ function HullTab({ verb }: { verb: string }) {
             slag();
             chime("print");
           }}
-          className={cn("nidus-cut min-h-11 px-3 font-display text-[0.7rem] tracking-[0.16em]", slagReady ? "nidus-cut-gilt" : "text-muted")}
+          className={cn("nidus-cut nidus-iconbtn", slagReady ? "nidus-cut-gilt" : "text-muted")}
         >
-          <span className="inline-flex items-center gap-1"><Flame className="size-3.5" />SLAG</span>
+          <Flame className="size-3.5" />
+          <span className="font-display text-[0.42rem] tracking-[0.12em]">SLAG</span>
         </button>
         <button
           type="button"
           title="Hive mind stamps, raises, rites, and raids."
           onClick={() => toggleScripts()}
-          className={cn("nidus-cut min-h-11 px-3 font-display text-[0.7rem] tracking-[0.14em]", scripts ? "nidus-cut-venom" : "text-muted")}
+          className={cn("nidus-cut nidus-iconbtn", scripts ? "nidus-cut-venom" : "text-muted")}
         >
-          <span className="inline-flex items-center gap-1"><Brain className="size-3.5" />{scripts ? "MIND" : "HIVE"}</span>
+          <Brain className="size-3.5" />
+          <span className="font-display text-[0.42rem] tracking-[0.12em]">{scripts ? "MIND" : "HIVE"}</span>
         </button>
         {tech.moltlock.done && echo >= moltCost(s) && (
-          <button type="button" onClick={() => doMolt()} className="min-h-11 border border-gilt px-3 font-display text-[0.7rem] tracking-[0.2em] text-gilt">
-            MOLT {moltCost(s)}E
+          <button type="button" onClick={() => doMolt()} className="nidus-cut nidus-iconbtn text-gilt">
+            <span className="font-display text-[0.7rem] leading-none">{moltCost(s)}</span>
+            <span className="font-display text-[0.42rem] tracking-[0.12em]">MOLT</span>
           </button>
         )}
       </div>
@@ -633,7 +640,7 @@ function ForgeTab({ verb }: { verb: string }) {
   const icons: Record<Caste, typeof Pickaxe> = { miner: Pickaxe, fab: Factory, builder: Hammer, lab: FlaskConical, striker: Swords };
   return (
     <div className="pointer-events-auto flex flex-col justify-end gap-2 p-2" data-chrome>
-      <div className="border border-border bg-nave/90 p-2 backdrop-blur-sm">
+      <div className="nidus-card p-2">
         <div className="mb-1.5 flex items-center justify-between">
           <p className="font-display text-[0.65rem] tracking-[0.24em] text-gilt">SWARM</p>
           <p className={cn("font-display text-[0.58rem] tabular-nums tracking-[0.14em]", full ? "text-blood-bright" : "text-muted")}>
@@ -646,18 +653,15 @@ function ForgeTab({ verb }: { verb: string }) {
             const on = printCaste === c.id;
             const mk = hullMark[c.id] ?? 0;
             return (
-              <button key={c.id} type="button" onClick={() => setPrintCaste(c.id)} className={cn("nidus-cut flex min-h-14 flex-col items-center justify-center gap-0.5", on ? "nidus-cut-on" : "")}>
+              <button key={c.id} type="button" onClick={() => setPrintCaste(c.id)} className={cn("nidus-cut flex min-h-16 flex-col items-center justify-center gap-0.5", on && "nidus-cut-on")}>
                 <Icon className="size-3.5 text-gilt" />
                 <span className="font-display text-[0.52rem] tracking-[0.12em]">{c.label}</span>
                 <span className="font-display text-base tabular-nums leading-none">{swarm[c.id]}</span>
-                <span className="text-[0.5rem] text-muted">{markName(mk)}</span>
+                <span className="font-display text-[0.48rem] tracking-[0.1em] text-muted">{markName(mk)}</span>
               </button>
             );
           })}
         </div>
-        <p className="mt-1.5 text-center text-[0.65rem] tabular-nums text-muted">
-          {cost.ore}o · {cost.parts}p
-        </p>
         <div className="mt-1.5 flex gap-1.5">
           <button
             type="button"
@@ -682,12 +686,14 @@ function ForgeTab({ verb }: { verb: string }) {
           </button>
         </div>
       </div>
-      <div className="flex gap-1.5">
-        <button type="button" title={full ? "Packed. Stamp still feeds SPARK and caste XP." : `${cost.ore} ore · ${cost.parts} parts.`} onClick={() => { print(); chime("print"); }} className={cn("nidus-cut nidus-cut-on min-h-11 flex-1 font-display text-[0.8rem] tracking-[0.32em]", pulse(verb === "PRINT" || full))}>
-          {full ? "PRINT SPARK" : "PRINT"}
+      <div className="nidus-actions">
+        <button type="button" title={full ? "Packed. Stamp still feeds SPARK and caste XP." : `${cost.ore} ore · ${cost.parts} parts.`} onClick={() => { print(); chime("print"); }} className={cn("nidus-cut nidus-cut-on min-h-11 flex-1 font-display tracking-[0.28em]", pulse(verb === "PRINT" || full))}>
+          <span className="block text-[0.8rem]">{full ? "PRINT SPARK" : "PRINT"}</span>
+          <span className="block font-sans text-[0.55rem] tabular-nums tracking-[0.08em] text-bone/80">{cost.ore}o · {cost.parts}p</span>
         </button>
-        <button type="button" title="Stamp while you are gone." onClick={toggleAuto} className={cn("nidus-cut min-h-11 px-3 font-display text-[0.7rem] tracking-[0.16em]", autoPrint ? "nidus-cut-venom" : "text-muted", pulse(verb === "AUTO" && !autoPrint))}>
-          AUTO
+        <button type="button" title="Stamp while you are gone." onClick={toggleAuto} className={cn("nidus-cut nidus-iconbtn", autoPrint ? "nidus-cut-venom" : "text-muted", pulse(verb === "AUTO" && !autoPrint))}>
+          <span className="font-display text-[0.7rem] leading-none">{autoPrint ? "ON" : "OFF"}</span>
+          <span className="font-display text-[0.42rem] tracking-[0.12em]">AUTO</span>
         </button>
       </div>
     </div>
@@ -719,38 +725,44 @@ function RaidTab({ verb }: { verb: string }) {
   const shownRaids = [...unlocked, ...lockedTease];
   const nestedWrecks = RAIDS.length - shownRaids.length;
   return (
-    <div className="pointer-events-auto flex max-h-[46dvh] flex-col justify-end gap-1.5 overflow-y-auto p-2" data-chrome>
-      <div className="flex items-center justify-between border border-border bg-nave/90 px-2 py-1.5">
+    <div className="pointer-events-auto flex max-h-[40dvh] flex-col justify-end gap-1.5 overflow-y-auto p-2" data-chrome>
+      <div className="nidus-card flex items-center justify-between px-2 py-1.5">
         <div>
           <p className="font-display text-[0.58rem] tracking-[0.18em] text-gilt">{markName(mark)}</p>
           <p className="text-[0.62rem] tabular-nums text-muted">{strikers} HULLS</p>
         </div>
-        <button type="button" disabled={mark >= MARK_MAX || s.ore < cost.ore || s.parts < cost.parts} title={`Bigger strikers. ${cost.parts} parts.`} onClick={() => markHull("striker")} className="min-h-10 border border-gilt px-2 font-display text-[0.6rem] tracking-[0.14em] text-gilt disabled:border-iron disabled:text-muted">
+        <button type="button" disabled={mark >= MARK_MAX || s.ore < cost.ore || s.parts < cost.parts} title={`Bigger strikers. ${cost.parts} parts.`} onClick={() => markHull("striker")} className="nidus-cut min-h-10 px-2 font-display text-[0.6rem] tracking-[0.14em] text-gilt disabled:text-muted">
           MARK {cost.parts}p
         </button>
       </div>
       {raidNode && (
-        <div className="border border-venom bg-nave/90 p-2">
-          <p className="font-display text-[0.65rem] tracking-[0.24em] text-venom">{beat || "ORBIT"} · {RAIDS.find((r) => r.id === raidNode)?.label}</p>
-          <p className="mb-1 text-[0.62rem] tabular-nums text-muted">{fmtTime(Math.max(0, (raidEnds - Date.now()) / 1000))}</p>
-          <div className="mb-1 h-1 bg-iron">
-            <div className="h-1 bg-blood-bright" style={{ width: `${Math.min(100, (raidHp / Math.max(1, raidHpMax)) * 100)}%` }} />
-          </div>
-          <div className="mb-1.5 h-1 bg-iron">
-            <div className="h-1 bg-gilt" style={{ width: `${Math.min(100, (raidHull / Math.max(1, raidHullMax)) * 100)}%` }} />
-          </div>
-          <div className="flex gap-1.5">
-            <button type="button" title={watching ? "Leave — fleet still fights at 18% bonus." : "Watching cuts 18% faster."} className={cn("min-h-11 flex-1 font-display text-[0.7rem] tracking-[0.16em]", watching ? "bg-venom text-void" : "border border-border text-bone", pulse(verb === "RAID" && !watching))} onClick={() => watchWell(!watching)}>
-              {watching ? "WATCHING" : "WATCH"}
-            </button>
-            <button type="button" disabled={boosted || s.charge < 8} title="Spends 8 charge. Twenty seconds of command." className={cn("min-h-11 flex-1 font-display text-[0.7rem] tracking-[0.16em]", boosted ? "bg-gilt text-void" : "border border-gilt text-gilt", pulse(verb === "BOOST"))} onClick={() => { boostWell(); chime("surge"); }}>
-              {boosted ? "COMMAND" : "BOOST"}
-            </button>
+        <div className="nidus-card relative min-h-[7.2rem] overflow-hidden p-0">
+          <img src={RAIDS.find((r) => r.id === raidNode)?.image} alt="" className="nidus-card-art" crossOrigin="anonymous" />
+          <div className="nidus-card-veil" />
+          <div className="relative z-10 flex h-full flex-col justify-end p-2">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <p className="font-display text-[0.65rem] tracking-[0.24em] text-venom">{beat || "ORBIT"} · {RAIDS.find((r) => r.id === raidNode)?.label}</p>
+              <StatusChip kind="well">{fmtTime(Math.max(0, (raidEnds - Date.now()) / 1000))}</StatusChip>
+            </div>
+            <div className="mb-1 h-1 bg-iron">
+              <div className="h-1 bg-blood-bright" style={{ width: `${Math.min(100, (raidHp / Math.max(1, raidHpMax)) * 100)}%` }} />
+            </div>
+            <div className="mb-1.5 h-1 bg-iron">
+              <div className="h-1 bg-gilt" style={{ width: `${Math.min(100, (raidHull / Math.max(1, raidHullMax)) * 100)}%` }} />
+            </div>
+            <div className="nidus-actions">
+              <button type="button" title={watching ? "Leave — fleet still fights at 18% bonus." : "Watching cuts 18% faster."} className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.7rem] tracking-[0.16em]", watching ? "nidus-cut-venom" : "", pulse(verb === "RAID" && !watching))} onClick={() => watchWell(!watching)}>
+                {watching ? "WATCHING" : "WATCH"}
+              </button>
+              <button type="button" disabled={boosted || s.charge < 8} title="Spends 8 charge. Twenty seconds of command." className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.7rem] tracking-[0.16em]", boosted ? "nidus-cut-gilt" : "text-gilt", pulse(verb === "BOOST"))} onClick={() => { boostWell(); chime("surge"); }}>
+                {boosted ? "COMMAND" : "BOOST"}
+              </button>
+            </div>
           </div>
         </div>
       )}
       {Object.values(s.salvage ?? {}).some((n) => n > 0) && (
-        <div className="border border-border bg-nave/80 px-2 py-1">
+        <div className="nidus-card px-2 py-1">
           <p className="mb-1 text-center font-display text-[0.55rem] tracking-[0.12em] text-gilt">
             {(["ice", "plate", "bone", "rose", "core"] as const).filter((k) => (s.salvage?.[k] ?? 0) > 0).map((k) => `${k.toUpperCase()} ${s.salvage?.[k]}`).join(" · ")}
           </p>
@@ -774,7 +786,7 @@ function RaidTab({ verb }: { verb: string }) {
           </div>
         </div>
       )}
-      {shownRaids.map((node) => {
+      {!raidNode && shownRaids.map((node) => {
         const why = raidLockWhy(s, node.id);
         const open = !why;
         const done = cleared.includes(node.id);
@@ -782,21 +794,27 @@ function RaidTab({ verb }: { verb: string }) {
         const times = s.raidCount?.[node.id] ?? 0;
         const firstIce = node.id === "ice" && !done;
         const wait = firstIce ? node.seconds * 0.78 : node.seconds;
+        const chipKind = open ? (firstIce ? "open" : done ? "lit" : "next") : "lock";
+        const chip = open ? (firstIce ? "FIRST" : done ? (times > 1 ? `×${times}` : "AGAIN") : "OPEN") : shortLock(why);
         return (
-          <button key={node.id} type="button" disabled={!open || Boolean(raidNode) || strikers < need} title={why || node.blurb} onClick={() => { send(node.id); chime("raid"); }} className={cn("relative min-h-[4.2rem] overflow-hidden border text-left", open ? "border-border" : "border-iron opacity-55", pulse(open && verb === "RAID" && node.id === "ice" && !raidNode))}>
-            <img src={node.image} alt="" className="absolute inset-0 h-full w-full object-cover" crossOrigin="anonymous" />
-            <div className="absolute inset-0 bg-gradient-to-r from-void via-void/70 to-void/20" />
-            <div className="relative z-10 flex h-full flex-col justify-end p-2">
-              <p className="font-display text-sm tracking-[0.16em]">{node.label}{firstIce ? " · FIRST CUT" : ""}</p>
-              <p className="text-[0.62rem] tabular-nums text-muted">
-                {open ? `${need} ${markName(mark)} · ${fmtTime(wait)}` : why}
-                {done ? (times > 1 ? ` · ×${times}` : " · CLEARED") : ""}
-              </p>
+          <button key={node.id} type="button" disabled={!open || Boolean(raidNode) || strikers < need} title={why || node.blurb} onClick={() => { send(node.id); chime("raid"); }} className={cn("nidus-card relative min-h-[4.4rem] w-full overflow-hidden text-left", !open && "nidus-card-lock", pulse(open && verb === "RAID" && node.id === "ice" && !raidNode))}>
+            <img src={node.image} alt="" className="nidus-card-art" crossOrigin="anonymous" />
+            <div className="nidus-card-veil" />
+            <div className="relative z-10 flex h-full items-end justify-between gap-2 p-2">
+              <div className="min-w-0">
+                <p className="font-display text-sm tracking-[0.16em]">{node.label}</p>
+                {open && (
+                  <p className="text-[0.62rem] tabular-nums text-muted">
+                    {need} {markName(mark)} · {fmtTime(wait)}
+                  </p>
+                )}
+              </div>
+              <StatusChip kind={chipKind}>{chip}</StatusChip>
             </div>
           </button>
         );
       })}
-      {nestedWrecks > 0 && (
+      {!raidNode && nestedWrecks > 0 && (
         <p className="text-center font-display text-[0.5rem] tracking-[0.14em] text-muted">+{nestedWrecks} WRECKS NESTED</p>
       )}
     </div>
@@ -836,7 +854,7 @@ function MindsTab() {
     const pct = Math.min(100, (spark / Math.max(1, sparkNeed)) * 100);
     return (
       <div className="pointer-events-none flex items-end justify-center p-4">
-        <div className="nidus-cut w-full max-w-sm bg-nave/85 p-3 text-center">
+        <div className="nidus-card w-full max-w-sm p-3 text-center">
           <p className="font-display text-[0.7rem] tracking-[0.2em] text-gilt">NO COMMANDER YET</p>
           <p className="mt-1 text-[0.8rem] text-bone">SPARK fills while the swarm works. Full bar. Three bodies. One stays.</p>
           <div className="mt-2 h-1.5 bg-iron">
@@ -853,31 +871,32 @@ function MindsTab() {
   const born = framePost(mind.frame);
   return (
     <div className="pointer-events-auto flex flex-col justify-end gap-1.5 p-2" data-chrome>
-      <div className="relative overflow-hidden border border-gilt/30 bg-nave/90">
-        <img src={mind.portrait} alt="" className="h-36 w-full object-cover object-top" crossOrigin="anonymous" />
+      <div className="nidus-card relative overflow-hidden">
+        <img src={mind.portrait} alt="" className="h-32 w-full object-cover object-top" crossOrigin="anonymous" />
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-void to-transparent p-2">
-          <p className="font-display text-[0.55rem] tracking-[0.22em] text-gilt">COMMANDER</p>
+          <div className="mb-0.5 flex items-center gap-1.5">
+            <StatusChip kind={mind.seated ? "next" : "open"}>{mind.seated ? "SEATED" : "PACING"}</StatusChip>
+            {mind.wounded && <StatusChip kind="lock">WOUND</StatusChip>}
+          </div>
           <h2 className="font-display text-2xl leading-none">{mind.name}</h2>
           <p className={cn("font-display text-[0.65rem] tracking-[0.16em]", rarityColor[mind.rarity])}>
-            {spec.label} · BORN {born.label} · NOW {post.label}
+            {spec.label} · {born.label} → {post.label}
           </p>
-          <p className="text-[0.75rem] text-bone">{mindPostLine(mind)}</p>
           {mindTalent(mind.level) && (
             <p className="font-display text-[0.55rem] tracking-[0.14em] text-venom">{mindTalent(mind.level)?.label}</p>
           )}
         </div>
       </div>
-      <div className="flex gap-1 overflow-x-auto">
+      <div className="nidus-strip">
         {live.map((m) => (
-          <button key={m.id} type="button" title={`${m.name} · ${POSTS[m.job].label}`} onClick={() => selectMind(m.id)} className={cn("h-12 w-10 shrink-0 overflow-hidden border", m.id === mind.id ? "border-gilt" : "border-border")}>
+          <button key={m.id} type="button" title={`${m.name} · ${POSTS[m.job].label}`} onClick={() => selectMind(m.id)} className={cn("h-12 w-10 shrink-0 overflow-hidden", m.id === mind.id ? "nidus-card-on nidus-card" : "nidus-card")}>
             <img src={m.portrait} alt="" className="h-full w-full object-cover" crossOrigin="anonymous" />
           </button>
         ))}
         {Array.from({ length: Math.max(0, throneCap(s) - live.length) }).map((_, i) => (
-          <div key={i} className="h-12 w-10 shrink-0 border border-dashed border-iron" />
+          <div key={i} className="nidus-card h-12 w-10 shrink-0 opacity-40" />
         ))}
       </div>
-      <p className="text-center text-[0.65rem] text-muted">POST — seated multiplies that rate. {mind.fracture}</p>
       <div className="grid grid-cols-5 gap-1">
         {JOBS.map((j) => {
           const Icon = icons[j.id];
@@ -895,33 +914,33 @@ function MindsTab() {
           );
         })}
       </div>
-      <div className="flex gap-1.5">
-        <button type="button" className="nidus-cut min-h-11 flex-1 font-display text-[0.62rem] tracking-[0.12em]" onClick={() => seat(mind.id)}>
-          {mind.seated ? "UNSEAT · HALF" : "SEAT · FULL"}
+      <div className="nidus-actions">
+        <button type="button" className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.62rem] tracking-[0.12em]", mind.seated && "nidus-cut-venom")} onClick={() => seat(mind.id)}>
+          {mind.seated ? "UNSEAT" : "SEAT"}
         </button>
         <button
           type="button"
           disabled={!mind.wounded || s.charge < (s.tech.flesh2?.done ? 2 : s.tech.mindheal?.done ? 4 : 8)}
           title="Charge mends a wound."
-          className="nidus-cut min-h-11 px-2 font-display text-[0.62rem] tracking-[0.12em] text-venom disabled:opacity-40"
+          className="nidus-cut nidus-iconbtn text-venom disabled:opacity-40"
           onClick={() => {
             useNidus.getState().heal(mind.id);
             chime("wake");
           }}
         >
-          HEAL
+          <span className="font-display text-[0.42rem] tracking-[0.12em]">HEAL</span>
         </button>
         <button
           type="button"
           disabled={s.echo < 3}
           title="Spend 3 Echo to rank them."
-          className="nidus-cut min-h-11 px-2 font-display text-[0.62rem] tracking-[0.12em] text-gilt disabled:opacity-40"
+          className="nidus-cut nidus-iconbtn text-gilt disabled:opacity-40"
           onClick={() => useNidus.getState().promote(mind.id)}
         >
-          MARK
+          <span className="font-display text-[0.42rem] tracking-[0.12em]">MARK</span>
         </button>
-        <button type="button" className="nidus-cut min-h-11 px-2 font-display text-[0.62rem] tracking-[0.12em] text-blood-bright" onClick={() => melt(mind.id)}>
-          UNMAKE
+        <button type="button" className="nidus-cut nidus-iconbtn text-blood-bright" onClick={() => melt(mind.id)}>
+          <span className="font-display text-[0.42rem] tracking-[0.12em]">UNMAKE</span>
         </button>
       </div>
     </div>
@@ -933,7 +952,7 @@ function WakeOverlay() {
   const pick = useNidus((s) => s.pickWake);
   if (!waking) return null;
   return (
-    <div className="absolute inset-0 z-30 flex flex-col justify-end bg-void/80 p-3" data-chrome>
+    <div className="pointer-events-auto absolute inset-x-0 top-0 bottom-16 z-40 flex flex-col justify-end bg-void/92 p-3" data-chrome>
       <p className="mb-1 text-center font-display text-[0.7rem] tracking-[0.24em] text-gilt">THREE COMMANDERS. ONE POST.</p>
       <p className="mb-2 text-center text-[0.7rem] text-muted">Pick the job you need. The rest ash.</p>
       <div className="grid grid-cols-3 gap-2">
@@ -941,7 +960,7 @@ function WakeOverlay() {
           const post = framePost(c.frame);
           const top = (Object.entries(c.stats) as [string, number][]).sort((a, b) => b[1] - a[1])[0];
           return (
-            <button key={c.name + i} type="button" onClick={() => { pick(i); chime("wake"); }} className="nidus-cut overflow-hidden bg-nave text-left">
+            <button key={c.name + i} type="button" onClick={() => { pick(i); chime("wake"); }} className="nidus-card overflow-hidden bg-nave text-left">
               <img src={c.portrait} alt="" className="h-28 w-full object-cover object-top" crossOrigin="anonymous" />
               <div className="p-1.5">
                 <p className="font-display text-[0.7rem] tracking-[0.16em] text-gilt">{post.label}</p>
@@ -968,8 +987,8 @@ function GiftOverlay() {
   }, []);
   if (!gift) return null;
   return (
-    <div className="absolute inset-0 z-30 flex items-end justify-center bg-void/55 p-4" data-chrome>
-      <div className="w-full max-w-sm border border-gilt bg-nave/95 p-3 nidus-pulse">
+    <div className="pointer-events-auto absolute inset-x-0 top-0 bottom-16 z-40 flex items-end justify-center bg-void/80 p-4" data-chrome>
+      <div className="nidus-panel w-full max-w-sm p-3 nidus-pulse">
         <p className="font-display text-[0.65rem] tracking-[0.28em] text-gilt">THE HIVE HELD · {fmtTime(gift.seconds)}</p>
         {streak > 1 && (
           <p className="mt-1 font-display text-[0.58rem] tracking-[0.16em] text-venom">STREAK {streak} · RICHER CUT</p>
@@ -995,7 +1014,7 @@ function BriefOverlay() {
   }, [card?.id, dismiss]);
   if (!card) return null;
   return (
-    <button type="button" data-chrome className="absolute inset-x-0 top-20 z-20 mx-auto w-[min(92%,22rem)] border border-border bg-nave/95 p-2.5 text-left" onClick={() => dismiss()}>
+    <button type="button" data-chrome className="nidus-panel absolute inset-x-0 top-20 z-20 mx-auto w-[min(92%,22rem)] p-2.5 text-left" onClick={() => dismiss()}>
       {card.portrait && <img src={card.portrait} alt="" className="mb-1.5 h-12 w-9 object-cover" crossOrigin="anonymous" />}
       <p className="font-display text-[0.6rem] tracking-[0.24em] text-gilt">{card.stamp}</p>
       <p className="font-display text-base">{card.headline}</p>

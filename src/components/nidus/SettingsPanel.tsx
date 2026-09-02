@@ -99,7 +99,7 @@ export function SettingsPanel({
   const hits = CODEX.filter((c) => !q || `${c.title} ${c.body}`.toLowerCase().includes(q.toLowerCase()));
 
   return (
-    <div className="pointer-events-auto max-h-[70dvh] overflow-y-auto border border-border bg-nave/95 p-3">
+    <div className="nidus-panel pointer-events-auto max-h-[70dvh] overflow-y-auto p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="grid grid-cols-4 gap-1">
           {(["view", "opt", "codex", "save"] as const).map((t) => (
@@ -108,8 +108,8 @@ export function SettingsPanel({
               type="button"
               onClick={() => setTab(t)}
               className={cn(
-                "min-h-10 px-1 font-display text-[0.62rem] tracking-[0.16em]",
-                tab === t ? "bg-blood text-bone" : "border border-border text-muted",
+                "nidus-cut min-h-10 px-1 font-display text-[0.62rem] tracking-[0.16em]",
+                tab === t ? "nidus-cut-on" : "text-muted",
               )}
             >
               {t === "view" ? "VIEW" : t === "opt" ? "LOCAL" : t === "codex" ? "CODEX" : "SAVE"}
@@ -194,7 +194,7 @@ export function SettingsPanel({
           />
           <ul className="flex flex-col gap-2">
             {hits.map((c) => (
-              <li key={`${c.title}-${c.id}`} className="border border-border p-2">
+              <li key={`${c.title}-${c.id}`} className="nidus-card p-2">
                 <p className="font-display text-xs tracking-[0.2em] text-gilt">{c.title}</p>
                 <p className="text-sm text-bone">{c.body}</p>
               </li>
@@ -221,7 +221,7 @@ export function SettingsPanel({
             {[0, 1, 2].map((i) => {
               const name = slotStamp(i);
               return (
-                <div key={i} className="border border-border p-2">
+                <div key={i} className="nidus-card p-2">
                   <p className="font-display text-[0.6rem] tracking-[0.16em] text-gilt">{name ?? `PEW ${i + 1}`}</p>
                   <button type="button" className="mt-1 min-h-9 w-full border border-border text-[0.65rem] tracking-[0.14em]" onClick={() => stashSlot(i)}>
                     STASH
@@ -320,8 +320,8 @@ function ViewMenu({ prefs }: { prefs: ViewPrefs }) {
               title={`${p.label} — ${p.why}`}
               onClick={() => applyCamPreset(id)}
               className={cn(
-                "min-h-14 border px-1 py-1 text-center",
-                on ? "border-gilt bg-blood/40 text-gilt" : "border-border text-bone",
+                "nidus-card min-h-14 px-1 py-1 text-center",
+                on && "nidus-card-on",
               )}
             >
               <span className="block font-display text-[0.62rem] tracking-[0.14em]">{p.label}</span>
