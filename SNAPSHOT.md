@@ -1,6 +1,7 @@
 # NIDUS snapshot — 2026-09-01 density 50 + loop 10
 
-GitHub: `NYXHIVEQUEEN/nidus` `main` (this pass stacked on last good chrome).
+GitHub: `NYXHIVEQUEEN/nidus` `main` @ `0b8312f`.
+Pre-pass chrome save: `10bd41a`.
 **No hive wipe.** `migrate()` still merges rooms/techs/casteXp/hiveRank/started/mercy/streak plus `printFocus`. Existing seated commanders stay seated.
 
 Playtest (no `localStorage.clear()`, no NEW HIVE):
