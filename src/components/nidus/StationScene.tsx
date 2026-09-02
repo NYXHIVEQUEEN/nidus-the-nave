@@ -409,6 +409,21 @@ function Hull() {
     g.rotateX(Math.PI / 2);
     return g;
   }, []);
+  const naveFillGeo = useMemo(() => {
+    const pts = [
+      new Vector2(0.0, 2.02),
+      new Vector2(0.3, 1.72),
+      new Vector2(0.46, 1.04),
+      new Vector2(0.32, 0.16),
+      new Vector2(0.48, -0.9),
+      new Vector2(0.4, -1.58),
+      new Vector2(0.18, -1.96),
+      new Vector2(0.0, -2.06),
+    ];
+    const g = new LatheGeometry(pts, 16);
+    g.rotateX(Math.PI / 2);
+    return g;
+  }, []);
   const waistGeo = useMemo(() => {
     const pts = [
       new Vector2(0.28, 0.85),
@@ -491,7 +506,7 @@ function Hull() {
     if (furnace.current) {
       const tide = eventKind === "TIDE" || eventKind === "FURNACE" || surging;
       furnace.current.intensity =
-        (far ? 5 : (tide ? 12 : 8) + Math.sin(t * 11) * 1.6 + glow * 2 + (giftOpen ? 6 : 0)) * (watchNave ? 1.35 : 1);
+        (far ? 3.5 : (tide ? 8 : 5.5) + Math.sin(t * 11) * 0.9 + glow * 1.4 + (giftOpen ? 4 : 0)) * (watchNave ? 1.2 : 1);
       furnace.current.color.set(eventKind === "PULSAR" ? GILT : eventKind === "ROSE" ? VENOM : BLOOD);
     }
     if (naveMat.current) {
@@ -540,7 +555,7 @@ function Hull() {
       hangarGlow.current.emissiveIntensity = raiding ? 0.9 + Math.sin(t * 6) * 0.35 : 0.12;
     }
     if (leakLite.current) {
-      leakLite.current.intensity = 4 + glow * 6 + Math.sin(t * 2.1) * 1.2 + (surging ? 4 : 0) + (eventKind === "PULSAR" ? 5 : 0);
+      leakLite.current.intensity = 2.2 + glow * 3.2 + Math.sin(t * 2.1) * 0.6 + (surging ? 2 : 0) + (eventKind === "PULSAR" ? 2.4 : 0);
       leakLite.current.color.set(eventKind === "ECLIPSE" ? "#4a3a58" : GILT);
     }
 
@@ -733,34 +748,36 @@ function Hull() {
   return (
     <group>
       <group ref={skyRef}>
-        <mesh rotation={[0, 0, 0]}>
+        <mesh rotation={[0, 0.18, 0.04]}>
           <cylinderGeometry args={[78, 78, 42, 48, 1, true]} />
-          <meshBasicMaterial map={arch} side={BackSide} />
+          <meshBasicMaterial map={arch} color="#b8a4b0" side={BackSide} />
         </mesh>
-        <mesh position={[0, 22, 0]} rotation={[0, 0, 0]}>
-          <sphereGeometry args={[78, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshBasicMaterial map={sleep} side={BackSide} />
+        <mesh position={[0, 10, 0]}>
+          <sphereGeometry args={[78, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshBasicMaterial map={voidMap} color="#4a3848" side={BackSide} />
         </mesh>
         <mesh position={[-28, -11, -10]}>
           <sphereGeometry args={[8.2, 28, 20]} />
-          <meshStandardMaterial map={sleep} roughness={0.92} metalness={0.05} emissive="#1a1020" emissiveIntensity={0.25} />
+          <meshStandardMaterial map={rift} color="#d8c8cc" roughness={0.86} metalness={0.08} emissive="#3a2838" emissiveIntensity={0.42} />
         </mesh>
         <mesh position={[24, -9, 14]}>
           <sphereGeometry args={[6.4, 28, 20]} />
-          <meshStandardMaterial map={titans} roughness={0.9} metalness={0.04} emissive="#141018" emissiveIntensity={0.2} />
+          <meshStandardMaterial map={titans} color="#dccbb8" roughness={0.84} metalness={0.08} emissive="#2a2218" emissiveIntensity={0.38} />
         </mesh>
         <mesh position={[8, -14, -26]}>
           <sphereGeometry args={[5.2, 24, 18]} />
-          <meshStandardMaterial map={rift} roughness={0.94} metalness={0.04} emissive="#1a0814" emissiveIntensity={0.22} />
+          <meshStandardMaterial map={rift} color="#d4bcc4" roughness={0.88} metalness={0.06} emissive="#2a1420" emissiveIntensity={0.4} />
         </mesh>
         <mesh rotation={[Math.PI / 2.2, 0.15, 0.1]}>
           <torusGeometry args={[36, 0.45, 8, 64]} />
-          <meshBasicMaterial color="#c9a8c4" transparent opacity={0.2} depthWrite={false} />
+          <meshBasicMaterial color="#e8d0d8" transparent opacity={0.3} depthWrite={false} />
         </mesh>
       </group>
 
       <group ref={stationRef}>
-      {/* wasp-waist nave — one lathe, not a pile of solids */}
+      <mesh geometry={naveFillGeo}>
+        <meshStandardMaterial color="#cbb8a6" metalness={0.4} roughness={0.52} />
+      </mesh>
       <mesh geometry={naveGeo}>
         <meshStandardMaterial ref={naveMat} map={rivet} color={BONE} metalness={0.5} roughness={0.44} emissive={gilt} emissiveIntensity={0.06} />
       </mesh>
@@ -806,6 +823,10 @@ function Hull() {
 
       {[-0.95, 0, 0.95].map((z, i) => (
         <group key={`lancet-${z}`}>
+          <mesh position={[0.46, 0.08, z]} rotation={[0, Math.PI / 2, 0]}>
+            <planeGeometry args={[0.16, 0.4]} />
+            <meshStandardMaterial color="#1c1612" metalness={0.7} roughness={0.45} />
+          </mesh>
           <mesh position={[0.5, 0.08, z]} rotation={[0, Math.PI / 2, 0]}>
             <planeGeometry args={[0.14, 0.38]} />
             <meshStandardMaterial
@@ -817,12 +838,19 @@ function Hull() {
               metalness={0.08}
               roughness={0.16}
               toneMapped={false}
-              side={DoubleSide}
             />
+          </mesh>
+          <mesh position={[0.505, 0.08, z]} rotation={[0, Math.PI / 2, 0]}>
+            <ringGeometry args={[0.072, 0.088, 4]} />
+            <meshStandardMaterial color="#3a342e" metalness={0.88} roughness={0.28} />
           </mesh>
           <mesh position={[0.5, 0.3, z]} rotation={[0, Math.PI / 2, 0]}>
             <coneGeometry args={[0.07, 0.14, 3]} />
             <meshStandardMaterial map={rose} color={GILT} emissive={gilt} emissiveIntensity={0.7 + glow} toneMapped={false} />
+          </mesh>
+          <mesh position={[-0.46, 0.08, z]} rotation={[0, -Math.PI / 2, 0]}>
+            <planeGeometry args={[0.16, 0.4]} />
+            <meshStandardMaterial color="#1c1612" metalness={0.7} roughness={0.45} />
           </mesh>
           <mesh position={[-0.5, 0.08, z]} rotation={[0, -Math.PI / 2, 0]}>
             <planeGeometry args={[0.14, 0.38]} />
@@ -832,12 +860,15 @@ function Hull() {
               emissive={i % 2 ? bloodC : gilt}
               emissiveIntensity={0.7 + glow * 0.8}
               toneMapped={false}
-              side={DoubleSide}
             />
           </mesh>
         </group>
       ))}
 
+      <mesh position={[0, 0.12, -1.98]}>
+        <circleGeometry args={[0.24, 16]} />
+        <meshStandardMaterial color="#1c1612" metalness={0.7} roughness={0.45} />
+      </mesh>
       <mesh position={[0, 0.12, -2.05]}>
         <circleGeometry args={[0.22, 16]} />
         <meshStandardMaterial map={rose} color={GILT} emissive={gilt} emissiveIntensity={1.1 + glow} toneMapped={false} />
@@ -961,6 +992,10 @@ function Hull() {
             <cylinderGeometry args={[0.16, 0.2, 0.08, 8, 1, true]} />
             <meshStandardMaterial ref={hangarGlow} map={grate} color={BONE} emissive={venom} emissiveIntensity={raiding ? 1 : 0.12} toneMapped={false} side={DoubleSide} />
           </mesh>
+          <mesh position={[0, 0.04, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[0.2, 8]} />
+            <meshStandardMaterial color="#1c1612" metalness={0.7} roughness={0.4} />
+          </mesh>
         </Dock>
       )}
       {gundeck && (
@@ -993,7 +1028,7 @@ function Hull() {
           <group ref={labRef} position={[0, 0.28, 0]}>
             <mesh>
               <sphereGeometry args={[0.11, 12, 10]} />
-              <meshStandardMaterial map={glass} color={VENOM} emissive={venom} emissiveIntensity={1.15} transparent opacity={0.88} toneMapped={false} />
+              <meshStandardMaterial map={glass} color={VENOM} emissive={venom} emissiveIntensity={1.15} toneMapped={false} />
             </mesh>
           </group>
         </Dock>
@@ -1131,7 +1166,7 @@ function Hull() {
 
       <instancedMesh ref={drones} args={[undefined, undefined, count]} key={count} visible={false}>
         <coneGeometry args={[0.032, 0.12, 6]} />
-        <meshStandardMaterial color="#e8dcc8" emissive={venom} emissiveIntensity={2.1} toneMapped={false} />
+        <meshStandardMaterial color="#d8cbb8" metalness={0.62} roughness={0.38} emissive={venom} emissiveIntensity={0.55} />
       </instancedMesh>
       <instancedMesh ref={embers} args={[undefined, undefined, emberCount]} visible={false}>
         <sphereGeometry args={[0.022, 5, 5]} />
@@ -1171,61 +1206,88 @@ function Hull() {
   );
 }
 
-function Pulsar() {
+function CornerSun() {
   const light = useRef<SpotLight>(null);
-  const star = useRef<Group>(null);
+  const hold = useRef<Group>(null);
+  const disc = useRef<Group>(null);
   const shaft = useRef<MeshBasicMaterial>(null);
-  const pos: [number, number, number] = [34, 20, -30];
+  const dust = useRef<InstancedMesh>(null);
+  const { camera } = useThree();
+  const sleep = useTexture("/nidus/sky-sleep.jpg");
+  sleep.colorSpace = SRGBColorSpace;
   const mobile = typeof window !== "undefined" && window.innerWidth < 500;
   useFrame((state) => {
-    if (REDUCE) return;
     const t = state.clock.elapsedTime;
-    const pulse = 0.74 + Math.sin(t * 1.65) * 0.16 + Math.sin(t * 7.1) * 0.05;
-    if (star.current) star.current.scale.setScalar(0.9 + pulse * 0.28);
+    const pulse = REDUCE ? 1 : 0.94 + Math.sin(t * 0.5) * 0.06;
+    if (hold.current) {
+      hold.current.position.copy(camera.position);
+      hold.current.quaternion.copy(camera.quaternion);
+    }
+    if (disc.current) disc.current.scale.setScalar(pulse);
     if (light.current) {
-      light.current.intensity = 22 + pulse * 38;
+      light.current.intensity = 9 + pulse * 5;
       light.current.target.position.set(0, 0, 0);
       light.current.target.updateMatrixWorld();
     }
-    if (shaft.current) shaft.current.opacity = 0.05 + pulse * 0.045;
+    if (shaft.current) shaft.current.opacity = 0.06 + pulse * 0.03;
+    const mesh = dust.current;
+    if (mesh && !REDUCE) {
+      for (let i = 0; i < 8; i++) {
+        const k = 0.22 + i * 0.09 + Math.sin(t * 0.18 + i) * 0.015;
+        dummy.position.set(-1.8 * (1 - k), 1.55 * (1 - k), -4.2 - k * 9);
+        dummy.scale.setScalar(0.4 + (1 - k) * 0.6);
+        dummy.rotation.set(0, 0, 0);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+    }
   });
   return (
     <group>
-      <group ref={star} position={pos}>
-        <mesh>
-          <sphereGeometry args={[1.15, 16, 16]} />
-          <meshBasicMaterial color="#fff6dc" />
-        </mesh>
-        <mesh>
-          <sphereGeometry args={[2.05, 12, 12]} />
-          <meshBasicMaterial color="#ffb45a" transparent opacity={0.32} depthWrite={false} blending={AdditiveBlending} />
-        </mesh>
-        <pointLight color="#ffe6b8" intensity={36} distance={80} decay={2} />
+      <directionalLight position={[-8, 11, 6]} intensity={1.7} color="#ffe2b8" />
+      <directionalLight position={[10, 6, 14]} intensity={1.05} color="#f0e4d4" />
+      <group ref={hold}>
+        <group ref={disc} position={[-5.8, 5.1, -13.5]}>
+          <mesh>
+            <sphereGeometry args={[0.28, 14, 14]} />
+            <meshBasicMaterial color="#fff6dc" />
+          </mesh>
+          <mesh>
+            <sphereGeometry args={[0.62, 10, 10]} />
+            <meshBasicMaterial map={sleep} color="#ffd08a" transparent opacity={0.55} depthWrite={false} blending={AdditiveBlending} />
+          </mesh>
+          <pointLight color="#ffe6b8" intensity={5} distance={18} decay={2} />
+        </group>
+        {!mobile && (
+          <mesh position={[-2.4, 2.1, -8]} rotation={[0.55, 0.4, 0]}>
+            <coneGeometry args={[0.55, 9, 8, 1, true]} />
+            <meshBasicMaterial
+              ref={shaft}
+              color="#ffd8a8"
+              transparent
+              opacity={0.07}
+              depthWrite={false}
+              blending={AdditiveBlending}
+              side={DoubleSide}
+            />
+          </mesh>
+        )}
+        <instancedMesh ref={dust} args={[undefined, undefined, 8]} frustumCulled={false}>
+          <sphereGeometry args={[0.03, 5, 5]} />
+          <meshBasicMaterial color="#ffe6c4" transparent opacity={0.5} depthWrite={false} blending={AdditiveBlending} />
+        </instancedMesh>
       </group>
       <spotLight
         ref={light}
-        position={pos}
-        angle={0.64}
-        penumbra={0.94}
+        position={[-12, 16, 8]}
+        angle={0.4}
+        penumbra={0.9}
         color="#ffe2b0"
-        intensity={36}
-        distance={100}
-        decay={1.65}
+        intensity={12}
+        distance={80}
+        decay={1.7}
       />
-      {!mobile && (
-        <mesh position={[17, 10, -15]} rotation={[1.05, 0.4, -0.15]}>
-          <coneGeometry args={[4.2, 18, 12, 1, true]} />
-          <meshBasicMaterial
-            ref={shaft}
-            color="#ffd8a8"
-            transparent
-            opacity={0.07}
-            depthWrite={false}
-            blending={AdditiveBlending}
-            side={DoubleSide}
-          />
-        </mesh>
-      )}
     </group>
   );
 }
@@ -1397,23 +1459,20 @@ export function StationScene() {
       style={{ touchAction: "none", position: "absolute", inset: 0 }}
       onDoubleClick={() => applyCamPreset("nave")}
       onCreated={({ gl, camera }) => {
-        gl.setClearColor("#0e0c12");
+        gl.setClearColor("#161218");
         gl.toneMapping = ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.34;
+        gl.toneMappingExposure = 1.22;
         const [x, y, z] = camPosition();
         camera.position.set(x, y, z);
       }}
     >
-      <fog attach="fog" args={["#160e16", 48, 180]} />
-      <hemisphereLight args={["#d4c8b4", "#1a0c12", 0.78]} />
-      <ambientLight intensity={0.54} />
-      <directionalLight position={[6.5, 8.5, 3.2]} intensity={2.05} color={GILT} />
-      {!mobile && <directionalLight position={[-6, 3, -5]} intensity={0.92} color="#9ec8dc" />}
-      <pointLight position={[0, 1.0, 2.6]} intensity={9.2} color={BLOOD} distance={12} decay={2} />
-      <pointLight position={[10, 5, -16]} intensity={13} color="#c4a574" distance={60} decay={2} />
-      <Stars radius={90} depth={48} count={mobile ? 56 : 120} factor={2.6} saturation={0} fade speed={REDUCE ? 0 : 0.15} />
+      <fog attach="fog" args={["#1c141c", 72, 240]} />
+      <hemisphereLight args={["#f0e2c8", "#241018", 0.92]} />
+      <ambientLight intensity={0.42} />
+      <pointLight position={[0, 1.0, 2.6]} intensity={6.2} color={BLOOD} distance={10} decay={2} />
+      <Stars radius={90} depth={48} count={mobile ? 80 : 160} factor={3.1} saturation={0.15} fade speed={REDUCE ? 0 : 0.12} />
       <Mood />
-      <Pulsar />
+      <CornerSun />
       <Hull />
       <BattleField />
       <Rig />
@@ -1455,10 +1514,10 @@ function Mood() {
       fog.far = 175;
       gl.toneMappingExposure = 1.36;
     } else {
-      fog.color.set("#160e16");
-      fog.near = 48;
-      fog.far = 180;
-      gl.toneMappingExposure = 1.34;
+      fog.color.set("#1c141c");
+      fog.near = 72;
+      fog.far = 240;
+      gl.toneMappingExposure = 1.22;
     }
   });
   return null;

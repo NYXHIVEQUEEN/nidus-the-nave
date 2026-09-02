@@ -16,7 +16,9 @@ self-consenting. Art is **hot, armored, not explicit**. Do not clone her face.
   `#c4a574`, venom `#1faf5b`, void `#0c0a09`. Not sci-fi cyan. Not plastic gold.
 - Look: **industrial femme deathcore** — rivets, lancets, wasp-waist hull,
   stained glass, hazard gilt, blood furnace, filigree on iron. Cathedral-factory
-  in orbit, not a generic space station.
+  in orbit, not a generic space station. The nave is a **filled body**, not a
+  paper lathe — space must not punch through. A small corner sun keys the void;
+  drones are metal gnats, not the only lights.
 - Portraits: original faces, military-femme gothic, street-occult lighting,
   bandanas/gloves/tattoos OK as *style*. **Leave the player’s face out.**
 - Audio: `public/nidus/rules.mp3` is **Rules of Engagement** by Nytheria Nyx.

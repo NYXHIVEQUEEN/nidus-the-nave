@@ -1,16 +1,22 @@
-# NIDUS snapshot — 2026-09-01 audio mixer
+# NIDUS snapshot — 2026-09-01 hull meat + corner sun
 
-GitHub: `NYXHIVEQUEEN/nidus` `main` @ `5d0bfcf`.
-Pre-pass density: `0b8312f`.
+GitHub: `NYXHIVEQUEEN/nidus` `main` (graphics pass on audio `47a34fe`).
 **No hive wipe.**
 
-## Audio
-- The anthem was stacking on its own hum stem + grain-sampling itself on every tap. Mixer is now a singleton (`__nidusAudio`).
-- **One music bed.** 900ms crossfade. ANTHEM = Rules of Engagement — Nytheria Nyx. RAID may crossfade to her coda stem, then back. Never two copies of the song.
-- **VOID** = procedural space pad (not stock replacing her) until more Nyx cuts.
-- Station amb (air, rumble, hull ticks) lives on its own bus. Tap SFX are synth + noise, not slices of the anthem.
-- SURGE ducks the bed instead of layering another mix.
-- RITE → LOCAL: ANTHEM / VOID + **NYX ON SPOTIFY** (artist door: `open.spotify.com/artist/0h7eXQHwChoJ0FkFqrMQSA`). Spotify cannot stream inside the nave.
-- Unlock still on first gesture. No autoplay before WAKE.
+## Graphics (12 + hull + sun)
+1. Closed nave fill so the ship is meat, not a see-through paper lathe
+2. Small corner sun (always upper-left of the glass) — not a full-sky sunburst
+3. Sun key + camera fill so bone plates read; furnace is an accent, not the only light
+4. Lancet glass sits on iron backing + frames — windows, not holes
+5. Hangar maw capped; lab globe opaque
+6. Stern rose has a bulkhead behind it
+7. Sky zenith is void, not a blown sleep hemisphere
+8. Nebula/arch tinted brighter; fog pushed back so space reads
+9. Planets catch light (rift/titans, not the sun texture)
+10. Drones are metal gnats (lower LED scream)
+11. Thin gilt shaft + dust motes from the corner sun
+12. Cyan fill light removed; gilt sun + bone fill only
+13. Stars denser, saturation tick
+14. Local furnace/leak ducked so the system sun can work
 
-Playtest: printed 17, ore held, mixer live, ANTHEM/VOID/SPOTIFY present, no pageerrors, typecheck clean.
+Playtest: printed 17 held, no pageerrors, ~29 draws / ~3.5k tris, typecheck clean.
