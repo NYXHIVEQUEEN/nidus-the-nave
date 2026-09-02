@@ -1033,7 +1033,7 @@ function WakeOverlay() {
               <img src={c.portrait} alt="" className="h-20 w-full object-cover object-top" crossOrigin="anonymous" />
               <div className="p-1.5">
                 <p className="font-display text-[0.7rem] tracking-[0.16em] text-gilt">{post.label}</p>
-                <p className={cn("font-display text-[0.58rem] tracking-[0.12em]", rarityColor[c.rarity])}>{FRAMES[c.frame].label}</p>
+                <p className={cn("font-display text-[0.58rem] tracking-[0.12em]", rarityColor[c.rarity])}>{FRAMES[c.frame]?.label ?? c.frame}</p>
                 <p className="font-display text-sm leading-tight">{c.name}</p>
                 <p className="text-[0.7rem] text-bone">{post.does}</p>
                 <p className="text-[0.6rem] tabular-nums text-muted">{top?.[0].toUpperCase()} {top?.[1]} · SEAT LATER</p>

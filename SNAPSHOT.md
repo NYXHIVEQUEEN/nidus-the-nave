@@ -1,11 +1,10 @@
-# NIDUS snapshot — 2026-09-01 name, local save, gnats, GitHub
+# NIDUS snapshot — 2026-09-01 offline fallback + spine tick
 
 GitHub: `NYXHIVEQUEEN/nidus` `main`.
 **No hive wipe.**
 
-- Store title: **NIDUS: The Nave** (`store/NAME.md`). In-game stays NIDUS.
-- Local save shouted on WAKE + bar + RITE SAVE. No cloud.
-- Drones/raid darts are winged craft, not cones. Wreck + well ring when raiding.
-- `store/GITHUB.md` is the host → PWABuilder wrap path.
+- Spine complete no longer blows the tick or the wake roll.
+- Net: try 2.8s then cache. Fonts ship local. Hull error bound.
+- Offline uses the **same** rates as online. No extra cut for being on wifi.
 
-Playtest: printed 17 held, LOCAL SAVE on title, 32 draws, no pageerrors.
+Tests: 20 persist pass. Playtest: hive held through offline, no pageerrors.

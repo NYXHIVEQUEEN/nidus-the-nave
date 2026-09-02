@@ -81,16 +81,24 @@ export const useNidus = create<Store>((set, get) => ({
   ...defaultState(),
   hydrate: () => {
     requestPersist();
-    const loaded = loadSave();
-    const ticked = applyTick(loaded, Date.now());
-    set(ticked);
+    try {
+      const loaded = loadSave();
+      const ticked = applyTick(loaded, Date.now());
+      set(ticked);
+    } catch {
+      set(loadSave());
+    }
   },
   tick: (now) => {
-    const next = applyTick(pickGame(get()), now);
-    set(next);
-    if (now - lastWrite > 4000) {
-      lastWrite = now;
-      writeSave(next);
+    try {
+      const next = applyTick(pickGame(get()), now);
+      set(next);
+      if (now - lastWrite > 4000) {
+        lastWrite = now;
+        writeSave(next);
+      }
+    } catch {
+      writeSave(pickGame(get()));
     }
   },
   start: () => {

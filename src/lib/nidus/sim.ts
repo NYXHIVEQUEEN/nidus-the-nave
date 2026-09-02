@@ -437,6 +437,7 @@ export function queueRoom(s: GameState, id: RoomId): GameState {
   const next = cloneState(s);
   const spec = ROOMS.find((r) => r.id === id);
   if (!spec) return next;
+  if (!next.rooms[id]) next.rooms[id] = { built: false, progress: 0, rank: 0, rankWork: 0 };
   const room = next.rooms[id];
   if (room.built) {
     if ((room.rank ?? 0) >= RANK_MAX) return next;

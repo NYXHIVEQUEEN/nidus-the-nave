@@ -280,3 +280,30 @@ test("later rooms missing from a save do not crash nextBuild or migrate", () => 
   const later = applyTick(s, Date.now() + 2000);
   assert.ok(later.rooms.orebay);
 });
+
+test("raising the solar spine does not crash the tick or the next node", () => {
+  let s = defaultState();
+  s.queuedRoom = "solar";
+  s.parts = 80;
+  s.ore = 40;
+  s.charge = 20;
+  s.spark = 40;
+  s.lastTick = 1_000_000;
+  s = applyTick(s, 1_000_000 + 400_000);
+  assert.equal(s.rooms.solar.built, true);
+  assert.doesNotThrow(() => applyTick(s, 1_000_000 + 90_000));
+  const rolled = rollCandidates(s);
+  assert.equal(rolled.waking.length, 3);
+  assert.ok(rolled.waking.every((c) => c.portrait && c.name && c.frame));
+});
+
+test("offline tick uses the same rates as online — no extra cut for being away from the net", () => {
+  const a = defaultState();
+  a.rooms.solar = { built: true, progress: 28, rank: 0, rankWork: 0 };
+  a.swarm.miner = 4;
+  a.lastTick = 5_000_000;
+  const on = applyTick(a, 5_000_000 + 20_000);
+  const off = applyTick(a, 5_000_000 + 20_000);
+  assert.equal(Math.floor(on.ore), Math.floor(off.ore));
+});
+

@@ -534,20 +534,22 @@ export function rollCandidates(s: GameState): { waking: Candidate[]; rng: number
     }
     frames.push(f);
   }
-  const waking: Candidate[] = frames.map((frame) => {
+  const waking: Candidate[] = [];
+  for (const frame of frames) {
     const spec = FRAMES[frame];
+    if (!spec) continue;
     let r = pick(seed, spec.portraits);
     seed = r.seed;
-    const portrait = r.item;
+    const portrait = r.item ?? spec.portraits[0] ?? "/nidus/warden.jpg";
     r = pick(seed, spec.names);
     seed = r.seed;
-    const name = r.item;
+    const name = r.item ?? spec.names[0] ?? "WAKER";
     r = pick(seed, spec.lines);
     seed = r.seed;
-    const line = r.item;
+    const line = r.item ?? spec.lines[0] ?? "The spine holds.";
     r = pick(seed, spec.fracture);
     seed = r.seed;
-    const fracture = r.item;
+    const fracture = r.item ?? spec.fracture[0] ?? "";
     const st = rand(seed);
     seed = st.seed;
     const pip = () => 1 + Math.floor(rand(seed).n * 3);
@@ -567,7 +569,7 @@ export function rollCandidates(s: GameState): { waking: Candidate[]; rng: number
     seed = s1.seed;
     const lab = pip();
     void mine;
-    return {
+    waking.push({
       name,
       frame,
       portrait,
@@ -581,8 +583,8 @@ export function rollCandidates(s: GameState): { waking: Candidate[]; rng: number
         lab: frame === "oracle" || frame === "wretch" ? 3 : lab,
       },
       fracture,
-    };
-  });
+    });
+  }
   const idr = idFrom(seed, "wake");
   return { waking, rng: idr.seed };
 }
@@ -593,7 +595,7 @@ export function candidateToMind(c: Candidate, seed: number): { mind: import("./t
     mind: {
       ...c,
       id: idr.id,
-      job: FRAMES[c.frame].job,
+      job: FRAMES[c.frame]?.job ?? "mine",
       seated: true,
       xp: 0,
       level: 1,
