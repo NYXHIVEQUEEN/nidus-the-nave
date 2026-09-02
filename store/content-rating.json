@@ -1,0 +1,17 @@
+{
+  "questionnaire": "IARC / Google Play content rating",
+  "expected": "PEGI 12 / ESRB Teen / IARC 12+ (confirm in the official form)",
+  "answers": {
+    "violence": "Yes — fantasy/cartoon wrecks and raids. No realistic gore, no torture.",
+    "blood": "Yes — implied, dried-blood palette, not realistic dismemberment.",
+    "language": "Mild. No hate speech.",
+    "sexual_content": "No. Armored characters, not explicit, no nudity, no sex.",
+    "drugs": "No.",
+    "gambling": "No. Idle numbers are not real-money gambling.",
+    "user_interaction": "No. Single player. No chat, no UGC, no social.",
+    "location_sharing": "No.",
+    "digital_purchases": "No in this build.",
+    "unrestricted_internet": "Spotify button opens an external catalog. No in-app browser for arbitrary URLs besides that and this privacy page.",
+    "age_target": "Not designed for children under 13."
+  }
+}

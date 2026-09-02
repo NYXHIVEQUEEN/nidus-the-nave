@@ -1,0 +1,35 @@
+NIDUS — Google Play listing copy
+================================
+App name (30): NIDUS
+Short name / launcher: NIDUS
+Package: com.nyxhivequeen.nidus
+Default language: English (United States)
+Category: Games → Simulation
+Tags: idle, space, gothic, strategy, single player
+
+Short description (max 80):
+Gothic idle hive. Raise a cathedral station. Commanders wake. The nave grows.
+
+Full description:
+You are the hive-brain. The nave is a gothic cathedral in orbit. Drones print. Rooms lock behind rooms. Commanders wake, pace, and take a seat.
+
+Raise the Solar Spine. Stamp miners, fabs, builders. Raid the ice ring. Molt when the reliquary is ready. Leave — the hive still works. Come back and claim the cut.
+
+Industrial femme deathcore. Bone, gilt, dried blood. No ads. No account. Your hive lives on the device.
+
+Music: Rules of Engagement — Nytheria Nyx. VOID is a space pad until more of her cuts land. NYX ON SPOTIFY opens her catalog.
+
+Single player. Offline honest. The hive is yours.
+
+Contact / developer:
+Developer name: Nytheria Nyx
+Organization: NYX HIVEQUEEN
+Website: GitHub NYXHIVEQUEEN/nidus
+Privacy policy URL: https://YOUR-HOST/privacy
+Terms URL: https://YOUR-HOST/terms
+Support email: (put a mail you actually read)
+
+Graphic assets (this repo):
+- High-res icon 512: public/store/icon-512.png
+- Feature graphic 1024×500: public/store/feature-graphic.png
+- Phone shots: public/store/shot-*.png

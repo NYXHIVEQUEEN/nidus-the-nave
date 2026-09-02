@@ -1,0 +1,28 @@
+{
+  "app": "NIDUS",
+  "package": "com.nyxhivequeen.nidus",
+  "data_collected": false,
+  "data_shared": false,
+  "data_encrypted_in_transit": true,
+  "users_can_request_deletion": true,
+  "deletion_how": "In-app NEW HIVE (RITE → SAVE), or uninstall, or clear app storage.",
+  "independent_security_review": false,
+  "committed_to_play_families": false,
+  "data_types": {
+    "location": false,
+    "personal_info": false,
+    "financial": false,
+    "health": false,
+    "messages": false,
+    "photos": false,
+    "audio": false,
+    "files": false,
+    "calendar": false,
+    "contacts": false,
+    "app_activity": false,
+    "web_browsing": false,
+    "app_info": false,
+    "device_ids": false
+  },
+  "notes": "Save game is localStorage / app private storage only. Not uploaded. No ads, no IAP in this build, no analytics SDK."
+}

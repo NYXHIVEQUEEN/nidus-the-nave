@@ -34,6 +34,7 @@ import {
 import { advise } from "@/lib/nidus/advisor";
 import { markCost, markName } from "@/lib/nidus/fleet";
 import { chime, resumeAudio, setAmbiance, unlockAudio } from "@/lib/nidus/audio";
+import { registerNidusPwa } from "@/lib/nidus/pwa";
 import { BOOT_IDLE, runBoot, type BootState } from "@/lib/nidus/boot";
 import {
   chargeStarve,
@@ -100,6 +101,7 @@ export function NidusApp() {
 
   useEffect(() => {
     hydrate();
+    registerNidusPwa();
     let cancelled = false;
     void runBoot((next) => {
       if (!cancelled) setBoot(next);

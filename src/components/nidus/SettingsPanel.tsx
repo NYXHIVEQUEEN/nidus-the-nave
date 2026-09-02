@@ -321,6 +321,14 @@ export function SettingsPanel({
           </button>
         </div>
       )}
+      <div className="mt-3 flex gap-2">
+        <a href="/privacy" className="flex min-h-11 flex-1 items-center justify-center border border-border font-display text-[0.62rem] tracking-[0.18em] text-gilt">
+          PRIVACY
+        </a>
+        <a href="/terms" className="flex min-h-11 flex-1 items-center justify-center border border-border font-display text-[0.62rem] tracking-[0.18em] text-gilt">
+          TERMS
+        </a>
+      </div>
     </div>
   );
 }

@@ -1,10 +1,14 @@
-# NIDUS snapshot — 2026-09-01 qol: crash, %, rates, room, hide
+# NIDUS snapshot — 2026-09-01 Play kit
 
 GitHub: `NYXHIVEQUEEN/nidus` `main`.
 **No hive wipe.**
 
-Later rooms missing from an old save crashed `nextBuild` (`rooms[id].built` on undefined). Migrate fills every room/tech. Tick/rank/rite skip ghosts.
+Play-store kit, not a Play upload (that needs her Console + an https host):
 
-Hull cards and the gold chip show raise %. Resource chips always show /m. AUTO HIDE defaults off (prefsGen 2). Chrome ~25% roomier. Builders raise slower (~2.55/60).
+- `/privacy` `/terms` + RITE links
+- PWA manifest, icons, maskable, feature graphic, phone shots
+- `store/PLAY.md` wrap path (PWABuilder TWA, package `com.nyxhivequeen.nidus`)
+- Data safety + IARC notes
+- assetlinks placeholder
 
-Playtest: printed 17, autoHide false, /m visible, 22% on spine, no pageerrors. persist 18/18.
+Privacy and terms return 200. Typecheck clean.
