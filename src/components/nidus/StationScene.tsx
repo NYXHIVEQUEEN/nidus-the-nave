@@ -16,6 +16,7 @@ import {
   Quaternion,
   RepeatWrapping,
   SRGBColorSpace,
+  NoColorSpace,
   TOUCH,
   Vector2,
   Vector3,
@@ -87,7 +88,7 @@ function useSpin() {
 }
 
 function useHullTextures() {
-  const [plate, glass, grate, filigree, blood, hazard, arch, sleep, rift, titans, rivet, giltMap, rose, voidMap, ember, bone] = useTexture([
+  const [plate, glass, grate, filigree, blood, hazard, arch, sleep, rift, titans, rivet, giltMap, rose, voidMap, ember, bone, height, rough] = useTexture([
     "/nidus/tex-plate.jpg",
     "/nidus/tex-glass.jpg",
     "/nidus/tex-grate.jpg",
@@ -104,11 +105,15 @@ function useHullTextures() {
     "/nidus/tex-void.jpg",
     "/nidus/tex-ember.jpg",
     "/nidus/tex-bone.jpg",
+    "/nidus/tex-height.jpg",
+    "/nidus/tex-rough.jpg",
   ]);
   for (const t of [plate, glass, grate, filigree, blood, hazard, arch, sleep, rift, titans, rivet, giltMap, rose, voidMap, ember, bone]) {
     t.colorSpace = SRGBColorSpace;
   }
-  const ani = typeof window !== "undefined" && window.innerWidth < 500 ? 2 : 8;
+  height.colorSpace = NoColorSpace;
+  rough.colorSpace = NoColorSpace;
+  const ani = typeof window !== "undefined" && window.innerWidth < 500 ? 4 : 8;
   plate.wrapS = plate.wrapT = RepeatWrapping;
   plate.anisotropy = ani;
   plate.repeat.set(4.4, 6.2);
@@ -135,7 +140,13 @@ function useHullTextures() {
   voidMap.wrapS = voidMap.wrapT = RepeatWrapping;
   ember.wrapS = ember.wrapT = RepeatWrapping;
   ember.repeat.set(2.2, 2.2);
-  return { plate, glass, grate, filigree, blood, hazard, arch, sleep, rift, titans, rivet, giltMap, rose, voidMap, ember, bone };
+  height.wrapS = height.wrapT = RepeatWrapping;
+  height.anisotropy = ani;
+  height.repeat.set(4.4, 6.2);
+  rough.wrapS = rough.wrapT = RepeatWrapping;
+  rough.anisotropy = ani;
+  rough.repeat.set(4.4, 6.2);
+  return { plate, glass, grate, filigree, blood, hazard, arch, sleep, rift, titans, rivet, giltMap, rose, voidMap, ember, bone, height, rough };
 }
 
 function Decal({
@@ -378,7 +389,7 @@ function Hull() {
   const spireRank = useNidus((s) => s.rooms.spire?.rank ?? 0);
   const crucibleRank = useNidus((s) => s.rooms.crucible?.rank ?? 0);
 
-  const { plate, glass, grate, filigree, blood, hazard, arch, sleep, rift, titans, rivet, giltMap, rose, voidMap, ember, bone } = useHullTextures();
+  const { plate, glass, grate, filigree, blood, hazard, arch, sleep, rift, titans, rivet, giltMap, rose, voidMap, ember, bone, height, rough } = useHullTextures();
   const drones = useRef<InstancedMesh>(null);
   const embers = useRef<InstancedMesh>(null);
   const furnace = useRef<PointLight>(null);
@@ -851,12 +862,12 @@ function Hull() {
         <meshStandardMaterial
           ref={naveMat}
           map={rivet}
-          bumpMap={rivet}
-          bumpScale={0.045}
-          roughnessMap={plate}
+          bumpMap={height}
+          bumpScale={0.07}
+          roughnessMap={rough}
           color="#9a8c78"
-          metalness={0.68}
-          roughness={0.42}
+          metalness={0.7}
+          roughness={0.48}
           emissive={gilt}
           emissiveIntensity={0.03}
           polygonOffset
@@ -869,15 +880,15 @@ function Hull() {
       </mesh>
       <mesh position={[0, 0.08, 0.05]}>
         <boxGeometry args={[0.78, 0.42, 3.05]} />
-        <meshStandardMaterial map={plate} bumpMap={rivet} bumpScale={0.05} color="#b7a894" metalness={0.58} roughness={0.46} />
+        <meshStandardMaterial map={plate} bumpMap={height} bumpScale={0.08} roughnessMap={rough} color="#b7a894" metalness={0.62} roughness={0.5} />
       </mesh>
       <mesh position={[0, 0.36, 0.1]}>
         <boxGeometry args={[0.34, 0.2, 2.15]} />
-        <meshStandardMaterial map={plate} bumpMap={filigree} bumpScale={0.03} color="#c4b6a2" metalness={0.52} roughness={0.48} />
+        <meshStandardMaterial map={plate} bumpMap={height} bumpScale={0.05} roughnessMap={rough} color="#c4b6a2" metalness={0.55} roughness={0.5} />
       </mesh>
       <mesh position={[0, 0.06, 0.12]}>
         <boxGeometry args={[1.72, 0.18, 0.52]} />
-        <meshStandardMaterial map={plate} bumpMap={rivet} bumpScale={0.04} color="#b0a28e" metalness={0.62} roughness={0.4} />
+        <meshStandardMaterial map={plate} bumpMap={height} bumpScale={0.06} roughnessMap={rough} color="#b0a28e" metalness={0.64} roughness={0.46} />
       </mesh>
       <mesh position={[0, -0.28, 0.05]}>
         <boxGeometry args={[0.18, 0.16, 3.18]} />
@@ -915,6 +926,27 @@ function Hull() {
           <meshStandardMaterial map={bone} color="#c8bba8" metalness={0.55} roughness={0.42} />
         </mesh>
       ))}
+      {[-0.95, 0.55].map((z) => (
+        <group key={`hatch-${z}`}>
+          <mesh position={[0.402, 0.1, z]} rotation={[0, Math.PI / 2, 0]}>
+            <boxGeometry args={[0.26, 0.18, 0.022]} />
+            <meshStandardMaterial map={grate} bumpMap={height} bumpScale={0.04} color="#6a5a4c" metalness={0.72} roughness={0.38} />
+          </mesh>
+          <mesh position={[0.416, 0.1, z]} rotation={[0, Math.PI / 2, 0]}>
+            <boxGeometry args={[0.2, 0.12, 0.01]} />
+            <meshStandardMaterial map={filigree} color="#c4a574" metalness={0.65} roughness={0.32} />
+          </mesh>
+        </group>
+      ))}
+      {[-1.35, -0.7, 0.05, 0.75, 1.4].map((z) =>
+        [-0.07, 0.07].map((x) => (
+          <mesh key={`bolt-${x}-${z}`} position={[x, -0.36, z]}>
+            <boxGeometry args={[0.035, 0.028, 0.035]} />
+            <meshStandardMaterial map={rivet} color="#4a4038" metalness={0.86} roughness={0.26} />
+          </mesh>
+        )),
+      )}
+      <Decal position={[0, 0.47, 0.1]} rotation={[-0.12, 0, 0]} size={[0.28, 1.6]} map={filigree} opacity={0.55} emissive={gilt} eInt={0.12} />
       {[-1.1, -0.35, 0.4, 1.15].map((z) => (
         <mesh key={`seam-${z}`} position={[0, 0.08, z]}>
           <boxGeometry args={[0.8, 0.44, 0.04]} />

@@ -18,6 +18,8 @@ export const BOOT_ASSETS: string[] = [
     "/nidus/tex-void.jpg",
     "/nidus/tex-ember.jpg",
     "/nidus/tex-bone.jpg",
+    "/nidus/tex-height.jpg",
+    "/nidus/tex-rough.jpg",
     "/nidus/sky-arch.jpg",
     "/nidus/sky-sleep.jpg",
     "/nidus/sky-rift.jpg",
