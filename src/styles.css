@@ -368,16 +368,16 @@
 }
 
 .nidus-railbtn {
-  height: calc(2.75rem * var(--nidus-ui-scale, 1));
-  width: calc(2.75rem * var(--nidus-ui-scale, 1));
+  height: calc(3.1rem * var(--nidus-ui-scale, 1));
+  width: calc(3.1rem * var(--nidus-ui-scale, 1));
 }
 
 .nidus-root[data-density="compact"] .nidus-sheet {
-  max-height: 32dvh;
+  max-height: 42dvh;
 }
 
 .nidus-root[data-density="comfort"] .nidus-sheet {
-  max-height: 38dvh;
+  max-height: 50dvh;
 }
 
 .nidus-root[data-density="watch"] .nidus-sheet {
@@ -385,12 +385,12 @@
 }
 
 .nidus-root[data-density="compact"] .nidus-rail {
-  max-height: calc(100dvh - 38dvh);
+  max-height: calc(100dvh - 46dvh);
 }
 
 .nidus-root[data-density="compact"] .nidus-railbtn {
-  height: 2.35rem;
-  width: 2.35rem;
+  height: 2.7rem;
+  width: 2.7rem;
 }
 
 .nidus-root[data-density="compact"] nav.grid {

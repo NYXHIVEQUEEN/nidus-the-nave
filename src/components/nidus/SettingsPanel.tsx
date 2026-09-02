@@ -351,8 +351,8 @@ function ViewMenu({ prefs }: { prefs: ViewPrefs }) {
         label="UI SCALE"
         why="Shrinks chrome without hiding verbs. Live."
         value={prefs.uiScale}
-        min={0.82}
-        max={1.12}
+        min={0.88}
+        max={1.22}
         step={0.01}
         display={prefs.uiScale.toFixed(2)}
         onChange={(v) => patchPrefs({ uiScale: v })}
@@ -432,7 +432,7 @@ function ViewMenu({ prefs }: { prefs: ViewPrefs }) {
         </button>
       </div>
       <p className="text-[0.7rem] text-muted">
-        Drag empty glass to orbit. Pinch or wheel to zoom. SNAP FRAME uses the distance you set. KEEP FRAME slowly returns to it after you let go. AUTO HIDE folds the chrome so the nave can breathe. EYE brings it back.
+        Drag empty glass to orbit. Pinch or wheel to zoom. SNAP FRAME uses the distance you set. KEEP FRAME slowly returns to it after you let go. AUTO HIDE is off unless you flip it. EYE still folds chrome by hand.
       </p>
     </div>
   );

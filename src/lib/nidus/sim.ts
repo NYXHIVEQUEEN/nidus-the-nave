@@ -13,7 +13,6 @@ import {
   printCost,
   raidNeed,
   raidUnlocked,
-  rankCost,
   rates,
   rollCandidates,
   rollOrders,
@@ -130,8 +129,14 @@ export function applyTick(s: GameState, now: number): GameState {
 
   if (next.queuedRoom) {
     const spec = ROOMS.find((x) => x.id === next.queuedRoom);
-    if (spec && spec.work > 0) {
-      const room = next.rooms[next.queuedRoom];
+    if (!spec || spec.work <= 0) {
+      next.queuedRoom = nextBuild(next);
+    } else {
+      let room = next.rooms[next.queuedRoom];
+      if (!room) {
+        room = { built: false, progress: 0, rank: 0, rankWork: 0 };
+        next.rooms[next.queuedRoom] = room;
+      }
       const needParts = Math.max(0, spec.parts - room.progress * (spec.parts / spec.work));
       const partDrain = Math.min(next.parts, (spec.parts / spec.work) * r.buildPerSec * dt);
       if (needParts <= 0.2 || next.parts > 0) {
@@ -157,7 +162,6 @@ export function applyTick(s: GameState, now: number): GameState {
   if (next.rankingRoom) {
     const spec = ROOMS.find((x) => x.id === next.rankingRoom);
     const room = next.rankingRoom ? next.rooms[next.rankingRoom] : null;
-    const cost = next.rankingRoom ? rankCost({ ...next, rooms: { ...next.rooms, [next.rankingRoom]: { ...next.rooms[next.rankingRoom], rank: next.rooms[next.rankingRoom].rank } } }, next.rankingRoom) : null;
     if (spec && room && room.built && (room.rank ?? 0) < RANK_MAX) {
       const workNeed = Math.ceil(spec.work * 0.42 * ((room.rank ?? 0) + 1));
       const partDrain = Math.min(next.parts, (spec.parts / Math.max(1, spec.work)) * r.buildPerSec * dt);
@@ -171,7 +175,6 @@ export function applyTick(s: GameState, now: number): GameState {
         pushBrief(next, { kind: "build", headline: spec.label, line: `Rank ${room.rank} inlaid.`, stamp: `R${room.rank}` });
         pushLog(next, `${spec.label} rank ${room.rank}.`);
         next.rankingRoom = null;
-        void cost;
       }
     } else {
       next.rankingRoom = null;
@@ -180,7 +183,7 @@ export function applyTick(s: GameState, now: number): GameState {
 
   if (next.activeTech) {
     const spec = TECH.find((t) => t.id === next.activeTech);
-    if (spec && !next.tech[spec.id].done) {
+    if (spec && next.tech[spec.id] && !next.tech[spec.id].done) {
       next.tech[spec.id].progress += r.labPerSec * dt;
       if (next.tech[spec.id].progress >= spec.work) {
         next.tech[spec.id].progress = spec.work;

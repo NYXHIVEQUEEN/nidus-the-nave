@@ -318,6 +318,7 @@ export function GoalDock({
   onExpand,
   verb,
   why,
+  pct,
 }: {
   goal: string;
   stage: { n: number; of: number; name: string };
@@ -325,6 +326,7 @@ export function GoalDock({
   onExpand: () => void;
   verb?: string;
   why?: string;
+  pct?: number;
 }) {
   return (
     <button
@@ -332,16 +334,19 @@ export function GoalDock({
       data-chrome
       onClick={onExpand}
       className={cn(
-        "nidus-card pointer-events-auto ml-12 mr-2 flex max-w-[22rem] items-center gap-2 px-2 py-1",
+        "nidus-card pointer-events-auto ml-12 mr-2 flex max-w-[24rem] items-center gap-2 px-2.5 py-1.5",
         collapsed && "mb-1",
       )}
       aria-label={verb ? `${goal}. ${verb}` : goal}
       title={why || goal}
     >
-      <span className="font-display text-[0.58rem] tabular-nums tracking-[0.16em] text-gilt">
+      <span className="font-display text-[0.62rem] tabular-nums tracking-[0.16em] text-gilt">
         {stage.n}/{stage.of} {stage.name}
       </span>
-      <span className="min-w-0 flex-1 truncate text-center font-display text-[0.65rem] tracking-[0.18em] text-gilt">{goal}</span>
+      <span className="min-w-0 flex-1 truncate text-center font-display text-[0.7rem] tracking-[0.16em] text-gilt">{goal}</span>
+      {typeof pct === "number" && pct > 0 && pct < 100 && (
+        <span className="font-display text-[0.62rem] tabular-nums text-venom">{pct}%</span>
+      )}
       {verb && <StatusChip kind="open">{verb}</StatusChip>}
       {collapsed && <ChevronUp className="size-3 shrink-0 text-muted" />}
     </button>

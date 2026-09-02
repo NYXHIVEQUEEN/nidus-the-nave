@@ -19,6 +19,25 @@ function migrate(raw: GameState): GameState {
   };
   merged.version = SAVE_VERSION;
   if (typeof merged.hiveRank !== "number") merged.hiveRank = 0;
+  for (const spec of Object.keys(base.rooms) as (keyof typeof base.rooms)[]) {
+    const room = merged.rooms[spec];
+    if (!room || typeof room !== "object") {
+      merged.rooms[spec] = { ...base.rooms[spec] };
+    } else {
+      if (typeof room.built !== "boolean") room.built = Boolean(room.built);
+      if (typeof room.progress !== "number" || Number.isNaN(room.progress)) room.progress = 0;
+      if (typeof room.rank !== "number" || Number.isNaN(room.rank)) room.rank = room.built ? 1 : 0;
+      if (typeof room.rankWork !== "number" || Number.isNaN(room.rankWork)) room.rankWork = 0;
+    }
+  }
+  for (const spec of Object.keys(base.tech) as (keyof typeof base.tech)[]) {
+    const t = merged.tech[spec];
+    if (!t || typeof t !== "object") merged.tech[spec] = { done: false, progress: 0 };
+    else {
+      if (typeof t.done !== "boolean") t.done = Boolean(t.done);
+      if (typeof t.progress !== "number" || Number.isNaN(t.progress)) t.progress = 0;
+    }
+  }
   if (!merged.casteXp) merged.casteXp = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
   if (!merged.pendingGift) merged.pendingGift = null;
   if (typeof merged.mercySurge !== "boolean") merged.mercySurge = false;
@@ -42,6 +61,9 @@ function migrate(raw: GameState): GameState {
   if (!merged.eventKind) merged.eventKind = "";
   if (!merged.log) merged.log = [];
   if (!merged.rankingRoom) merged.rankingRoom = null;
+  if (merged.queuedRoom && !merged.rooms[merged.queuedRoom]) merged.queuedRoom = null;
+  if (merged.rankingRoom && !merged.rooms[merged.rankingRoom]) merged.rankingRoom = null;
+  if (merged.activeTech && !merged.tech[merged.activeTech]) merged.activeTech = null;
   for (const id of Object.keys(merged.rooms) as (keyof typeof merged.rooms)[]) {
     const room = merged.rooms[id];
     if (typeof room.rank !== "number") room.rank = room.built ? 1 : 0;

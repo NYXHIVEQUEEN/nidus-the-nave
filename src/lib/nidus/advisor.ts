@@ -47,12 +47,12 @@ export function pickPrintCaste(s: GameState): Caste {
 }
 
 export function nextBuild(s: GameState): RoomId | null {
-  const row = ROOMS.find((r) => r.id !== "foundry" && !s.rooms[r.id].built && roomUnlocked(s, r.id).ok);
+  const row = ROOMS.find((r) => r.id !== "foundry" && !s.rooms[r.id]?.built && roomUnlocked(s, r.id).ok);
   return row?.id ?? null;
 }
 
 export function nextRite(s: GameState) {
-  return TECH.find((t) => !s.tech[t.id].done && techUnlocked(s, t.id).ok)?.id ?? null;
+  return TECH.find((t) => !s.tech[t.id]?.done && techUnlocked(s, t.id).ok)?.id ?? null;
 }
 
 export function nextRaid(s: GameState): RaidId | null {

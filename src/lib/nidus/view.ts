@@ -25,6 +25,7 @@ export type ViewPrefs = {
   density: Density;
   uiScale: number;
   musicBed: MusicBed;
+  prefsGen: number;
 };
 
 export const CAM_DIR = { x: 0.594, y: 0.259, z: 0.761 };
@@ -54,14 +55,15 @@ let prefs: ViewPrefs = {
   camFov: 46,
   camZoom: 1,
   camPull: false,
-  autoHide: true,
+  autoHide: false,
   watchNave: false,
   lookId: "",
   lookUntil: 0,
   seenHelp: {},
   density: "auto",
-  uiScale: 1,
+  uiScale: 1.06,
   musicBed: "anthem",
+  prefsGen: 2,
 };
 
 function clamp(n: number, a: number, b: number) {
@@ -88,14 +90,15 @@ function read() {
       camFov: typeof parsed.camFov === "number" ? clamp(parsed.camDist === 24 && parsed.camFov === 48 ? 46 : parsed.camFov, 28, 70) : 46,
       camZoom: typeof parsed.camZoom === "number" ? clamp(parsed.camZoom, 0.35, 1.8) : 1,
       camPull: Boolean(parsed.camPull),
-      autoHide: parsed.autoHide !== false,
-      watchNave: Boolean(parsed.watchNave),
+      autoHide: (parsed.prefsGen ?? 0) >= 2 ? Boolean(parsed.autoHide) : false,
+      watchNave: Boolean(parsed.watchNave) && Boolean((parsed.prefsGen ?? 0) >= 2 && parsed.autoHide),
       lookId: typeof parsed.lookId === "string" ? parsed.lookId : "",
       lookUntil: typeof parsed.lookUntil === "number" ? parsed.lookUntil : 0,
       seenHelp: parsed.seenHelp && typeof parsed.seenHelp === "object" ? parsed.seenHelp : {},
       density: parsed.density === "compact" || parsed.density === "comfort" || parsed.density === "watch" || parsed.density === "auto" ? parsed.density : "auto",
-      uiScale: typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.82, 1.12) : 1,
+      uiScale: typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.88, 1.22) : 1.06,
       musicBed: parsed.musicBed === "void" ? "void" : "anthem",
+      prefsGen: 2,
     };
   } catch {
     /* keep */
@@ -175,8 +178,8 @@ export function subscribeSpin(fn: () => void) {
 
 export function resolveDensity(p = prefs, w = 390, h = 844, landscape = false): DensityResolved {
   if (p.density === "compact" || p.density === "comfort" || p.density === "watch") return p.density;
-  if (landscape && h < 520) return "compact";
-  if (h < 720) return "compact";
+  if (landscape && h < 480) return "compact";
+  if (h < 620) return "compact";
   return "comfort";
 }
 

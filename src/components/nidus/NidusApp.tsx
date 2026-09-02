@@ -236,6 +236,14 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   const density = useDensity();
   const vp = useViewport();
   const watchChrome = density === "watch" || collapsed;
+  const buildPct = (() => {
+    const id = s.queuedRoom;
+    if (!id) return undefined;
+    const spec = ROOMS.find((r) => r.id === id);
+    const st = s.rooms[id];
+    if (!spec || !st || spec.work <= 0) return undefined;
+    return Math.min(99, Math.floor((st.progress / spec.work) * 100));
+  })();
 
   useEffect(() => {
     if (!prefs.hints) return;
@@ -330,7 +338,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
         <ResourceBar compact={watchChrome || density === "compact"} />
         <div className="min-h-0 flex-1" />
         <div className="px-2 pb-1">
-          <GoalDock goal={goal} stage={stage} collapsed={collapsed} onExpand={bump} verb={tip.verb} why={tip.why} />
+          <GoalDock goal={goal} stage={stage} collapsed={collapsed} onExpand={bump} verb={tip.verb} why={tip.why} pct={buildPct} />
         </div>
         <div data-chrome className={cn("nidus-sheet", watchChrome && "nidus-sheet-hide")}>
           <p className="px-2 pt-1 text-center text-[0.62rem] tracking-[0.06em] text-muted">{tip.why}</p>
@@ -385,12 +393,13 @@ function ResourceBar({ compact }: { compact: boolean }) {
           <p className="text-[0.55rem] tracking-[0.18em] text-muted">RANK</p>
           <p className="font-display text-xs tabular-nums text-gilt">{hiveTitle(hiveRank)}</p>
         </button>
-        <Chip label="ORE" value={fmt(ore)} sub={compact ? undefined : `${fmt(r.orePerSec * 60)}/m`} cap={oreCap(s)} cur={ore} onTap={setOpen} />
-        <Chip label="PARTS" value={fmt(parts)} sub={compact ? undefined : `${fmt(r.partsPerSec * 60)}/m`} cap={partsCap(s)} cur={parts} onTap={setOpen} />
-        <Chip label="CHARGE" value={fmt(charge)} cap={chargeCap(s)} cur={charge} venom starve={starve} onTap={setOpen} />
+        <Chip label="ORE" value={fmt(ore)} sub={`${fmt(r.orePerSec * 60)}/m`} cap={oreCap(s)} cur={ore} onTap={setOpen} />
+        <Chip label="PARTS" value={fmt(parts)} sub={`${fmt(r.partsPerSec * 60)}/m`} cap={partsCap(s)} cur={parts} onTap={setOpen} />
+        <Chip label="CHARGE" value={fmt(charge)} sub={`${r.chargeGen - r.chargeDrain >= 0 ? "+" : ""}${fmt((r.chargeGen - r.chargeDrain) * 60)}/m`} cap={chargeCap(s)} cur={charge} venom starve={starve} onTap={setOpen} />
         <button type="button" className={cn("min-w-[4rem] text-left", hot && "nidus-spark")} onClick={() => setOpen(open === "SPARK" ? null : "SPARK")}>
           <p className="text-[0.55rem] tracking-[0.18em] text-muted">SPARK</p>
           <p className="font-display text-xs tabular-nums text-venom">{waking ? "WOKE" : sparkBanked(s) ? "BANK" : `${Math.floor(spark)}`}</p>
+          <p className="text-[0.55rem] tabular-nums text-gilt-dim">+{fmt(r.sparkPerSec * 60)}/m</p>
           <div className="mt-0.5 h-0.5 w-full bg-iron">
             <div className="h-0.5 bg-venom" style={{ width: `${Math.min(100, (spark / wakeNeed(s)) * 100)}%` }} />
           </div>
@@ -503,7 +512,7 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
   const slagReady = now >= slagAt;
   const s = useNidus();
   const full = packed(s);
-  const nextRoom = ROOMS.find((r) => r.id !== "foundry" && !rooms[r.id].built && !roomLockWhy(s, r.id));
+  const nextRoom = ROOMS.find((r) => r.id !== "foundry" && !rooms[r.id]?.built && !roomLockWhy(s, r.id));
   const [why, setWhy] = useState<string | null>(null);
   const strip = ROOMS.filter((r) => {
     if (r.id === "foundry") return true;
@@ -550,22 +559,29 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
       <div className="pointer-events-auto">
         <div className="nidus-strip">
           {shown.map((r) => {
-            const st = rooms[r.id];
+            const st = rooms[r.id] ?? { built: false, progress: 0, rank: 0, rankWork: 0 };
             const lock = roomLockWhy(s, r.id);
             const ranking = s.rankingRoom === r.id;
             const isNext = nextRoom?.id === r.id;
+            const work = Math.max(1, r.work);
+            const raisePct = Math.min(100, Math.floor((st.progress / work) * 100));
+            const rankNeed = Math.max(1, Math.ceil(r.work * 0.42 * ((st.rank ?? 0) + 1)));
+            const rankPct = Math.min(100, Math.floor(((st.rankWork ?? 0) / rankNeed) * 100));
             const chipKind = st.built ? "lit" : lock ? "lock" : isNext || queued === r.id ? "next" : "open";
             const chip = st.built
               ? ranking
-                ? `R${st.rank ?? 0}…`
+                ? `R${st.rank ?? 0} ${rankPct}%`
                 : `R${st.rank ?? 0}`
               : lock
                 ? shortLock(lock)
                 : queued === r.id
-                  ? "QUEUE"
+                  ? `${raisePct}%`
                   : isNext
                     ? "NEXT"
-                    : `${Math.floor((st.progress / r.work) * 100)}%`;
+                    : raisePct > 0
+                      ? `${raisePct}%`
+                      : "RAISE";
+            const bar = st.built ? (ranking ? rankPct : 100) : raisePct;
             return (
               <button
                 key={r.id}
@@ -579,16 +595,19 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
                   chime("snap");
                 }}
                 className={cn(
-                  "nidus-card w-[5.2rem] px-1.5 py-1.5 text-left",
-                  compact ? "min-h-[3.6rem]" : "min-h-[4.2rem]",
+                  "nidus-card w-[6.1rem] px-2 py-2 text-left",
+                  compact ? "min-h-[4.2rem]" : "min-h-[5rem]",
                   st.built && "nidus-card-on",
                   lock && "nidus-card-lock",
                   pulse(isNext && verb === "BUILD"),
                 )}
               >
                 <StatusChip kind={chipKind}>{chip}</StatusChip>
-                <p className="mt-1 font-display text-[0.58rem] leading-tight tracking-[0.12em]">{r.label}</p>
-                <p className="truncate text-[0.5rem] tracking-[0.04em] text-gilt-dim">{r.bonus}</p>
+                <p className="mt-1 font-display text-[0.62rem] leading-tight tracking-[0.12em]">{r.label}</p>
+                <p className="truncate text-[0.52rem] tracking-[0.04em] text-gilt-dim">{r.bonus}</p>
+                <div className="mt-1 h-0.5 w-full bg-iron">
+                  <div className={cn("h-0.5", st.built ? "bg-gilt" : "bg-venom")} style={{ width: `${bar}%` }} />
+                </div>
               </button>
             );
           })}

@@ -4,6 +4,7 @@ import { importSave } from "./save.ts";
 import { autoHoldBerths, canWakeMinds, cookUnlocked, hiveTitle, postBoostPct, roomUnlocked, techUnlocked, wakeNeed } from "./progress.ts";
 import { berthCap, chargeCap, defaultState, rollCandidates, totalSwarm } from "./content.ts";
 import { applyTick, chooseWake, claimGift, sendRaid, startSurge, tryPrint } from "./sim.ts";
+import { nextBuild } from "./advisor.ts";
 
 test("importSave keeps ore rooms minds and never blanks the hive", () => {
   const raw = JSON.stringify({
@@ -257,4 +258,25 @@ test("post boost percent is larger when seated", () => {
   const pace = postBoostPct(mind);
   const seat = postBoostPct({ ...mind, seated: true });
   assert.ok(seat > pace);
+});
+
+test("later rooms missing from a save do not crash nextBuild or migrate", () => {
+  const raw = JSON.stringify({
+    version: 1,
+    ore: 80,
+    parts: 40,
+    rooms: { solar: { built: true, progress: 28 } },
+    queuedRoom: "orebay",
+  });
+  const s = importSave(raw);
+  assert.ok(s);
+  assert.equal(s.rooms.solar.built, true);
+  assert.ok(s.rooms.cloister);
+  assert.equal(s.rooms.cloister.built, false);
+  assert.ok(s.rooms.crucible);
+  assert.doesNotThrow(() => nextBuild(s));
+  const id = nextBuild(s);
+  assert.ok(id);
+  const later = applyTick(s, Date.now() + 2000);
+  assert.ok(later.rooms.orebay);
 });

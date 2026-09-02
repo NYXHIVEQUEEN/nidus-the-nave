@@ -410,7 +410,7 @@ export function rates(s: GameState, now: number) {
     (s.tech.partmill?.done ? 1.22 : 1);
   const buildPerSec =
     s.swarm.builder *
-    (3.6 / 60) *
+    (2.55 / 60) *
     lvl("builder") *
     mark("builder") *
     molt *
