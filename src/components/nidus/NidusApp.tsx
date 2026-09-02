@@ -811,7 +811,10 @@ function RaidTab({ verb, compact }: { verb: string; compact: boolean }) {
                   type="button"
                   disabled={!open}
                   title={spec.line}
-                  onClick={() => useNidus.getState().cook(k)}
+                  onClick={() => {
+                    useNidus.getState().cook(k);
+                    chime("cook");
+                  }}
                   className={cn("nidus-cut min-h-9 px-2 font-display text-[0.52rem] tracking-[0.12em]", open ? "nidus-cut-gilt nidus-pulse" : "text-iron")}
                 >
                   {spec.label} {k.toUpperCase()}
@@ -952,7 +955,7 @@ function MindsTab({ compact }: { compact: boolean }) {
         })}
       </div>
       <div className="nidus-actions">
-        <button type="button" title={mind.seated ? "Half post while pacing." : `SEAT for +${postBoostPct({ ...mind, seated: true })}% ${post.label}.`} className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.62rem] tracking-[0.12em]", mind.seated && "nidus-cut-venom", !mind.seated && "nidus-pulse")} onClick={() => seat(mind.id)}>
+        <button type="button" title={mind.seated ? "Half post while pacing." : `SEAT for +${postBoostPct({ ...mind, seated: true })}% ${post.label}.`} className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.62rem] tracking-[0.12em]", mind.seated && "nidus-cut-venom", !mind.seated && "nidus-pulse")} onClick={() => { seat(mind.id); chime("seat"); }}>
           {mind.seated ? "UNSEAT" : `SEAT +${postBoostPct({ ...mind, seated: true })}%`}
         </button>
         <button
@@ -1034,7 +1037,7 @@ function GiftOverlay() {
           {fmt(gift.ore)} ORE · {fmt(gift.parts)} PARTS · +{gift.spark} SPARK
         </p>
         {mercy && <p className="mt-1 text-[0.7rem] text-muted">CLAIM banks a mercy SURGE and a lick of charge.</p>}
-        <button type="button" className="nidus-cut nidus-cut-on mt-3 min-h-11 w-full font-display tracking-[0.28em] text-bone" onClick={() => { claim(); chime("wake"); }}>
+        <button type="button" className="nidus-cut nidus-cut-on mt-3 min-h-11 w-full font-display tracking-[0.28em] text-bone" onClick={() => { claim(); chime("claim"); }}>
           CLAIM
         </button>
       </div>

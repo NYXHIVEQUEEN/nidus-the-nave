@@ -19,8 +19,12 @@ self-consenting. Art is **hot, armored, not explicit**. Do not clone her face.
   in orbit, not a generic space station.
 - Portraits: original faces, military-femme gothic, street-occult lighting,
   bandanas/gloves/tattoos OK as *style*. **Leave the player’s face out.**
-- Audio: `public/nidus/rules.mp3` + `loop-hum/break/coda.mp3` are **Rules of
-  Engagement** by Nytheria Nyx. Keep credit in SAVE. Do not replace with stock.
+- Audio: `public/nidus/rules.mp3` is **Rules of Engagement** by Nytheria Nyx.
+  Keep credit in SAVE. Never stack two copies of the anthem. Mixer is a
+  singleton (`globalThis.__nidusAudio`) with one music bed, a station amb bus,
+  and tap SFX. Crossfade 900ms. VOID is a procedural space pad, not stock that
+  replaces her. Spotify is a door (`open.spotify.com/artist/0h7eXQHwChoJ0FkFqrMQSA`),
+  not in-hive streaming. Unlock on first gesture. Do not autoplay before WAKE.
 - UI: four tabs, short chrome, no lore walls. Dictionary lives in RITE → CODEX.
 
 ## Locked product

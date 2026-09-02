@@ -126,6 +126,7 @@ const GLOSS: Record<string, string> = {
   ROSE: "Drink a rose for SPARK.",
   CORE: "Crack a core for Echo.",
   SIZE: "TIGHT packs chrome. ROOMY breathes. WATCH hides it. AUTO reads the glass.",
+  SONG: "One bed. ANTHEM is Nyx. VOID is space until more of her cuts.",
 };
 
 export function gloss(label: string): string {

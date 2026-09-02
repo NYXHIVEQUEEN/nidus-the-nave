@@ -3,6 +3,7 @@ const KEY = "nidus.prefs.v1";
 export type HelpId = "hull" | "forge" | "raid" | "minds" | "view" | "wake" | "idle";
 export type Density = "auto" | "compact" | "comfort" | "watch";
 export type DensityResolved = "compact" | "comfort" | "watch";
+export type MusicBed = "anthem" | "void";
 
 export type ViewPrefs = {
   spinPaused: boolean;
@@ -23,6 +24,7 @@ export type ViewPrefs = {
   seenHelp: Partial<Record<HelpId, boolean>>;
   density: Density;
   uiScale: number;
+  musicBed: MusicBed;
 };
 
 export const CAM_DIR = { x: 0.594, y: 0.259, z: 0.761 };
@@ -59,6 +61,7 @@ let prefs: ViewPrefs = {
   seenHelp: {},
   density: "auto",
   uiScale: 1,
+  musicBed: "anthem",
 };
 
 function clamp(n: number, a: number, b: number) {
@@ -92,6 +95,7 @@ function read() {
       seenHelp: parsed.seenHelp && typeof parsed.seenHelp === "object" ? parsed.seenHelp : {},
       density: parsed.density === "compact" || parsed.density === "comfort" || parsed.density === "watch" || parsed.density === "auto" ? parsed.density : "auto",
       uiScale: typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.82, 1.12) : 1,
+      musicBed: parsed.musicBed === "void" ? "void" : "anthem",
     };
   } catch {
     /* keep */

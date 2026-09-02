@@ -18,7 +18,7 @@ import {
   type ViewPrefs,
 } from "@/lib/nidus/view";
 import { slotStamp } from "@/lib/nidus/save";
-import { syncAudioGains } from "@/lib/nidus/audio";
+import { openNyxSpotify, setMusicBed, syncAudioGains } from "@/lib/nidus/audio";
 
 const CODEX: { id: string; title: string; body: string }[] = [
   { id: "hive", title: "HIVE", body: "You are the lone brain. Drones are meat. Minds are rare sparks that wake and take a body." },
@@ -29,7 +29,7 @@ const CODEX: { id: string; title: string; body: string }[] = [
   { id: "ore", title: "ORE", body: "Mined ice and wreck-slag. Caps if you skip the Ore Bay." },
   { id: "parts", title: "PARTS", body: "Fabs chew ore into parts. Rooms and prints eat parts." },
   { id: "charge", title: "CHARGE", body: "The spine’s blood. Low charge starves every rate. Raise Solar." },
-  { id: "spark", title: "SPARK", body: "Fills while the swarm works. First wake waits for the Solar Spine. Then three bodies. Pick one." },
+  { id: "song", title: "SONG", body: "One bed. ANTHEM is Rules of Engagement — Nytheria Nyx. VOID is a space pad until more of her cuts. The hive never stacks the anthem on itself. NYX ON SPOTIFY opens her catalog. Spotify cannot play inside the nave." },
   { id: "echo", title: "ECHO", body: "Residue of unmade or fallen minds. Fuel for Molt." },
   { id: "print", title: "PRINT", body: "Stamp a caste. AUTO keeps stamping while you are gone." },
   { id: "surge", title: "SURGE", body: "A short scream. All rates spike. Idle return mercy lasts longer." },
@@ -143,6 +143,29 @@ export function SettingsPanel({
               syncAudioGains();
             }}
           />
+          <p className="font-display text-xs tracking-[0.2em] text-gilt">BED</p>
+          <p className="text-[0.7rem] text-muted">One song at a time. ANTHEM is Rules of Engagement. VOID is a space pad until more Nyx cuts land.</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Toggle
+              on={prefs.musicBed !== "void"}
+              label="ANTHEM"
+              onClick={() => setMusicBed("anthem")}
+            />
+            <Toggle
+              on={prefs.musicBed === "void"}
+              label="VOID"
+              onClick={() => setMusicBed("void")}
+            />
+          </div>
+          <button
+            type="button"
+            className="nidus-cut nidus-cut-gilt min-h-11 font-display text-[0.65rem] tracking-[0.16em]"
+            title="Opens Nytheria Nyx on Spotify. The hive cannot stream Spotify itself."
+            onClick={() => openNyxSpotify()}
+          >
+            NYX ON SPOTIFY
+          </button>
+          <p className="text-[0.65rem] text-muted">Rules of Engagement — Nytheria Nyx. Spotify is a door, not a second mix.</p>
           <Slider
             label="SPIN"
             value={Math.min(1, Math.max(0, (prefs.spinSpeed - 0.15) / 1.85))}
