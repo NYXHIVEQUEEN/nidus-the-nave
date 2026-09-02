@@ -361,6 +361,12 @@
   --nidus-ui-scale: 1;
 }
 
+.nidus-vignette {
+  background:
+    radial-gradient(ellipse at 16% 10%, rgba(255, 214, 160, 0.14), transparent 28%),
+    radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(8, 6, 8, 0.58) 100%);
+}
+
 .nidus-railbtn {
   height: calc(2.75rem * var(--nidus-ui-scale, 1));
   width: calc(2.75rem * var(--nidus-ui-scale, 1));

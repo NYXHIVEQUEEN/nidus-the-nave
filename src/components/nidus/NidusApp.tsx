@@ -303,7 +303,8 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
       style={{ ["--nidus-ui-scale" as string]: String(prefs.uiScale) }}
     >
       <StationMount />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-void/40 via-transparent to-void/55" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-void/35 via-transparent to-void/6" />
+      <div className="nidus-vignette pointer-events-none absolute inset-0" />
       <LeftRail
         muted={muted}
         spinPaused={spinPaused}
