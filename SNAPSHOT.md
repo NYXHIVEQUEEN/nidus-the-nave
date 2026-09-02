@@ -1,6 +1,7 @@
 # NIDUS snapshot — 2026-09-01 audio mixer
 
-GitHub: `NYXHIVEQUEEN/nidus` `main` (audio pass on density `0b8312f`).
+GitHub: `NYXHIVEQUEEN/nidus` `main` @ `5d0bfcf`.
+Pre-pass density: `0b8312f`.
 **No hive wipe.**
 
 ## Audio
