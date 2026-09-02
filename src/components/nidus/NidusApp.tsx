@@ -96,10 +96,11 @@ export function NidusApp() {
   const showBrief = useNidus((s) => s.showBrief);
   const gift = useNidus((s) => s.pendingGift);
   const [boot, setBoot] = useState<BootState>(BOOT_IDLE);
-  const peek = peekHive();
-  const [session, setSession] = useState(peek.started);
+  const [held, setHeld] = useState({ started: false, name: "" });
+  const [session, setSession] = useState(false);
 
   useEffect(() => {
+    setHeld(peekHive());
     hydrate();
     registerNidusPwa();
     let cancelled = false;
@@ -137,18 +138,18 @@ export function NidusApp() {
   }, [hydrate, tick, saveNow]);
 
   useEffect(() => {
-    if (boot.ready && peek.started) {
+    if (boot.ready && held.started) {
       if (!started) start();
       setSession(true);
     }
-  }, [boot.ready, peek.started, started, start]);
+  }, [boot.ready, held.started, started, start]);
 
   if (!boot.ready || !session) {
     return (
       <TitleScreen
         boot={boot}
-        returning={peek.started}
-        hiveName={peek.name}
+        returning={held.started}
+        hiveName={held.name}
         onWake={() => {
           unlockAudio();
           chime("wake");
@@ -198,9 +199,11 @@ function TitleScreen({
       <div className="relative z-10 flex w-full flex-col items-center gap-2 px-6 pb-10 pt-8">
         <p className="font-display text-[0.65rem] tracking-[0.55em] text-gilt">{returning ? hiveName : "HIVE MIND"}</p>
         <h1 className="font-display text-5xl font-black tracking-[0.28em] text-bone">NIDUS</h1>
-        <p className="max-w-[16rem] text-center text-sm tracking-[0.18em] text-muted">
+        <p className="font-display text-[0.7rem] tracking-[0.32em] text-gilt">THE NAVE</p>
+        <p className="max-w-[18rem] text-center text-sm tracking-[0.18em] text-muted">
           {returning ? "THE NAVE HELD. YOU NEVER LEFT." : "LIGHTBRINGER. NIGHTQUEEN. UNYIELDING."}
         </p>
+        <p className="font-display text-[0.58rem] tracking-[0.22em] text-gilt-dim">LOCAL SAVE · THIS DEVICE</p>
         <div className="mt-3 w-full max-w-xs">
           <div className="mb-1 flex items-center justify-between font-display text-[0.6rem] tracking-[0.28em] text-gilt">
             <span>{returning ? "RETURNING" : boot.label}</span>
@@ -427,6 +430,10 @@ function ResourceBar({ compact }: { compact: boolean }) {
           </button>
         )}
         <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", fresh ? "bg-venom" : "bg-iron")} title={fresh ? "held" : "autosave"} />
+        <button type="button" className="text-left" title="No cloud" onClick={() => setOpen(open === "LOCAL" ? null : "LOCAL")}>
+          <p className="text-[0.5rem] tracking-[0.16em] text-muted">SAVE</p>
+          <p className="font-display text-[0.58rem] tracking-[0.12em] text-gilt">LOCAL</p>
+        </button>
       </div>
       {open && <p className="px-1 pt-1 text-center text-[0.65rem] text-gilt">{gloss(open)}</p>}
     </header>

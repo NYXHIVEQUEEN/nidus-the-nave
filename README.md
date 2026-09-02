@@ -37,3 +37,9 @@ Combined rebuild after the App Builder tree was not mounted in chat:
 - Canvas nave + pulsar (not the original R3F cathedral)
 
 Add `assets/` (hum/surge/wake mp3 + sky jpgs) from the zip if the clone is source-only.
+
+## Play Store / GitHub
+
+Local save only — no cloud. Host + PWABuilder wrap + listing files: `store/GITHUB.md`.
+Name check: `store/NAME.md`. Store title is **NIDUS: The Nave**. In-game title stays NIDUS.
+

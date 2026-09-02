@@ -1,14 +1,11 @@
-# NIDUS snapshot — 2026-09-01 Play kit
+# NIDUS snapshot — 2026-09-01 name, local save, gnats, GitHub
 
 GitHub: `NYXHIVEQUEEN/nidus` `main`.
 **No hive wipe.**
 
-Play-store kit, not a Play upload (that needs her Console + an https host):
+- Store title: **NIDUS: The Nave** (`store/NAME.md`). In-game stays NIDUS.
+- Local save shouted on WAKE + bar + RITE SAVE. No cloud.
+- Drones/raid darts are winged craft, not cones. Wreck + well ring when raiding.
+- `store/GITHUB.md` is the host → PWABuilder wrap path.
 
-- `/privacy` `/terms` + RITE links
-- PWA manifest, icons, maskable, feature graphic, phone shots
-- `store/PLAY.md` wrap path (PWABuilder TWA, package `com.nyxhivequeen.nidus`)
-- Data safety + IARC notes
-- assetlinks placeholder
-
-Privacy and terms return 200. Typecheck clean.
+Playtest: printed 17 held, LOCAL SAVE on title, 32 draws, no pageerrors.

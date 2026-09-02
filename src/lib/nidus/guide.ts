@@ -25,7 +25,7 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
     verbs: [
       { id: "wake", label: "WAKE", line: "Opens the live hive." },
       { id: "boot", label: "BAR", line: "Loads faces and hull plates." },
-      { id: "save", label: "SAVE", line: "Your hive is already bound." },
+      { id: "save", label: "LOCAL", line: "This device only. No cloud. EXPORT before you switch glass." },
       { id: "song", label: "SONG", line: "Rules of Engagement — Nytheria Nyx." },
     ],
   },
@@ -126,6 +126,7 @@ const GLOSS: Record<string, string> = {
   ROSE: "Drink a rose for SPARK.",
   CORE: "Crack a core for Echo.",
   SIZE: "TIGHT packs chrome. ROOMY breathes. WATCH hides it. AUTO reads the glass.",
+  LOCAL: "No cloud. Hive lives on this device. Uninstall burns it. EXPORT in RITE → SAVE.",
   SONG: "One bed. ANTHEM is Nyx. VOID is space until more of her cuts.",
 };
 

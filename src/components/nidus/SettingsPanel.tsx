@@ -230,6 +230,12 @@ export function SettingsPanel({
 
       {tab === "save" && (
         <div className="flex flex-col gap-2">
+          <div className="nidus-card p-2">
+            <p className="font-display text-[0.7rem] tracking-[0.18em] text-gilt">LOCAL ONLY</p>
+            <p className="mt-1 text-[0.75rem] leading-snug text-muted">
+              No cloud. No account. The hive lives on this device. Uninstall, a new browser, or clear site data burns the nave. EXPORT a file or STASH a pew before you switch glass.
+            </p>
+          </div>
           <p className="text-sm text-muted">
             {lastSaveAt ? `BOUND ${new Date(lastSaveAt).toLocaleString()}` : "NOT BOUND THIS SESSION"}
           </p>

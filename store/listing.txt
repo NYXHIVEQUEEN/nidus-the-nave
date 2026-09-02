@@ -1,6 +1,6 @@
 NIDUS — Google Play listing copy
 ================================
-App name (30): NIDUS
+App name (30): NIDUS: The Nave
 Short name / launcher: NIDUS
 Package: com.nyxhivequeen.nidus
 Default language: English (United States)

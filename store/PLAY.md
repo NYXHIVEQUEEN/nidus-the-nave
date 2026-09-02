@@ -1,6 +1,8 @@
 # NIDUS → Google Play
 
-The hive is a **web game**. Play does not take a website. It takes an Android package that opens your hosted hive in a Trusted Web Activity (a Chrome window with no browser chrome). That is the honest path. Capacitor is a heavier second path if you later add native IAP.
+GitHub steps (host + wrap + listing files) live in `store/GITHUB.md`.
+Name check lives in `store/NAME.md`. Ship the store title as **NIDUS: The Nave**.
+
 
 You cannot finish Play from this chat. You need: a Play developer account, a live **https** host you control, and one afternoon in [Play Console](https://play.google.com/console).
 

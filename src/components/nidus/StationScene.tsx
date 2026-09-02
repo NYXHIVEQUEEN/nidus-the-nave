@@ -6,7 +6,10 @@ import {
   ACESFilmicToneMapping,
   AdditiveBlending,
   BackSide,
+  BoxGeometry,
   Color,
+  ConeGeometry,
+  CylinderGeometry,
   DoubleSide,
   LatheGeometry,
   Object3D as Obj3D,
@@ -17,6 +20,7 @@ import {
   Vector2,
   Vector3,
 } from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { useNidus } from "@/lib/nidus/store";
 import { ROOMS } from "@/lib/nidus/content";
 import { CAM_DEFAULT, CAM_MAX, CAM_MIN, applyCamPreset, camPosition, getPrefs, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
@@ -34,6 +38,29 @@ const REDUCE =
   typeof window !== "undefined" &&
   typeof window.matchMedia === "function" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function craftGeo(s = 1) {
+  const body = new BoxGeometry(0.04 * s, 0.022 * s, 0.11 * s);
+  const nose = new ConeGeometry(0.016 * s, 0.05 * s, 5);
+  nose.rotateX(Math.PI / 2);
+  nose.translate(0, 0, 0.075 * s);
+  const wing = new BoxGeometry(0.1 * s, 0.006 * s, 0.03 * s);
+  wing.translate(0, 0, 0.01 * s);
+  const fin = new BoxGeometry(0.006 * s, 0.03 * s, 0.022 * s);
+  fin.translate(0, 0.018 * s, -0.028 * s);
+  const engine = new CylinderGeometry(0.01 * s, 0.014 * s, 0.02 * s, 6);
+  engine.rotateX(Math.PI / 2);
+  engine.translate(0, 0, -0.06 * s);
+  const g = mergeGeometries([body, nose, wing, fin, engine], false) ?? body;
+  g.computeVertexNormals();
+  return g;
+}
+
+const _craftGilt = new Color(GILT);
+const _craftBone = new Color(BONE);
+const _craftBlood = new Color(BLOOD);
+const _craftVenom = new Color(VENOM);
+const CRAFT_TINT = [_craftGilt, _craftBone, _craftBlood, _craftVenom, _craftGilt];
 
 const SOCKETS: Record<string, [number, number, number]> = {
   solar: [0, 0.9, 0],
@@ -424,6 +451,8 @@ function Hull() {
     () => new LatheGeometry([new Vector2(0.05, 0), new Vector2(0.17, 0.05), new Vector2(0.19, 0.24), new Vector2(0.08, 0.34)], 10),
     [],
   );
+  const gnatGeo = useMemo(() => craftGeo(1), []);
+  const dartGeo = useMemo(() => craftGeo(1.4), []);
   const blisterGeo = useMemo(
     () => new LatheGeometry([new Vector2(0.04, 0), new Vector2(0.145, 0.06), new Vector2(0.155, 0.22), new Vector2(0.1, 0.34), new Vector2(0.03, 0.4)], 10),
     [],
@@ -647,11 +676,13 @@ function Hull() {
           dummy.position.set(Math.cos(a) * r, Math.sin(t * 0.5 + i) * 0.42 + belt * 0.25, Math.sin(a) * r * 0.62);
           dummy.lookAt(0, 0, 0);
           dummy.rotateX(Math.PI / 2);
-          dummy.scale.setScalar(0.9 + (i % 3) * 0.25);
+          dummy.scale.setScalar(0.85 + (i % 3) * 0.22);
           dummy.updateMatrix();
           mesh.setMatrixAt(i, dummy.matrix);
+          mesh.setColorAt(i, CRAFT_TINT[i % CRAFT_TINT.length] ?? _craftBone);
         }
         mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
         mesh.visible = true;
       }
     }
@@ -1269,9 +1300,8 @@ function Hull() {
         </mesh>
       </group>
 
-      <instancedMesh ref={drones} args={[undefined, undefined, count]} key={count} visible={false}>
-        <coneGeometry args={[0.036, 0.14, 6]} />
-        <meshStandardMaterial color="#d8cbb8" metalness={0.7} roughness={0.32} emissive={venom} emissiveIntensity={0.7} />
+      <instancedMesh ref={drones} args={[gnatGeo, undefined, count]} key={count} visible={false}>
+        <meshStandardMaterial color="#d8cbb8" metalness={0.72} roughness={0.3} emissive={gilt} emissiveIntensity={0.22} />
       </instancedMesh>
       <instancedMesh ref={embers} args={[undefined, undefined, emberCount]} visible={false}>
         <sphereGeometry args={[0.022, 5, 5]} />
@@ -1303,10 +1333,30 @@ function Hull() {
           <meshBasicMaterial color={GILT} transparent opacity={0.62} toneMapped={false} blending={AdditiveBlending} depthWrite={false} />
         </mesh>
       </group>
-      <instancedMesh ref={fighters} args={[undefined, undefined, 12]} visible={false}>
-        <coneGeometry args={[0.04, 0.16, 6]} />
-        <meshStandardMaterial color="#e8dcc8" emissive={venom} emissiveIntensity={0.9} />
+      <instancedMesh ref={fighters} args={[dartGeo, undefined, 12]} visible={false}>
+        <meshStandardMaterial color="#e8dcc8" metalness={0.7} roughness={0.28} emissive={bloodC} emissiveIntensity={0.45} />
       </instancedMesh>
+      {raiding && (
+        <group position={[0.15, -0.35, -6.4]} rotation={[0.15, 0.4, -0.08]}>
+          <mesh>
+            <boxGeometry args={[1.6, 0.32, 0.48]} />
+            <meshStandardMaterial map={plate} color="#6a5a4c" metalness={0.62} roughness={0.48} />
+          </mesh>
+          <mesh position={[0.7, 0.08, 0]} rotation={[0.2, 0, 0.55]}>
+            <boxGeometry args={[0.9, 0.04, 0.28]} />
+            <meshStandardMaterial map={plate} color="#8a7358" metalness={0.7} roughness={0.4} />
+          </mesh>
+          <mesh position={[-0.55, 0.02, 0.1]} rotation={[0.1, 0.3, -0.4]}>
+            <boxGeometry args={[0.5, 0.08, 0.2]} />
+            <meshStandardMaterial color="#3a2a26" metalness={0.75} roughness={0.36} emissive={bloodC} emissiveIntensity={0.35} />
+          </mesh>
+          <mesh rotation={[Math.PI / 2.4, 0.2, 0.1]}>
+            <torusGeometry args={[2.1, 0.025, 6, 32]} />
+            <meshBasicMaterial color={GILT} transparent opacity={0.45} depthWrite={false} blending={AdditiveBlending} />
+          </mesh>
+          <pointLight color={BLOOD} intensity={4.5} distance={8} decay={2} />
+        </group>
+      )}
     </group>
   );
 }
@@ -1402,11 +1452,16 @@ function BattleField() {
   const n = useNidus((s) => Math.min(16, s.raid?.strikers ?? 0));
   const boosted = useNidus((s) => (s.raid?.boostUntil ?? 0) > Date.now());
   const ships = useRef<InstancedMesh>(null);
+  const sparks = useRef<InstancedMesh>(null);
+  const dartGeo = useMemo(() => craftGeo(1.6), []);
+  const plate = useTexture("/nidus/tex-plate.jpg");
+  plate.colorSpace = SRGBColorSpace;
   useFrame((state) => {
     const mesh = ships.current;
     if (!mesh) return;
     if (!watching) {
       mesh.visible = false;
+      if (sparks.current) sparks.current.visible = false;
       return;
     }
     const t = state.clock.elapsedTime;
@@ -1419,24 +1474,53 @@ function BattleField() {
         dummy.position.set(Math.cos(a) * 2.5, Math.sin(t * 1.4 + i) * 0.28, Math.sin(a) * 1.7);
         dummy.lookAt(0, 0, 0);
         dummy.rotateX(Math.PI / 2);
-        dummy.scale.setScalar(boosted ? 1.15 : 1);
+        dummy.scale.setScalar(boosted ? 1.2 : 1);
       }
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
     }
     mesh.instanceMatrix.needsUpdate = true;
     mesh.visible = true;
+    const sp = sparks.current;
+    if (sp) {
+      for (let i = 0; i < 10; i++) {
+        const a = t * 2.2 + i * 0.62;
+        dummy.position.set(Math.cos(a) * 0.7, 0.1 + Math.sin(t * 3 + i) * 0.35, Math.sin(a * 0.7) * 0.5);
+        dummy.scale.setScalar(0.5 + (i % 3) * 0.4);
+        dummy.rotation.set(0, 0, 0);
+        dummy.updateMatrix();
+        sp.setMatrixAt(i, dummy.matrix);
+      }
+      sp.instanceMatrix.needsUpdate = true;
+      sp.visible = true;
+    }
   });
   if (!watching) return null;
   return (
     <group>
-      <mesh>
-        <icosahedronGeometry args={[0.55, 0]} />
-        <meshStandardMaterial color="#2a1a18" emissive="#7a1f2b" emissiveIntensity={0.9} />
+      <mesh rotation={[0.25, 0.5, 0.12]}>
+        <boxGeometry args={[1.55, 0.34, 0.5]} />
+        <meshStandardMaterial map={plate} color="#6a5044" metalness={0.6} roughness={0.5} emissive="#3a1a18" emissiveIntensity={0.4} />
       </mesh>
-      <instancedMesh ref={ships} args={[undefined, undefined, 16]} visible={false}>
-        <coneGeometry args={[0.055, 0.2, 6]} />
-        <meshStandardMaterial color={boosted ? GILT : BONE} emissive={boosted ? GILT : VENOM} emissiveIntensity={boosted ? 1.1 : 0.7} />
+      <mesh position={[0.62, 0.12, 0.05]} rotation={[0.3, 0.1, 0.7]}>
+        <boxGeometry args={[0.95, 0.045, 0.3]} />
+        <meshStandardMaterial map={plate} color="#8a7358" metalness={0.68} roughness={0.42} />
+      </mesh>
+      <mesh position={[-0.4, -0.05, 0.12]} rotation={[0.4, -0.3, 0.2]}>
+        <cylinderGeometry args={[0.08, 0.14, 0.4, 6]} />
+        <meshStandardMaterial color="#2a1a18" metalness={0.7} roughness={0.35} emissive="#7a1f2b" emissiveIntensity={0.7} />
+      </mesh>
+      <mesh rotation={[Math.PI / 2.3, 0.15, 0]}>
+        <torusGeometry args={[2.35, 0.03, 6, 40]} />
+        <meshBasicMaterial color={boosted ? GILT : VENOM} transparent opacity={boosted ? 0.55 : 0.35} depthWrite={false} blending={AdditiveBlending} />
+      </mesh>
+      <pointLight color={boosted ? GILT : BLOOD} intensity={boosted ? 8 : 5} distance={10} decay={2} />
+      <instancedMesh ref={ships} args={[dartGeo, undefined, 16]} visible={false}>
+        <meshStandardMaterial color={boosted ? GILT : BONE} metalness={0.72} roughness={0.28} emissive={boosted ? GILT : BLOOD} emissiveIntensity={boosted ? 0.55 : 0.35} />
+      </instancedMesh>
+      <instancedMesh ref={sparks} args={[undefined, undefined, 10]} visible={false}>
+        <sphereGeometry args={[0.04, 6, 6]} />
+        <meshBasicMaterial color={BLOOD} transparent opacity={0.85} toneMapped={false} blending={AdditiveBlending} depthWrite={false} />
       </instancedMesh>
     </group>
   );
