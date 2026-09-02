@@ -129,9 +129,13 @@ export const useNidus = create<Store>((set, get) => ({
     lastWrite = Date.now();
   },
   queue: (id) => {
-    set(queueRoom(get(), id));
-    writeSave(pickGame(get()));
-    lastWrite = Date.now();
+    try {
+      set(queueRoom(pickGame(get()), id));
+      writeSave(pickGame(get()));
+      lastWrite = Date.now();
+    } catch {
+      writeSave(pickGame(get()));
+    }
   },
   pickWake: (i) => {
     set(chooseWake(get(), i));
@@ -225,8 +229,12 @@ export const useNidus = create<Store>((set, get) => ({
     writeSave(pickGame(get()));
   },
   markHull: (c) => {
-    set(upMark(get(), c));
-    writeSave(pickGame(get()));
+    try {
+      set(upMark(pickGame(get()), c));
+      writeSave(pickGame(get()));
+    } catch {
+      writeSave(pickGame(get()));
+    }
   },
   stashSlot: (i) => {
     writeSlot(i, pickGame(get()));
@@ -271,8 +279,12 @@ export const useNidus = create<Store>((set, get) => ({
     writeSave(pickGame(get()));
   },
   zoneUp: (id) => {
-    set(raiseZone(get(), id));
-    writeSave(pickGame(get()));
-    lastWrite = Date.now();
+    try {
+      set(raiseZone(pickGame(get()), id));
+      writeSave(pickGame(get()));
+      lastWrite = Date.now();
+    } catch {
+      writeSave(pickGame(get()));
+    }
   },
 }));

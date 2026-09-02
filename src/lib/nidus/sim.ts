@@ -30,6 +30,48 @@ function cloneState<T>(s: T): T {
   return JSON.parse(JSON.stringify(s, (_k, v) => (typeof v === "function" ? undefined : v))) as T;
 }
 
+/** Fill rooms/tech/CUT fields so a live hive never throws after a content expand. */
+export function ensureHive(s: GameState): GameState {
+  if (!s.rooms || typeof s.rooms !== "object") s.rooms = {} as GameState["rooms"];
+  for (const spec of ROOMS) {
+    const room = s.rooms[spec.id];
+    if (!room || typeof room !== "object") {
+      s.rooms[spec.id] = {
+        built: spec.id === "foundry",
+        progress: spec.id === "foundry" ? spec.work : 0,
+        rank: spec.id === "foundry" ? 1 : 0,
+        rankWork: 0,
+      };
+    } else {
+      if (typeof room.built !== "boolean") room.built = Boolean(room.built);
+      if (typeof room.progress !== "number" || Number.isNaN(room.progress)) room.progress = 0;
+      if (typeof room.rank !== "number" || Number.isNaN(room.rank)) room.rank = room.built ? 1 : 0;
+      if (typeof room.rankWork !== "number" || Number.isNaN(room.rankWork)) room.rankWork = 0;
+    }
+  }
+  if (!s.tech || typeof s.tech !== "object") s.tech = {} as GameState["tech"];
+  for (const spec of TECH) {
+    const t = s.tech[spec.id];
+    if (!t || typeof t !== "object") s.tech[spec.id] = { done: false, progress: 0 };
+    else {
+      if (typeof t.done !== "boolean") t.done = Boolean(t.done);
+      if (typeof t.progress !== "number" || Number.isNaN(t.progress)) t.progress = 0;
+    }
+  }
+  if (typeof s.credits !== "number" || Number.isNaN(s.credits)) s.credits = 0;
+  if (typeof s.autoSell !== "boolean") s.autoSell = true;
+  if (!s.zoneRank) s.zoneRank = { spine: 0, hold: 0, nave: 0, fleet: 0, crypt: 0 };
+  else {
+    for (const id of ["spine", "hold", "nave", "fleet", "crypt"] as const) {
+      if (typeof s.zoneRank[id] !== "number" || Number.isNaN(s.zoneRank[id])) s.zoneRank[id] = 0;
+    }
+  }
+  if (s.queuedRoom && !s.rooms[s.queuedRoom]) s.queuedRoom = null;
+  if (s.rankingRoom && !s.rooms[s.rankingRoom]) s.rankingRoom = null;
+  if (s.activeTech && !s.tech[s.activeTech]) s.activeTech = null;
+  return s;
+}
+
 function pushBrief(s: GameState, card: Omit<BriefCard, "id">) {
   s.briefing = [{ id: `b-${s.rng}-${s.briefing.length}`, ...card }, ...s.briefing].slice(0, 8);
 }
@@ -89,7 +131,7 @@ function clampRes(s: GameState) {
 
 /** Sim pipeline (architecture): res → rooms → rites → spark → print → scripts → battle → clamp. View never writes this. */
 export function applyTick(s: GameState, now: number): GameState {
-  const next: GameState = cloneState(s);
+  const next: GameState = ensureHive(cloneState(s));
   const raw = (now - next.lastTick) / 1000;
   const dt = Math.min(Math.max(0, raw), offlineCapSec(next));
   if (dt <= 0) {
@@ -168,16 +210,13 @@ export function applyTick(s: GameState, now: number): GameState {
     const spec = ROOMS.find((x) => x.id === next.rankingRoom);
     const room = next.rankingRoom ? next.rooms[next.rankingRoom] : null;
     if (spec && room && room.built && (room.rank ?? 0) < RANK_MAX) {
-      const workNeed = Math.ceil(spec.work * 0.42 * ((room.rank ?? 0) + 1));
-      const partDrain = Math.min(next.parts, (spec.parts / Math.max(1, spec.work)) * r.buildPerSec * dt);
+      const workNeed = Math.max(12, Math.ceil(spec.work * 0.42 * ((room.rank ?? 0) + 1)));
       const credNeed = Math.max(0.4, 1.6 * ((room.rank ?? 0) + 1) * dt);
-      if ((next.credits ?? 0) < credNeed) {
-        /* rank waits on CUT */
-      } else {
-        room.rankWork = (room.rankWork ?? 0) + r.buildPerSec * dt;
-        next.credits -= credNeed;
+      room.rankWork = room.rankWork ?? 0;
+      if ((next.credits ?? 0) >= credNeed) {
+        room.rankWork += r.buildPerSec * dt;
+        next.credits = Math.max(0, (next.credits ?? 0) - credNeed);
       }
-      next.parts -= partDrain * 0.08;
       if (room.rankWork >= workNeed) {
         room.rank = (room.rank ?? 0) + 1;
         room.rankWork = 0;
@@ -466,7 +505,7 @@ export function tryPrint(s: GameState): GameState {
 }
 
 export function queueRoom(s: GameState, id: RoomId): GameState {
-  const next = cloneState(s);
+  const next = ensureHive(cloneState(s));
   const spec = ROOMS.find((r) => r.id === id);
   if (!spec) return next;
   if (!next.rooms[id]) next.rooms[id] = { built: false, progress: 0, rank: 0, rankWork: 0 };
@@ -660,7 +699,7 @@ export function tapSlag(s: GameState, now: number): GameState {
 }
 
 export function expandBerth(s: GameState): GameState {
-  const next = cloneState(s);
+  const next = ensureHive(cloneState(s));
   const cost = expandCost(next);
   if ((next.credits ?? 0) < cost.credits) return next;
   next.credits -= cost.credits;
@@ -684,7 +723,7 @@ export function sellStock(s: GameState, kind: "ore" | "parts", n: number): GameS
 }
 
 export function raiseZone(s: GameState, id: ZoneId): GameState {
-  const next = cloneState(s);
+  const next = ensureHive(cloneState(s));
   if (!next.zoneRank) next.zoneRank = { spine: 0, hold: 0, nave: 0, fleet: 0, crypt: 0 };
   const n = next.zoneRank[id] ?? 0;
   if (n >= 5) return next;

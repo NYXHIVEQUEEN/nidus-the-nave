@@ -371,7 +371,7 @@ export function totalSwarm(s: GameState): number {
 
 export function printCost(s: GameState): { ore: number; parts: number } {
   const base = Math.pow(1.08, Math.max(0, s.printed - 16));
-  const cheap = s.tech.cheapprint.done ? 0.74 : 1;
+  const cheap = s.tech.cheapprint?.done ? 0.74 : 1;
   const foundry = 1 - Math.min(0.18, (s.rooms.foundry.rank ?? 0) * 0.04);
   return { ore: Math.ceil(4 * base * cheap * foundry), parts: Math.ceil(2 * base * cheap * foundry) };
 }
@@ -415,9 +415,9 @@ function jobBonus(s: GameState, job: Job): number {
 }
 
 export function rates(s: GameState, now: number) {
-  const surge = now < s.surgeUntil ? (s.tech.longsurge?.done ? 7.2 : s.tech.surgeplus.done ? 6.2 : 5.2) : 1;
+  const surge = now < s.surgeUntil ? (s.tech.longsurge?.done ? 7.2 : s.tech.surgeplus?.done ? 6.2 : 5.2) : 1;
   const molt = 1 + s.moltLayer * 0.28;
-  const chargeFactor = s.charge <= 1 ? (s.rooms.solar.built ? 0.28 : 0.44) : Math.min(1, s.charge / 12);
+  const chargeFactor = s.charge <= 1 ? (s.rooms.solar?.built ? 0.28 : 0.44) : Math.min(1, s.charge / 12);
   const hum = 1.12 + Math.min(0.5, s.hiveAge / 720);
   const idle = 1.28;
   const lvl = (c: Caste) => Math.pow(1.12, s.casteLevel[c]);
@@ -435,7 +435,7 @@ export function rates(s: GameState, now: number) {
     idle *
     jobBonus(s, "mine") *
     rr("orebay", 0.07) *
-    (s.tech.teeth.done ? 1.25 : 1) *
+    (s.tech.teeth?.done ? 1.25 : 1) *
     (s.tech.orevein?.done ? 1.22 : 1);
   const partsPerSec =
     Math.min(s.ore > 0.5 ? s.swarm.fab : 0, s.swarm.fab) *
@@ -450,7 +450,7 @@ export function rates(s: GameState, now: number) {
     jobBonus(s, "forge") *
     rr("foundry", 0.07) *
     (s.rooms.crucible?.built ? 1.18 : 1) *
-    (s.tech.heat.done ? 1.25 : 1) *
+    (s.tech.heat?.done ? 1.25 : 1) *
     (s.tech.partmill?.done ? 1.22 : 1);
   const buildPerSec =
     s.swarm.builder *
@@ -464,7 +464,7 @@ export function rates(s: GameState, now: number) {
     idle *
     jobBonus(s, "build") *
     rr("barracks", 0.06) *
-    (s.tech.hands.done ? 1.25 : 1) *
+    (s.tech.hands?.done ? 1.25 : 1) *
     (s.tech.ribcage?.done ? 1.2 : 1) *
     (s.tech.queue.done ? 1.15 : 1) *
     (s.tech.thirdqueue?.done ? 1.18 : 1);
@@ -481,12 +481,12 @@ export function rates(s: GameState, now: number) {
     jobBonus(s, "lab") *
     rr("lab", 0.1) *
     (s.rooms.cloister?.built ? 1.14 : 1) *
-    (s.tech.wick.done ? 1.25 : 1) *
+    (s.tech.wick?.done ? 1.25 : 1) *
     (s.tech.glassmind?.done ? 1.2 : 1);
   const sparkPerSec =
     totalSwarm(s) *
     0.042 *
-    (s.tech.wick.done ? 1.18 : 1) *
+    (s.tech.wick?.done ? 1.18 : 1) *
     (s.tech.glassmind?.done ? 1.16 : 1) *
     (s.rooms.cloister?.built ? 1.2 : 1) *
     mark("lab") *

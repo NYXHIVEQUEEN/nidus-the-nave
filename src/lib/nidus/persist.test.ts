@@ -3,8 +3,8 @@ import { test } from "node:test";
 import { importSave } from "./save.ts";
 import { autoHoldBerths, canWakeMinds, cookUnlocked, hiveTitle, postBoostPct, roomUnlocked, techUnlocked, wakeNeed } from "./progress.ts";
 import { berthCap, chargeCap, defaultState, rollCandidates, totalSwarm } from "./content.ts";
-import { applyTick, chooseWake, claimGift, sendRaid, startSurge, tryPrint } from "./sim.ts";
-import { nextBuild } from "./advisor.ts";
+import { applyTick, chooseWake, claimGift, queueRoom, sendRaid, startSurge, tryPrint } from "./sim.ts";
+import { advise, nextBuild } from "./advisor.ts";
 
 test("importSave keeps ore rooms minds and never blanks the hive", () => {
   const raw = JSON.stringify({
@@ -328,4 +328,22 @@ test("low ore recycles surplus parts so the hive is not stuck", () => {
   assert.ok(s.ore > 0.4);
   assert.ok(s.parts < 20);
 });
+
+test("queue and rank with CUT do not throw when mill is missing from an old hive", () => {
+  const s = defaultState();
+  delete (s.rooms as Record<string, unknown>).mill;
+  delete (s.rooms as Record<string, unknown>).refinery;
+  delete (s.tech as Record<string, unknown>).millcut;
+  s.credits = 80;
+  s.rooms.foundry = { built: true, progress: 0, rank: 1, rankWork: 0 };
+  assert.doesNotThrow(() => advise(s));
+  const queued = queueRoom(s, "solar");
+  assert.equal(queued.queuedRoom, "solar");
+  const ranked = queueRoom(s, "foundry");
+  assert.equal(ranked.rankingRoom, "foundry");
+  const ticked = applyTick(ranked, Date.now() + 2000);
+  assert.ok((ticked.credits ?? 0) >= 0);
+  assert.ok(ticked.rooms.mill);
+});
+
 

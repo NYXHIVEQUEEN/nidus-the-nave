@@ -643,7 +643,7 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
           <Brain className="size-3.5" />
           <span className="font-display text-[0.42rem] tracking-[0.12em]">{scripts ? "MIND" : "HIVE"}</span>
         </button>
-        {tech.moltlock.done && echo >= moltCost(s) && (
+        {tech.moltlock?.done && echo >= moltCost(s) && (
           <button type="button" onClick={() => doMolt()} className="nidus-cut nidus-iconbtn text-gilt">
             <span className="font-display text-[0.7rem] leading-none">{moltCost(s)}</span>
             <span className="font-display text-[0.42rem] tracking-[0.12em]">MOLT</span>

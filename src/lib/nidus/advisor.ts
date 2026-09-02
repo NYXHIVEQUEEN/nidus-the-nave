@@ -24,11 +24,11 @@ export function advise(s: GameState): Advice {
   if (totalSwarm(s) < berthCap(s) - 1 && s.ore > printCost(s).ore * 2)
     return { chip: `PRINT ${s.printCaste.toUpperCase()}`, why: "Berths empty. Stamp them.", verb: "PRINT" };
   if (!s.rooms.lab.built) return { chip: "RAISE THE LAB", why: "Rites lock behind glass.", verb: "BUILD" };
-  if (s.rooms.lab.built && !s.activeTech && !s.tech.cheapprint.done)
+  if (s.rooms.lab?.built && !s.activeTech && !s.tech.cheapprint?.done)
     return { chip: "START CHEAP PRINT", why: "First rite. Cheaper stamps.", verb: "RITE" };
   if (!s.autoPrint) return { chip: "FLIP AUTO PRINT", why: "The hive should stamp while you sleep.", verb: "AUTO" };
-  if (!s.rooms.hangar.built) return { chip: "RAISE THE HANGAR", why: "Fleet needs a mouth.", verb: "BUILD" };
-  const nextRoom = ROOMS.find((r) => r.id !== "foundry" && !s.rooms[r.id].built && roomUnlocked(s, r.id).ok);
+  if (!s.rooms.hangar?.built) return { chip: "RAISE THE HANGAR", why: "Fleet needs a mouth.", verb: "BUILD" };
+  const nextRoom = ROOMS.find((r) => r.id !== "foundry" && !s.rooms[r.id]?.built && roomUnlocked(s, r.id).ok);
   if (nextRoom && s.parts >= nextRoom.parts * 0.35) return { chip: `RAISE ${nextRoom.label}`, why: "Next node on the nave.", verb: "BUILD" };
   const openRaid = RAIDS.find((r) => raidUnlocked(s, r.id) && !s.raidCleared.includes(r.id) && s.swarm.striker >= raidNeed(s, r.id));
   if (openRaid) return { chip: `RAID ${openRaid.label}`, why: "Strikers are ready.", verb: "RAID" };

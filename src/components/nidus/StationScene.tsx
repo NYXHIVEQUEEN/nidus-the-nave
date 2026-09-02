@@ -287,9 +287,11 @@ const KIND: Record<string, AnnexKind> = {
 
 function Dock({ id, rank = 0, children }: { id: string; rank?: number; children: ReactNode }) {
   const r = Math.max(0, Math.min(5, rank));
+  const pos = SOCKETS[id] ?? ([0, 0, 0] as [number, number, number]);
+  const quat = RADIAL[id];
   return (
     <Grow>
-      <group position={SOCKETS[id]} quaternion={RADIAL[id]}>
+      <group position={pos} quaternion={quat}>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.115, 0.016, 5, 12]} />
           <meshStandardMaterial color="#3a342e" metalness={0.88} roughness={0.28} />

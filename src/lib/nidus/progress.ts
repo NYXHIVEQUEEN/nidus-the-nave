@@ -75,8 +75,8 @@ export function techUnlocked(s: GameState, id: TechId): { ok: boolean; why: stri
 }
 
 export function computeHiveRank(s: GameState): number {
-  const rooms = Object.values(s.rooms).filter((r) => r.built).length;
-  const techs = Object.values(s.tech).filter((t) => t.done).length;
+  const rooms = Object.values(s.rooms).filter((r) => r && r.built).length;
+  const techs = Object.values(s.tech).filter((t) => t && t.done).length;
   const raids = s.raidCleared.length;
   const caste = Object.values(s.casteLevel).reduce((a, b) => a + b, 0);
   const minds = s.minds.filter((m) => m.alive).length;
