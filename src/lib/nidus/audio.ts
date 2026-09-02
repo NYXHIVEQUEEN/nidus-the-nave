@@ -4,7 +4,7 @@ import { getPrefs, patchPrefs, type MusicBed } from "./view";
 export const NYX_SPOTIFY = "https://open.spotify.com/artist/0h7eXQHwChoJ0FkFqrMQSA";
 export const NYX_ANTHEM_SPOTIFY = "https://open.spotify.com/track/5B0hF5OoWMG6AWsASSRtyr";
 
-export type ChimeKind = "print" | "wake" | "surge" | "snap" | "raid" | "dead" | "seat" | "cook" | "claim";
+export type ChimeKind = "print" | "wake" | "surge" | "snap" | "raid" | "dead" | "seat" | "cook" | "claim" | "hit";
 export type AmbKind = "idle" | "raid" | "surge" | "wake";
 
 type Slot = { gain: GainNode; src: AudioBufferSourceNode | null; voidGain: GainNode | null };
@@ -392,6 +392,7 @@ export function chime(kind: ChimeKind) {
     seat: { f: 262, peak: 0.12, dur: 0.22 },
     cook: { f: 174, peak: 0.1, dur: 0.2, noise: 0.07, hp: 600 },
     claim: { f: 523, peak: 0.13, dur: 0.26 },
+    hit: { f: 88, peak: 0.1, dur: 0.12, noise: 0.16, hp: 320, type: "sawtooth" },
   };
   const spec = table[kind];
   ping(m, spec.f, spec.peak, spec.dur, m.sfx, spec.type ?? "triangle");

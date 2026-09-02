@@ -12,6 +12,7 @@ import type {
   SalvageId,
   TechId,
   TechSpec,
+  ZoneId,
 } from "./types";
 import { idFrom, pick, rand } from "./rng";
 
@@ -116,24 +117,38 @@ export const FRAMES: Record<
   },
 };
 
+export const ZONES: { id: ZoneId; label: string; hint: string }[] = [
+  { id: "spine", label: "SPINE", hint: "Charge and stamp." },
+  { id: "hold", label: "HOLD", hint: "Ore in. Cut out." },
+  { id: "nave", label: "NAVE", hint: "Berths and pews." },
+  { id: "fleet", label: "FLEET", hint: "Mouth and teeth." },
+  { id: "crypt", label: "CRYPT", hint: "Molt and echo." },
+];
+
 export const ROOMS: RoomSpec[] = [
-  { id: "foundry", label: "FOUNDRY", parts: 0, work: 0, blurb: "The stamp.", bonus: "Prints drones.", tier: 0 },
-  { id: "solar", label: "SOLAR SPINE", parts: 14, work: 28, blurb: "Charge blood.", bonus: "+charge /s", tier: 0 },
-  { id: "orebay", label: "ORE BAY", parts: 22, work: 42, requires: "solar", blurb: "Ice hold.", bonus: "+ore cap", tier: 1 },
-  { id: "barracks", label: "BARRACKS", parts: 26, work: 52, requires: "solar", blurb: "Berths.", bonus: "+18 pop", tier: 1 },
-  { id: "silo", label: "SILO", parts: 38, work: 70, requires: "orebay", blurb: "Idle vault.", bonus: "+offline hrs", tier: 2 },
-  { id: "nerve", label: "NERVE", parts: 48, work: 86, requires: "barracks", blurb: "Pews for minds.", bonus: "+thrones +pop", tier: 2 },
-  { id: "lab", label: "LAB", parts: 40, work: 72, requires: "solar", blurb: "Glass rites.", bonus: "unlocks rites", tier: 1 },
-  { id: "hangar", label: "HANGAR", parts: 54, work: 100, requires: "barracks", blurb: "Fleet mouth.", bonus: "+raid +pop", tier: 2 },
-  { id: "gundeck", label: "GUN DECK", parts: 62, work: 118, requires: "hangar", blurb: "Tracers.", bonus: "+fleet power", tier: 3 },
-  { id: "reliquary", label: "RELIQUARY", parts: 88, work: 155, requires: "nerve", blurb: "Molt cradle.", bonus: "molt +pop", tier: 3 },
-  { id: "crucible", label: "CRUCIBLE", parts: 36, work: 64, requires: "orebay", needRank: { id: "solar", rank: 2 }, blurb: "Blood kiln.", bonus: "+parts rate", tier: 2 },
-  { id: "cloister", label: "CLOISTER", parts: 44, work: 80, requires: "lab", blurb: "Quiet glass.", bonus: "+spark /s", tier: 2 },
-  { id: "choir", label: "CHOIR", parts: 58, work: 96, requires: "nerve", blurb: "Pews sing.", bonus: "minds XP faster", tier: 3 },
-  { id: "vault", label: "VAULT", parts: 70, work: 120, requires: "silo", blurb: "Deep hold.", bonus: "fat caps", tier: 3 },
-  { id: "crypt", label: "CRYPT", parts: 66, work: 110, requires: "hangar", also: "lab", blurb: "Echo cellar.", bonus: "+echo on death", tier: 3 },
-  { id: "spire", label: "SPIRE", parts: 78, work: 140, requires: "gundeck", blurb: "Lancet tower.", bonus: "+fleet +charge", tier: 4 },
-  { id: "apse", label: "APSE", parts: 96, work: 170, requires: "reliquary", needMolt: 1, blurb: "Molt mouth.", bonus: "cheaper molt", tier: 4 },
+  { id: "foundry", label: "FOUNDRY", parts: 0, work: 0, blurb: "The stamp.", bonus: "Prints drones.", tier: 0, zone: "spine" },
+  { id: "solar", label: "SOLAR SPINE", parts: 14, work: 28, blurb: "Charge blood.", bonus: "+charge /s", tier: 0, zone: "spine" },
+  { id: "orebay", label: "ORE BAY", parts: 22, work: 42, requires: "solar", blurb: "Ice hold.", bonus: "+ore cap", tier: 1, zone: "hold" },
+  { id: "barracks", label: "BARRACKS", parts: 26, work: 52, requires: "solar", blurb: "Berths.", bonus: "+18 pop", tier: 1, zone: "nave" },
+  { id: "silo", label: "SILO", parts: 38, work: 70, requires: "orebay", blurb: "Idle vault.", bonus: "+offline hrs", tier: 2, zone: "hold" },
+  { id: "nerve", label: "NERVE", parts: 48, work: 86, requires: "barracks", blurb: "Pews for minds.", bonus: "+thrones +pop", tier: 2, zone: "nave" },
+  { id: "lab", label: "LAB", parts: 40, work: 72, requires: "solar", blurb: "Glass rites.", bonus: "unlocks rites", tier: 1, zone: "nave" },
+  { id: "hangar", label: "HANGAR", parts: 54, work: 100, requires: "barracks", blurb: "Fleet mouth.", bonus: "+raid +pop", tier: 2, zone: "fleet" },
+  { id: "gundeck", label: "GUN DECK", parts: 62, work: 118, requires: "hangar", blurb: "Tracers.", bonus: "+fleet power", tier: 3, zone: "fleet" },
+  { id: "reliquary", label: "RELIQUARY", parts: 88, work: 155, requires: "nerve", blurb: "Molt cradle.", bonus: "molt +pop", tier: 3, zone: "crypt" },
+  { id: "crucible", label: "CRUCIBLE", parts: 36, work: 64, requires: "orebay", needRank: { id: "solar", rank: 2 }, blurb: "Blood kiln.", bonus: "+parts rate", tier: 2, zone: "spine" },
+  { id: "cloister", label: "CLOISTER", parts: 44, work: 80, requires: "lab", blurb: "Quiet glass.", bonus: "+spark /s", tier: 2, zone: "nave" },
+  { id: "choir", label: "CHOIR", parts: 58, work: 96, requires: "nerve", blurb: "Pews sing.", bonus: "minds XP faster", tier: 3, zone: "nave" },
+  { id: "vault", label: "VAULT", parts: 70, work: 120, requires: "silo", blurb: "Deep hold.", bonus: "fat caps", tier: 3, zone: "hold" },
+  { id: "crypt", label: "CRYPT", parts: 66, work: 110, requires: "hangar", also: "lab", blurb: "Echo cellar.", bonus: "+echo on death", tier: 3, zone: "crypt" },
+  { id: "spire", label: "SPIRE", parts: 78, work: 140, requires: "gundeck", blurb: "Lancet tower.", bonus: "+fleet +charge", tier: 4, zone: "fleet" },
+  { id: "apse", label: "APSE", parts: 96, work: 170, requires: "reliquary", needMolt: 1, blurb: "Molt mouth.", bonus: "cheaper molt", tier: 4, zone: "crypt" },
+  { id: "mill", label: "STAMP MILL", parts: 32, work: 58, requires: "orebay", blurb: "Parts to CUT.", bonus: "sells robotics", tier: 1, zone: "spine" },
+  { id: "refinery", label: "REFINERY", parts: 48, work: 84, requires: "mill", blurb: "Cut the slag.", bonus: "+CUT /s", tier: 2, zone: "hold" },
+  { id: "sensor", label: "SENSOR", parts: 40, work: 76, requires: "hangar", blurb: "See the well.", bonus: "watch bonus", tier: 2, zone: "fleet" },
+  { id: "armory", label: "ARMORY", parts: 70, work: 126, requires: "gundeck", blurb: "Teeth for hulls.", bonus: "+fleet", tier: 3, zone: "fleet" },
+  { id: "dock", label: "DOCK", parts: 60, work: 108, requires: "hangar", blurb: "Second mouth.", bonus: "+raid +pop", tier: 3, zone: "fleet" },
+  { id: "gallery", label: "GALLERY", parts: 64, work: 112, requires: "choir", blurb: "Pews for gold.", bonus: "minds XP", tier: 3, zone: "nave" },
 ];
 
 export const RAIDS: {
@@ -207,6 +222,12 @@ export const TECH: TechSpec[] = [
   { id: "stamp2", label: "DOUBLE STAMP", work: 145, parts: 36, blurb: "Focus stamp +1 more.", requires: "printfocus", tier: 2 },
   { id: "nervecore", label: "NERVE CORE", work: 200, parts: 56, blurb: "+3 thrones.", requires: "nervegrow", needRoom: "choir", tier: 3 },
   { id: "rosekey", label: "ROSE KEY", work: 210, parts: 60, blurb: "Sister-wreck opens.", requires: "moltlock", needMolt: 1, tier: 3 },
+  { id: "millcut", label: "MILL CUT", work: 90, parts: 22, blurb: "Parts sell richer.", needRoom: "mill", tier: 1 },
+  { id: "creditfeed", label: "CUT FEED", work: 140, parts: 34, blurb: "Refinery drips CUT.", requires: "millcut", needRoom: "refinery", tier: 2 },
+  { id: "sensorwatch", label: "CLEAR EYE", work: 120, parts: 30, blurb: "Watching hits harder.", needRoom: "sensor", tier: 2 },
+  { id: "armorteeth", label: "ARMOR TEETH", work: 165, parts: 42, blurb: "Hulls bite deeper.", needRoom: "armory", requires: "claws", tier: 3 },
+  { id: "dockberth", label: "DOCK BERTHS", work: 150, parts: 38, blurb: "+12 pop cap.", needRoom: "dock", tier: 3 },
+  { id: "galleryxp", label: "GOLD PEWS", work: 155, parts: 40, blurb: "Minds drink faster.", needRoom: "gallery", requires: "framexp", tier: 3 },
 ];
 
 export function defaultState(now = Date.now()): GameState {
@@ -222,6 +243,8 @@ export function defaultState(now = Date.now()): GameState {
     hiveRank: 0,
     ore: 72,
     parts: 36,
+    credits: 18,
+    autoSell: true,
     charge: 52,
     spark: 0,
     sparkNeed: 16,
@@ -262,12 +285,15 @@ export function defaultState(now = Date.now()): GameState {
     rng: 0xc0ffee ^ (now % 1_000_000),
     tab: "hull",
     lastSaveAt: 0,
+    lastSnapAt: 0,
+    snapIndex: 0,
     slagAt: 0,
     pendingGift: null,
     mercySurge: false,
     returnStreak: 0,
     lastReturnAt: 0,
     printFocus: { caste: "miner", n: 0 },
+    zoneRank: { spine: 0, hold: 0, nave: 0, fleet: 0, crypt: 0 },
   };
 }
 
@@ -280,13 +306,31 @@ export function berthCap(s: GameState): number {
   const rites =
     (s.tech.berthplus?.done ? 16 : 0) +
     (s.tech.huskbeds?.done ? 14 : 0) +
-    (s.tech.berthdeep?.done ? 22 : 0);
-  return 22 + barracks + nerve + hangar + rel + choir + rites + s.moltLayer * 8 + (s.berthExtra ?? 0);
+    (s.tech.berthdeep?.done ? 22 : 0) +
+    (s.tech.dockberth?.done ? 12 : 0);
+  return 22 + barracks + nerve + hangar + rel + choir + rites + s.moltLayer * 8 + (s.berthExtra ?? 0) + (s.rooms.dock?.built ? 8 : 0);
 }
 
-export function expandCost(s: GameState): { ore: number; parts: number; add: number } {
+export function expandCost(s: GameState): { credits: number; add: number } {
   const n = s.berthExtra ?? 0;
-  return { ore: 14 + n * 6, parts: 18 + n * 8, add: 2 };
+  return { credits: 24 + n * 10, add: 2 };
+}
+
+export const ORE_CUT = 0.42;
+export const PARTS_CUT = 1.12;
+
+export function sellYield(kind: "ore" | "parts", n: number, s: GameState): number {
+  const mill = s.rooms.mill?.built ? 1.18 : 1;
+  const ref = s.rooms.refinery?.built ? 1.22 : 1;
+  const rite = s.tech.millcut?.done ? 1.16 : 1;
+  const z = 1 + (s.zoneRank?.hold ?? 0) * 0.05;
+  const rate = kind === "ore" ? ORE_CUT : PARTS_CUT;
+  return n * rate * mill * ref * rite * z;
+}
+
+export function zoneCost(s: GameState, id: ZoneId): number {
+  const n = (s.zoneRank?.[id] ?? 0) + 1;
+  return Math.ceil(36 * n * (1 + n * 0.12));
 }
 
 export function oreCap(s: GameState): number {
@@ -457,7 +501,23 @@ export function rates(s: GameState, now: number) {
     (s.tech.solarfeed?.done ? 0.18 : 0) +
     (s.tech.solar2?.done ? 0.22 : 0);
   const chargeDrain = 0.0016 * totalSwarm(s) + (s.minds.some((m) => m.fracture.includes("Burns charge")) ? 0.02 : 0);
-  return { orePerSec, partsPerSec, buildPerSec, labPerSec, sparkPerSec, chargeGen, chargeDrain };
+  const zHold = 1 + (s.zoneRank?.hold ?? 0) * 0.04;
+  const zSpine = 1 + (s.zoneRank?.spine ?? 0) * 0.04;
+  const zNave = 1 + (s.zoneRank?.nave ?? 0) * 0.04;
+  const creditsPerSec =
+    ((s.rooms.refinery?.built ? 0.08 : 0) + (s.tech.creditfeed?.done ? 0.05 : 0) + (s.rooms.refinery?.rank ?? 0) * 0.02) *
+    zHold;
+  const slow = 0.5;
+  return {
+    orePerSec: orePerSec * zHold * slow,
+    partsPerSec: partsPerSec * zSpine * slow,
+    buildPerSec: buildPerSec * zNave * slow,
+    labPerSec: labPerSec * zNave * slow,
+    sparkPerSec: sparkPerSec * slow,
+    chargeGen,
+    chargeDrain,
+    creditsPerSec,
+  };
 }
 
 export function nextGoal(s: GameState): string {
@@ -504,12 +564,12 @@ export function raidNeed(s: GameState, id: RaidId): number {
   return node.need + Math.floor(times * 0.35);
 }
 
-export function rankCost(s: GameState, id: RoomId): { parts: number; work: number } | null {
+export function rankCost(s: GameState, id: RoomId): { credits: number; work: number } | null {
   const spec = ROOMS.find((r) => r.id === id);
   const room = s.rooms[id];
   if (!spec || !room?.built || (room.rank ?? 0) >= 5) return null;
   const n = (room.rank ?? 0) + 1;
-  return { parts: Math.ceil(spec.parts * 0.48 * n), work: Math.ceil(spec.work * 0.42 * n) };
+  return { credits: Math.ceil(18 * n * (1 + spec.tier * 0.12)), work: Math.ceil(spec.work * 0.42 * n) };
 }
 
 export function rollCandidates(s: GameState): { waking: Candidate[]; rng: number } {

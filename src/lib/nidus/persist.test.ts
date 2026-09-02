@@ -307,3 +307,25 @@ test("offline tick uses the same rates as online — no extra cut for being away
   assert.equal(Math.floor(on.ore), Math.floor(off.ore));
 });
 
+test("credits migrate from ore and parts without wiping the hive", () => {
+  const s = importSave(JSON.stringify({ version: 1, ore: 100, parts: 40, printed: 16, rooms: { solar: { built: true, progress: 28 } } }));
+  assert.ok(s);
+  assert.ok((s.credits ?? 0) > 0);
+  assert.equal(s.ore, 100);
+  assert.equal(s.autoSell, true);
+  assert.ok(s.rooms.mill);
+  assert.equal(s.rooms.mill.built, false);
+});
+
+test("low ore recycles surplus parts so the hive is not stuck", () => {
+  let s = defaultState();
+  s.rooms.solar = { built: true, progress: 28, rank: 0, rankWork: 0 };
+  s.ore = 0.4;
+  s.parts = 20;
+  s.credits = 4;
+  s.lastTick = 1_000_000;
+  s = applyTick(s, 1_000_000 + 8000);
+  assert.ok(s.ore > 0.4);
+  assert.ok(s.parts < 20);
+});
+

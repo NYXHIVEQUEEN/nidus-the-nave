@@ -46,6 +46,16 @@ function migrate(raw: GameState): GameState {
   if (!merged.printFocus || typeof merged.printFocus.n !== "number") {
     merged.printFocus = { caste: merged.printCaste || "miner", n: 0 };
   }
+  if (typeof merged.credits !== "number" || Number.isNaN(merged.credits)) {
+    merged.credits = Math.floor((merged.ore ?? 0) * 0.22 + (merged.parts ?? 0) * 0.55 + 12);
+  }
+  if (typeof merged.autoSell !== "boolean") merged.autoSell = true;
+  if (!merged.zoneRank) merged.zoneRank = { spine: 0, hold: 0, nave: 0, fleet: 0, crypt: 0 };
+  else {
+    merged.zoneRank = { ...{ spine: 0, hold: 0, nave: 0, fleet: 0, crypt: 0 }, ...merged.zoneRank };
+  }
+  if (typeof merged.lastSnapAt !== "number") merged.lastSnapAt = 0;
+  if (typeof merged.snapIndex !== "number") merged.snapIndex = 0;
   if (!merged.lastSaveAt) merged.lastSaveAt = 0;
   if (!merged.slagAt) merged.slagAt = 0;
   if (typeof merged.autoBuild !== "boolean") merged.autoBuild = false;

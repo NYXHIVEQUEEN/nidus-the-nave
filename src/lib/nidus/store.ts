@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Caste, Job, RaidId, RoomId, SalvageId, Tab, TechId } from "./types";
+import type { Caste, Job, RaidId, RoomId, SalvageId, Tab, TechId, ZoneId } from "./types";
 import { defaultState } from "./content";
 import {
   applyTick,
@@ -22,6 +22,8 @@ import {
   expandBerth,
   healMind,
   cookSalvage,
+  sellStock,
+  raiseZone,
 } from "./sim";
 import { exportSave, importSave, loadSave, readSlot, requestPersist, wipeSave, writeSave, writeSlot } from "./save";
 import type { GameState } from "./types";
@@ -65,6 +67,9 @@ type Store = GameState & {
   heal: (id: string) => void;
   promote: (id: string) => void;
   cook: (id: SalvageId) => void;
+  sell: (kind: "ore" | "parts", n: number) => void;
+  toggleAutoSell: () => void;
+  zoneUp: (id: ZoneId) => void;
 };
 
 let lastWrite = 0;
@@ -92,6 +97,12 @@ export const useNidus = create<Store>((set, get) => ({
   tick: (now) => {
     try {
       const next = applyTick(pickGame(get()), now);
+      if (now - (next.lastSnapAt || 0) > 120_000) {
+        const i = (next.snapIndex ?? 0) % 3;
+        writeSlot(i, next);
+        next.snapIndex = i + 1;
+        next.lastSnapAt = now;
+      }
       set(next);
       if (now - lastWrite > 4000) {
         lastWrite = now;
@@ -247,6 +258,20 @@ export const useNidus = create<Store>((set, get) => ({
   },
   cook: (id) => {
     set(cookSalvage(get(), id));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  sell: (kind, n) => {
+    set(sellStock(get(), kind, n));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  toggleAutoSell: () => {
+    set({ autoSell: !get().autoSell });
+    writeSave(pickGame(get()));
+  },
+  zoneUp: (id) => {
+    set(raiseZone(get(), id));
     writeSave(pickGame(get()));
     lastWrite = Date.now();
   },

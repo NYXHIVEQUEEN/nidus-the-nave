@@ -9,7 +9,7 @@ export function markName(n: number) {
 }
 
 export function markCost(n: number) {
-  return { ore: 18 + n * 28, parts: 12 + n * 18 };
+  return { credits: 22 + n * 26 };
 }
 
 export function fleetPower(s: GameState) {
@@ -18,6 +18,9 @@ export function fleetPower(s: GameState) {
   const claws = s.tech.claws.done ? 1.4 : 1;
   const gun = s.rooms.gundeck.built ? 1.18 + (s.rooms.gundeck.rank ?? 0) * 0.06 : 1;
   const spire = s.rooms.spire?.built ? 1.12 : 1;
+  const armory = s.rooms.armory?.built ? 1.14 + (s.rooms.armory.rank ?? 0) * 0.04 : 1;
+  const sensor = s.rooms.sensor?.built && s.raid?.watching ? (s.tech.sensorwatch?.done ? 1.22 : 1.1) : 1;
+  const armorRite = s.tech.armorteeth?.done ? 1.16 : 1;
   const molt = 1 + s.moltLayer * 0.22;
   let mind = 1;
   for (const m of s.minds) {
@@ -27,7 +30,7 @@ export function fleetPower(s: GameState) {
     mind += (m.seated ? 0.3 : 0.15) * m.stats.raid * wound * talent;
   }
   const n = s.raid?.strikers ?? s.swarm.striker;
-  return n * mark * lvl * claws * gun * spire * molt * mind;
+  return n * mark * lvl * claws * gun * spire * armory * sensor * armorRite * molt * mind;
 }
 
 export function nodeArmor(id: RaidId) {
@@ -73,9 +76,8 @@ export function markUp(s: GameState, caste: Caste): GameState {
   const n = s.hullMark[caste] ?? 0;
   if (n >= 6) return s;
   const cost = markCost(n);
-  if (s.ore < cost.ore || s.parts < cost.parts) return s;
-  s.ore -= cost.ore;
-  s.parts -= cost.parts;
+  if ((s.credits ?? 0) < cost.credits) return s;
+  s.credits -= cost.credits;
   s.hullMark[caste] = n + 1;
   return s;
 }

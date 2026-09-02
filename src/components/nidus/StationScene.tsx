@@ -24,6 +24,7 @@ import {
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { useNidus } from "@/lib/nidus/store";
 import { ROOMS } from "@/lib/nidus/content";
+import { chime } from "@/lib/nidus/audio";
 import { CAM_DEFAULT, CAM_MAX, CAM_MIN, applyCamPreset, camPosition, getPrefs, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
 
 const dummy = new Obj3D();
@@ -80,6 +81,12 @@ const SOCKETS: Record<string, [number, number, number]> = {
   apse: [0, 1.12, 0.36],
   spire: [0, 0.58, -2.02],
   crucible: [0.4, -0.26, 0.54],
+  mill: [0.48, -0.22, 0.18],
+  refinery: [0.88, -0.2, -0.18],
+  sensor: [0.22, 0.62, -1.35],
+  armory: [-0.48, 0.1, -1.38],
+  dock: [0.52, -0.44, -0.92],
+  gallery: [-0.58, 0.7, 0.12],
   prow: [0, 0.04, 2.15],
 };
 
@@ -268,6 +275,12 @@ const KIND: Record<string, AnnexKind> = {
   vault: "coffer",
   crypt: "ossuary",
   crucible: "bowl",
+  mill: "hopper",
+  refinery: "bowl",
+  sensor: "lantern",
+  armory: "lance",
+  dock: "maw",
+  gallery: "arcade",
   spire: "needle",
   apse: "apse",
 };
@@ -310,6 +323,12 @@ function Hull() {
   const apse = useNidus((s) => s.rooms.apse?.built ?? false);
   const spire = useNidus((s) => s.rooms.spire?.built ?? false);
   const crucible = useNidus((s) => s.rooms.crucible?.built ?? false);
+  const mill = useNidus((s) => s.rooms.mill?.built ?? false);
+  const refinery = useNidus((s) => s.rooms.refinery?.built ?? false);
+  const sensor = useNidus((s) => s.rooms.sensor?.built ?? false);
+  const armory = useNidus((s) => s.rooms.armory?.built ?? false);
+  const dock = useNidus((s) => s.rooms.dock?.built ?? false);
+  const gallery = useNidus((s) => s.rooms.gallery?.built ?? false);
   const roomsLit = useNidus(
     (s) =>
       Number(s.rooms.solar.built) +
@@ -494,8 +513,14 @@ function Hull() {
     if (apse) out.push(SOCKETS.apse);
     if (spire) out.push(SOCKETS.spire);
     if (crucible) out.push(SOCKETS.crucible);
+    if (mill) out.push(SOCKETS.mill);
+    if (refinery) out.push(SOCKETS.refinery);
+    if (sensor) out.push(SOCKETS.sensor);
+    if (armory) out.push(SOCKETS.armory);
+    if (dock) out.push(SOCKETS.dock);
+    if (gallery) out.push(SOCKETS.gallery);
     return out;
-  }, [solar, orebay, silo, barracks, hangar, gundeck, lab, nerve, reliquary, cloister, choir, vault, crypt, apse, spire, crucible]);
+  }, [solar, orebay, silo, barracks, hangar, gundeck, lab, nerve, reliquary, cloister, choir, vault, crypt, apse, spire, crucible, mill, refinery, sensor, armory, dock, gallery]);
 
   useFrame((state, delta) => {
     const d = Math.min(delta, 0.1);
@@ -1311,6 +1336,52 @@ function Hull() {
           </mesh>
         </Dock>
       )}
+      {mill && (
+        <Dock id="mill">
+          <mesh geometry={hopperGeo}>
+            <meshStandardMaterial map={grate} color="#8a7358" metalness={0.7} roughness={0.35} />
+          </mesh>
+        </Dock>
+      )}
+      {refinery && (
+        <Dock id="refinery">
+          <mesh geometry={bowlGeo}>
+            <meshStandardMaterial map={ember} color="#c4a574" metalness={0.6} roughness={0.32} emissive={gilt} emissiveIntensity={0.4} />
+          </mesh>
+        </Dock>
+      )}
+      {sensor && (
+        <Dock id="sensor">
+          <mesh position={[0, 0.14, 0]}>
+            <sphereGeometry args={[0.09, 10, 8]} />
+            <meshStandardMaterial map={glass} color={GILT} emissive={gilt} emissiveIntensity={0.8} toneMapped={false} />
+          </mesh>
+        </Dock>
+      )}
+      {armory && (
+        <Dock id="armory">
+          <mesh position={[0, 0.16, 0]} rotation={[0.2, 0, 0]}>
+            <boxGeometry args={[0.08, 0.36, 0.08]} />
+            <meshStandardMaterial map={rivet} color="#6a5044" metalness={0.75} roughness={0.3} />
+          </mesh>
+        </Dock>
+      )}
+      {dock && (
+        <Dock id="dock">
+          <mesh position={[0, 0.08, 0]}>
+            <boxGeometry args={[0.28, 0.1, 0.22]} />
+            <meshStandardMaterial map={plate} color="#8a7a68" metalness={0.62} roughness={0.4} />
+          </mesh>
+        </Dock>
+      )}
+      {gallery && (
+        <Dock id="gallery">
+          <mesh position={[0, 0.1, 0]}>
+            <boxGeometry args={[0.22, 0.12, 0.34]} />
+            <meshStandardMaterial map={filigree} color={GILT} metalness={0.55} roughness={0.36} />
+          </mesh>
+        </Dock>
+      )}
       {spire && (
         <Dock id="spire" rank={spireRank}>
           <mesh position={[0, 0.22, 0]}>
@@ -1531,75 +1602,94 @@ function CornerSun() {
 }
 
 function BattleField() {
-  const watching = useNidus((s) => Boolean(s.raid?.watching));
-  const n = useNidus((s) => Math.min(16, s.raid?.strikers ?? 0));
-  const boosted = useNidus((s) => (s.raid?.boostUntil ?? 0) > Date.now());
+  const raid = useNidus((s) => s.raid);
+  const watching = Boolean(raid?.watching);
+  const n = Math.min(16, raid?.strikers ?? 0);
+  const boosted = (raid?.boostUntil ?? 0) > Date.now();
   const ships = useRef<InstancedMesh>(null);
+  const pirates = useRef<InstancedMesh>(null);
   const sparks = useRef<InstancedMesh>(null);
   const dartGeo = useMemo(() => craftGeo(1.6), []);
+  const pirateGeo = useMemo(() => craftGeo(3.4), []);
   const plate = useTexture("/nidus/tex-plate.jpg");
   plate.colorSpace = SRGBColorSpace;
+  const lastHit = useRef(0);
   useFrame((state) => {
-    const mesh = ships.current;
-    if (!mesh) return;
-    if (!watching) {
-      mesh.visible = false;
-      if (sparks.current) sparks.current.visible = false;
-      return;
-    }
+    if (!raid) return;
     const t = state.clock.elapsedTime;
-    for (let i = 0; i < 16; i++) {
-      if (i >= n) {
-        dummy.position.set(0, -80, 0);
-        dummy.scale.setScalar(0.001);
-      } else {
-        const a = t * 0.55 + (i / Math.max(1, n)) * Math.PI * 2;
-        dummy.position.set(Math.cos(a) * 2.5, Math.sin(t * 1.4 + i) * 0.28, Math.sin(a) * 1.7);
-        dummy.lookAt(0, 0, 0);
-        dummy.rotateX(Math.PI / 2);
-        dummy.scale.setScalar(boosted ? 1.2 : 1);
-      }
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
+    if (t - lastHit.current > (boosted ? 0.7 : 1.45)) {
+      lastHit.current = t;
+      chime("hit");
     }
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.visible = true;
+    const mesh = ships.current;
+    if (mesh) {
+      for (let i = 0; i < 16; i++) {
+        if (i >= n) {
+          dummy.position.set(0, -80, 0);
+          dummy.scale.setScalar(0.001);
+        } else {
+          const a = t * 0.7 + (i / Math.max(1, n)) * Math.PI * 2;
+          dummy.position.set(Math.cos(a) * 2.8, 0.35 + Math.sin(t * 1.6 + i) * 0.32, Math.sin(a) * 1.9 - 0.2);
+          dummy.lookAt(0.2, 0.1, 0);
+          dummy.rotateX(Math.PI / 2);
+          dummy.scale.setScalar((boosted ? 1.25 : 1) * (watching ? 1 : 0.85));
+        }
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.visible = true;
+    }
+    const pr = pirates.current;
+    if (pr) {
+      dummy.position.set(0.15, 0.08, 0.1);
+      dummy.rotation.set(0.18, t * 0.12, 0.08);
+      dummy.scale.setScalar(1.15);
+      dummy.updateMatrix();
+      pr.setMatrixAt(0, dummy.matrix);
+      dummy.position.set(-1.6, -0.3, 0.8);
+      dummy.rotation.set(0.3, t * 0.08, -0.2);
+      dummy.scale.setScalar(0.55);
+      dummy.updateMatrix();
+      pr.setMatrixAt(1, dummy.matrix);
+      pr.instanceMatrix.needsUpdate = true;
+      pr.visible = true;
+    }
     const sp = sparks.current;
     if (sp) {
       for (let i = 0; i < 10; i++) {
-        const a = t * 2.2 + i * 0.62;
-        dummy.position.set(Math.cos(a) * 0.7, 0.1 + Math.sin(t * 3 + i) * 0.35, Math.sin(a * 0.7) * 0.5);
-        dummy.scale.setScalar(0.5 + (i % 3) * 0.4);
+        const a = t * 2.6 + i * 0.62;
+        dummy.position.set(Math.cos(a) * 0.55, 0.12 + Math.sin(t * 4 + i) * 0.28, Math.sin(a * 0.7) * 0.4);
+        dummy.scale.setScalar(0.45 + (i % 3) * 0.4);
         dummy.rotation.set(0, 0, 0);
         dummy.updateMatrix();
         sp.setMatrixAt(i, dummy.matrix);
       }
       sp.instanceMatrix.needsUpdate = true;
-      sp.visible = true;
+      sp.visible = watching;
     }
   });
-  if (!watching) return null;
+  if (!raid) return null;
   return (
-    <group>
-      <mesh rotation={[0.25, 0.5, 0.12]}>
-        <boxGeometry args={[1.55, 0.34, 0.5]} />
-        <meshStandardMaterial map={plate} color="#6a5044" metalness={0.6} roughness={0.5} emissive="#3a1a18" emissiveIntensity={0.4} />
+    <group position={[0, 0.2, watching ? 0.4 : 1.6]} scale={watching ? 1 : 0.55}>
+      <mesh rotation={[0.2, 0.4, 0.1]}>
+        <boxGeometry args={[1.85, 0.42, 0.62]} />
+        <meshStandardMaterial map={plate} color="#5a4038" metalness={0.62} roughness={0.48} emissive="#3a1a18" emissiveIntensity={0.45} />
       </mesh>
-      <mesh position={[0.62, 0.12, 0.05]} rotation={[0.3, 0.1, 0.7]}>
-        <boxGeometry args={[0.95, 0.045, 0.3]} />
-        <meshStandardMaterial map={plate} color="#8a7358" metalness={0.68} roughness={0.42} />
+      <mesh position={[0.85, 0.08, 0]} rotation={[0.2, 0, 0.5]}>
+        <boxGeometry args={[0.9, 0.08, 0.55]} />
+        <meshStandardMaterial map={plate} color="#3a2a24" metalness={0.7} roughness={0.36} />
       </mesh>
-      <mesh position={[-0.4, -0.05, 0.12]} rotation={[0.4, -0.3, 0.2]}>
-        <cylinderGeometry args={[0.08, 0.14, 0.4, 6]} />
-        <meshStandardMaterial color="#2a1a18" metalness={0.7} roughness={0.35} emissive="#7a1f2b" emissiveIntensity={0.7} />
+      <mesh position={[-0.7, 0.22, 0]} rotation={[0.4, 0, -0.3]}>
+        <coneGeometry args={[0.18, 0.7, 6]} />
+        <meshStandardMaterial color="#2a1a18" metalness={0.72} roughness={0.32} emissive="#7a1f2b" emissiveIntensity={0.8} />
       </mesh>
-      <mesh rotation={[Math.PI / 2.3, 0.15, 0]}>
-        <torusGeometry args={[2.35, 0.03, 6, 40]} />
-        <meshBasicMaterial color={boosted ? GILT : VENOM} transparent opacity={boosted ? 0.55 : 0.35} depthWrite={false} blending={AdditiveBlending} />
-      </mesh>
-      <pointLight color={boosted ? GILT : BLOOD} intensity={boosted ? 8 : 5} distance={10} decay={2} />
+      <pointLight color={boosted ? GILT : BLOOD} intensity={boosted ? 9 : 6} distance={12} decay={2} />
       <instancedMesh ref={ships} args={[dartGeo, undefined, 16]} visible={false}>
         <meshStandardMaterial color={boosted ? GILT : BONE} metalness={0.72} roughness={0.28} emissive={boosted ? GILT : BLOOD} emissiveIntensity={boosted ? 0.55 : 0.35} />
+      </instancedMesh>
+      <instancedMesh ref={pirates} args={[pirateGeo, undefined, 2]} visible={false}>
+        <meshStandardMaterial color="#6a5044" metalness={0.55} roughness={0.45} emissive="#5a2018" emissiveIntensity={0.35} />
       </instancedMesh>
       <instancedMesh ref={sparks} args={[undefined, undefined, 10]} visible={false}>
         <sphereGeometry args={[0.04, 6, 6]} />

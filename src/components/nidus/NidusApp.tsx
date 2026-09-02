@@ -18,6 +18,7 @@ import {
   JOBS,
   RAIDS,
   ROOMS,
+  ZONES,
   berthCap,
   chargeCap,
   expandCost,
@@ -28,8 +29,10 @@ import {
   raidNeed,
   raidUnlocked,
   rates,
+  rankCost,
   throneCap,
   totalSwarm,
+  zoneCost,
 } from "@/lib/nidus/content";
 import { advise } from "@/lib/nidus/advisor";
 import { markCost, markName } from "@/lib/nidus/fleet";
@@ -380,6 +383,7 @@ function ResourceBar({ compact }: { compact: boolean }) {
   const spark = useNidus((s) => s.spark);
   const sparkNeed = useNidus((s) => s.sparkNeed);
   const echo = useNidus((s) => s.echo);
+  const credits = useNidus((s) => s.credits);
   const hiveRank = useNidus((s) => s.hiveRank);
   const waking = useNidus((s) => s.waking);
   const lastSaveAt = useNidus((s) => s.lastSaveAt);
@@ -398,6 +402,7 @@ function ResourceBar({ compact }: { compact: boolean }) {
           <p className="text-[0.55rem] tracking-[0.18em] text-muted">RANK</p>
           <p className="font-display text-xs tabular-nums text-gilt">{hiveTitle(hiveRank)}</p>
         </button>
+        <Chip label="CUT" value={fmt(credits ?? 0)} sub={`${fmt((r.creditsPerSec ?? 0) * 60)}/m`} cap={Math.max(80, (credits ?? 0) + 40)} cur={credits ?? 0} venom onTap={setOpen} />
         <Chip label="ORE" value={fmt(ore)} sub={`${fmt(r.orePerSec * 60)}/m`} cap={oreCap(s)} cur={ore} onTap={setOpen} />
         <Chip label="PARTS" value={fmt(parts)} sub={`${fmt(r.partsPerSec * 60)}/m`} cap={partsCap(s)} cur={parts} onTap={setOpen} />
         <Chip label="CHARGE" value={fmt(charge)} sub={`${r.chargeGen - r.chargeDrain >= 0 ? "+" : ""}${fmt((r.chargeGen - r.chargeDrain) * 60)}/m`} cap={chargeCap(s)} cur={charge} venom starve={starve} onTap={setOpen} />
@@ -516,6 +521,8 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
   const scripts = useNidus((s) => s.scripts);
   const toggleScripts = useNidus((s) => s.toggleScripts);
   const mercy = useNidus((s) => s.mercySurge);
+  const zoneUp = useNidus((s) => s.zoneUp);
+  const zoneRank = useNidus((s) => s.zoneRank);
   const now = Date.now();
   const surging = now < surgeUntil;
   const slagReady = now >= slagAt;
@@ -523,23 +530,6 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
   const full = packed(s);
   const nextRoom = ROOMS.find((r) => r.id !== "foundry" && !rooms[r.id]?.built && !roomLockWhy(s, r.id));
   const [why, setWhy] = useState<string | null>(null);
-  const strip = ROOMS.filter((r) => {
-    if (r.id === "foundry") return true;
-    const st = rooms[r.id];
-    if (st?.built || queued === r.id) return true;
-    return !roomLockWhy(s, r.id);
-  });
-  const tease = ROOMS.find((r) => !strip.some((x) => x.id === r.id) && Boolean(roomLockWhy(s, r.id)));
-  const shown = compact
-    ? ([ROOMS.find((r) => r.id === queued), nextRoom, tease, s.rankingRoom ? ROOMS.find((r) => r.id === s.rankingRoom) : undefined].filter(
-        (r): r is (typeof ROOMS)[number] => Boolean(r),
-      ) as (typeof ROOMS)[number][])
-        .filter((r, i, a) => a.findIndex((x) => x.id === r.id) === i)
-        .slice(0, 4)
-    : tease
-      ? [...strip, tease]
-      : strip;
-  const nested = ROOMS.length - shown.length;
 
   return (
     <div className="pointer-events-none flex flex-col justify-end gap-1 p-2">
@@ -556,75 +546,67 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
           ))}
         </div>
       )}
-      {s.orders?.length > 0 && compact && (
-        <div className="pointer-events-none flex justify-center gap-1">
-          {s.orders.map((o) => (
-            <span key={o.id} className="nidus-chip nidus-chip-open" title={o.label}>
-              {o.have}/{o.need}
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="pointer-events-auto">
-        <div className="nidus-strip">
-          {shown.map((r) => {
-            const st = rooms[r.id] ?? { built: false, progress: 0, rank: 0, rankWork: 0 };
-            const lock = roomLockWhy(s, r.id);
-            const ranking = s.rankingRoom === r.id;
-            const isNext = nextRoom?.id === r.id;
-            const work = Math.max(1, r.work);
-            const raisePct = Math.min(100, Math.floor((st.progress / work) * 100));
-            const rankNeed = Math.max(1, Math.ceil(r.work * 0.42 * ((st.rank ?? 0) + 1)));
-            const rankPct = Math.min(100, Math.floor(((st.rankWork ?? 0) / rankNeed) * 100));
-            const chipKind = st.built ? "lit" : lock ? "lock" : isNext || queued === r.id ? "next" : "open";
-            const chip = st.built
-              ? ranking
-                ? `R${st.rank ?? 0} ${rankPct}%`
-                : `R${st.rank ?? 0}`
-              : lock
-                ? shortLock(lock)
-                : queued === r.id
-                  ? `${raisePct}%`
-                  : isNext
-                    ? "NEXT"
-                    : raisePct > 0
-                      ? `${raisePct}%`
-                      : "RAISE";
-            const bar = st.built ? (ranking ? rankPct : 100) : raisePct;
-            return (
-              <button
-                key={r.id}
-                type="button"
-                disabled={Boolean(lock) || ((st.rank ?? 0) >= RANK_MAX && st.built)}
-                title={lock || r.bonus}
-                onClick={() => {
-                  lookAtRoom(r.id);
-                  setWhy(`${r.label} · ${r.bonus}`);
-                  queue(r.id);
-                  chime("snap");
-                }}
-                className={cn(
-                  "nidus-card w-[6.1rem] px-2 py-2 text-left",
-                  compact ? "min-h-[4.2rem]" : "min-h-[5rem]",
-                  st.built && "nidus-card-on",
-                  lock && "nidus-card-lock",
-                  pulse(isNext && verb === "BUILD"),
-                )}
-              >
-                <StatusChip kind={chipKind}>{chip}</StatusChip>
-                <p className="mt-1 font-display text-[0.62rem] leading-tight tracking-[0.12em]">{r.label}</p>
-                <p className="truncate text-[0.52rem] tracking-[0.04em] text-gilt-dim">{r.bonus}</p>
-                <div className="mt-1 h-0.5 w-full bg-iron">
-                  <div className={cn("h-0.5", st.built ? "bg-gilt" : "bg-venom")} style={{ width: `${bar}%` }} />
-                </div>
-              </button>
-            );
-          })}
-          {nested > 0 && (
-            <p className="self-center px-1 font-display text-[0.5rem] tracking-[0.14em] text-muted">+{nested} NESTS</p>
-          )}
-        </div>
-        {why && !compact && <p className="px-1 pt-1 text-center text-[0.65rem] text-gilt">{why}</p>}
+      <div className="pointer-events-auto flex flex-col gap-1.5">
+        {ZONES.map((z) => {
+          const rows = ROOMS.filter((r) => r.zone === z.id && (r.id === "foundry" || rooms[r.id]?.built || queued === r.id || !roomLockWhy(s, r.id) || r.id === nextRoom?.id));
+          if (rows.length === 0) return null;
+          const zr = zoneRank?.[z.id] ?? 0;
+          const zc = zoneCost(s, z.id);
+          return (
+            <div key={z.id} className="nidus-card px-1.5 py-1">
+              <div className="mb-0.5 flex items-center justify-between gap-1">
+                <p className="font-display text-[0.52rem] tracking-[0.18em] text-gilt">{z.label} · R{zr}</p>
+                <button
+                  type="button"
+                  disabled={zr >= RANK_MAX || (s.credits ?? 0) < zc}
+                  title={`${z.hint} ${zc} CUT`}
+                  onClick={() => {
+                    zoneUp(z.id);
+                    chime("snap");
+                  }}
+                  className="nidus-cut min-h-7 px-1.5 font-display text-[0.48rem] tracking-[0.12em] text-gilt disabled:opacity-40"
+                >
+                  ZONE {zc}c
+                </button>
+              </div>
+              <div className="flex gap-0.5 overflow-x-auto">
+                {rows.map((r) => {
+                  const st = rooms[r.id] ?? { built: false, progress: 0, rank: 0, rankWork: 0 };
+                  const lock = roomLockWhy(s, r.id);
+                  const ranking = s.rankingRoom === r.id;
+                  const work = Math.max(1, r.work);
+                  const raisePct = Math.min(100, Math.floor((st.progress / work) * 100));
+                  const rk = rankCost(s, r.id);
+                  const rankPct = rk ? Math.min(100, Math.floor(((st.rankWork ?? 0) / rk.work) * 100)) : 100;
+                  const bar = st.built ? (ranking ? rankPct : 100) : raisePct;
+                  const tag = st.built ? (ranking ? `R${st.rank}` : `R${st.rank}`) : queued === r.id ? `${raisePct}` : lock ? "—" : "↑";
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      disabled={Boolean(lock) || ((st.rank ?? 0) >= RANK_MAX && st.built)}
+                      title={lock || `${r.label} · ${r.bonus}${rk ? ` · ${rk.credits}c` : ""}`}
+                      onClick={() => {
+                        lookAtRoom(r.id);
+                        setWhy(`${r.label} · ${r.bonus}`);
+                        queue(r.id);
+                        chime("snap");
+                      }}
+                      className={cn("nidus-vbar nidus-cut shrink-0", st.built && "nidus-cut-on", lock && "opacity-40", pulse(nextRoom?.id === r.id && verb === "BUILD"))}
+                    >
+                      <span className="font-display text-[0.42rem] tabular-nums text-gilt">{tag}</span>
+                      <div className="nidus-vbar-track">
+                        <div className={cn("nidus-vbar-fill", st.built ? "bg-gilt" : "bg-venom")} style={{ height: `${bar}%` }} />
+                      </div>
+                      <span className="w-full truncate text-center font-display text-[0.4rem] leading-tight tracking-[0.06em]">{r.label.split(" ")[0]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+        {why && !compact && <p className="px-1 text-center text-[0.65rem] text-gilt">{why}</p>}
       </div>
       <div className="pointer-events-auto nidus-actions">
         <button
@@ -691,10 +673,14 @@ function ForgeTab({ verb, compact }: { verb: string; compact: boolean }) {
   const markHull = useNidus((s) => s.markHull);
   const expandPop = useNidus((s) => s.expandPop);
   const hullMark = useNidus((s) => s.hullMark);
+  const sell = useNidus((s) => s.sell);
+  const autoSell = useNidus((s) => s.autoSell);
+  const toggleAutoSell = useNidus((s) => s.toggleAutoSell);
   const s = useNidus();
   const cost = printCost(s);
   const cap = berthCap(s);
   const pop = expandCost(s);
+  const mk = markCost(hullMark[printCaste] ?? 0);
   const full = packed(s);
   const jammed = totalSwarm(s) >= cap;
   const icons: Record<Caste, typeof Pickaxe> = { miner: Pickaxe, fab: Factory, builder: Hammer, lab: FlaskConical, striker: Swords };
@@ -729,24 +715,35 @@ function ForgeTab({ verb, compact }: { verb: string; compact: boolean }) {
         <div className="mt-1.5 flex gap-1.5">
           <button
             type="button"
-            disabled={s.ore < pop.ore || s.parts < pop.parts}
-            title="Buys berths. Packed stamp still feeds SPARK."
+            disabled={(s.credits ?? 0) < pop.credits}
+            title="Buys berths with CUT."
             onClick={() => {
               expandPop();
               chime("snap");
             }}
             className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.6rem] tracking-[0.12em] disabled:opacity-40", pulse(full))}
           >
-            EXPAND +{pop.add}
+            EXPAND +{pop.add} · {pop.credits}c
           </button>
           <button
             type="button"
-            disabled={(hullMark[printCaste] ?? 0) >= MARK_MAX}
-            title={`Rank ${CASTES.find((c) => c.id === printCaste)?.label}. ${markCost(hullMark[printCaste] ?? 0).parts} parts.`}
+            disabled={(hullMark[printCaste] ?? 0) >= MARK_MAX || (s.credits ?? 0) < mk.credits}
+            title={`Rank ${CASTES.find((c) => c.id === printCaste)?.label}. ${mk.credits} CUT.`}
             onClick={() => markHull(printCaste)}
             className="nidus-cut min-h-11 px-2 font-display text-[0.6rem] tracking-[0.12em] text-bone disabled:opacity-40"
           >
-            MARK {markCost(hullMark[printCaste] ?? 0).parts}p
+            MARK {mk.credits}c
+          </button>
+        </div>
+        <div className="mt-1 flex gap-1">
+          <button type="button" className="nidus-cut min-h-9 flex-1 font-display text-[0.5rem] tracking-[0.12em]" onClick={() => { sell("ore", Math.max(8, s.ore * 0.2)); chime("cook"); }}>
+            SELL ORE
+          </button>
+          <button type="button" className="nidus-cut min-h-9 flex-1 font-display text-[0.5rem] tracking-[0.12em]" onClick={() => { sell("parts", Math.max(6, s.parts * 0.2)); chime("cook"); }}>
+            SELL BOTS
+          </button>
+          <button type="button" className={cn("nidus-cut min-h-9 px-2 font-display text-[0.5rem] tracking-[0.1em]", autoSell !== false ? "nidus-cut-venom" : "text-muted")} onClick={toggleAutoSell}>
+            AUTO {autoSell !== false ? "ON" : "OFF"}
           </button>
         </div>
       </div>
@@ -795,8 +792,8 @@ function RaidTab({ verb, compact }: { verb: string; compact: boolean }) {
           <p className="font-display text-[0.58rem] tracking-[0.18em] text-gilt">{markName(mark)}</p>
           <p className="text-[0.62rem] tabular-nums text-muted">{strikers} HULLS</p>
         </div>
-        <button type="button" disabled={mark >= MARK_MAX || s.ore < cost.ore || s.parts < cost.parts} title={`Bigger strikers. ${cost.parts} parts.`} onClick={() => markHull("striker")} className="nidus-cut min-h-10 px-2 font-display text-[0.6rem] tracking-[0.14em] text-gilt disabled:text-muted">
-          MARK {cost.parts}p
+        <button type="button" disabled={mark >= MARK_MAX || (s.credits ?? 0) < cost.credits} title={`Bigger strikers. ${cost.credits} CUT.`} onClick={() => markHull("striker")} className="nidus-cut min-h-10 px-2 font-display text-[0.6rem] tracking-[0.14em] text-gilt disabled:text-muted">
+          MARK {cost.credits}c
         </button>
       </div>
       {raidNode && (
@@ -805,9 +802,13 @@ function RaidTab({ verb, compact }: { verb: string; compact: boolean }) {
           <div className="nidus-card-veil" />
           <div className="relative z-10 flex h-full flex-col justify-end p-2">
             <div className="mb-1 flex items-center justify-between gap-2">
-              <p className="font-display text-[0.65rem] tracking-[0.24em] text-venom">{beat || "ORBIT"} · {RAIDS.find((r) => r.id === raidNode)?.label}</p>
+              <p className="font-display text-[0.65rem] tracking-[0.24em] text-venom">{beat || "ORBIT"} · BOTS vs PIRATE</p>
               <StatusChip kind="well">{fmtTime(Math.max(0, (raidEnds - Date.now()) / 1000))}</StatusChip>
             </div>
+            <p className="mb-0.5 flex justify-between font-display text-[0.48rem] tracking-[0.14em] text-muted">
+              <span>PIRATE</span>
+              <span>BOTS</span>
+            </p>
             <div className="mb-1 h-1 bg-iron">
               <div className="h-1 bg-blood-bright" style={{ width: `${Math.min(100, (raidHp / Math.max(1, raidHpMax)) * 100)}%` }} />
             </div>

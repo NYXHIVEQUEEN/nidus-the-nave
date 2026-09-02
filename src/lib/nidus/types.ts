@@ -20,7 +20,14 @@ export type RoomId =
   | "crypt"
   | "apse"
   | "spire"
-  | "crucible";
+  | "crucible"
+  | "mill"
+  | "refinery"
+  | "sensor"
+  | "armory"
+  | "dock"
+  | "gallery";
+export type ZoneId = "spine" | "hold" | "nave" | "fleet" | "crypt";
 export type RaidId =
   | "ice"
   | "freighter"
@@ -80,7 +87,13 @@ export type TechId =
   | "raidkeep"
   | "stamp2"
   | "nervecore"
-  | "rosekey";
+  | "rosekey"
+  | "millcut"
+  | "creditfeed"
+  | "sensorwatch"
+  | "armorteeth"
+  | "dockberth"
+  | "galleryxp";
 export type SalvageId = "ice" | "plate" | "rose" | "bone" | "core";
 export type OrderKind = "print" | "build" | "raid" | "surge" | "slag" | "wake" | "mark" | "expand";
 
@@ -153,6 +166,7 @@ export type RoomSpec = {
   blurb: string;
   bonus: string;
   tier: number;
+  zone: ZoneId;
 };
 
 export type TechSpec = {
@@ -175,6 +189,8 @@ export type GameState = {
   hiveRank: number;
   ore: number;
   parts: number;
+  credits: number;
+  autoSell: boolean;
   charge: number;
   spark: number;
   sparkNeed: number;
@@ -215,10 +231,13 @@ export type GameState = {
   rng: number;
   tab: Tab;
   lastSaveAt: number;
+  lastSnapAt: number;
+  snapIndex: number;
   slagAt: number;
-  pendingGift: { ore: number; parts: number; spark: number; seconds: number } | null;
+  pendingGift: { ore: number; parts: number; spark: number; seconds: number; credits?: number } | null;
   mercySurge: boolean;
   returnStreak: number;
   lastReturnAt: number;
   printFocus: { caste: Caste; n: number };
+  zoneRank: Record<ZoneId, number>;
 };

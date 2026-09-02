@@ -1,4 +1,4 @@
-import type { BriefCard, Caste, GameState, Order, RaidId, RoomId, SalvageId } from "./types";
+import type { BriefCard, Caste, GameState, Order, RaidId, RoomId, SalvageId, ZoneId } from "./types";
 import {
   RAIDS,
   ROOMS,
@@ -16,8 +16,10 @@ import {
   rates,
   rollCandidates,
   rollOrders,
+  sellYield,
   throneCap,
   totalSwarm,
+  zoneCost,
 } from "./content";
 import { nextBuild, nextRaid, nextRite, pickPrintCaste } from "./advisor";
 import { casteXpNeed, computeHiveRank, cookUnlocked, moltCost, RANK_MAX, roomUnlocked, SALVAGE_COOK, techUnlocked, autoHoldBerths, canWakeMinds, wakeNeed } from "./progress";
@@ -82,6 +84,7 @@ function clampRes(s: GameState) {
   s.ore = Math.max(0, Math.min(s.ore, oreCap(s)));
   s.parts = Math.max(0, Math.min(s.parts, partsCap(s)));
   s.charge = Math.max(0, Math.min(s.charge, chargeCap(s)));
+  s.credits = Math.max(0, s.credits ?? 0);
 }
 
 /** Sim pipeline (architecture): res → rooms → rites → spark → print → scripts → battle → clamp. View never writes this. */
@@ -100,6 +103,7 @@ export function applyTick(s: GameState, now: number): GameState {
   const oreSpentOnParts = partsGain * 2;
   next.ore += oreGain - oreSpentOnParts;
   next.parts += partsGain;
+  next.credits = (next.credits ?? 0) + (r.creditsPerSec ?? 0) * dt;
   next.charge += (r.chargeGen - r.chargeDrain) * dt;
   next.hiveAge += dt;
   if (next.surgeUntil > 0 && now >= next.surgeUntil) next.surgeUntil = 0;
@@ -122,6 +126,7 @@ export function applyTick(s: GameState, now: number): GameState {
       ore: oreCut,
       parts: partsCut,
       spark: sparkCut,
+      credits: Math.max(1, Math.floor(oreCut * 0.2 + partsCut * 0.35)),
       seconds: Math.floor(dt),
     };
     next.mercySurge = true;
@@ -165,8 +170,14 @@ export function applyTick(s: GameState, now: number): GameState {
     if (spec && room && room.built && (room.rank ?? 0) < RANK_MAX) {
       const workNeed = Math.ceil(spec.work * 0.42 * ((room.rank ?? 0) + 1));
       const partDrain = Math.min(next.parts, (spec.parts / Math.max(1, spec.work)) * r.buildPerSec * dt);
-      room.rankWork = (room.rankWork ?? 0) + r.buildPerSec * dt;
-      next.parts -= partDrain * 0.25;
+      const credNeed = Math.max(0.4, 1.6 * ((room.rank ?? 0) + 1) * dt);
+      if ((next.credits ?? 0) < credNeed) {
+        /* rank waits on CUT */
+      } else {
+        room.rankWork = (room.rankWork ?? 0) + r.buildPerSec * dt;
+        next.credits -= credNeed;
+      }
+      next.parts -= partDrain * 0.08;
       if (room.rankWork >= workNeed) {
         room.rank = (room.rank ?? 0) + 1;
         room.rankWork = 0;
@@ -262,6 +273,27 @@ export function applyTick(s: GameState, now: number): GameState {
       next.raid = launched.raid;
       next.rng = launched.rng;
       next.swarm = launched.swarm;
+    }
+  }
+
+  if (next.ore < 2 && next.parts > 6) {
+    const n = Math.min(next.parts - 4, dt * 0.55);
+    next.parts -= n;
+    next.ore += n * 0.58;
+    next.credits = (next.credits ?? 0) + n * 0.18;
+  }
+  if (next.autoSell !== false) {
+    const oc = oreCap(next);
+    const pc = partsCap(next);
+    if (next.ore > oc * 0.9) {
+      const dump = next.ore - oc * 0.78;
+      next.ore -= dump;
+      next.credits = (next.credits ?? 0) + sellYield("ore", dump, next);
+    }
+    if (next.parts > pc * 0.9) {
+      const dump = next.parts - pc * 0.78;
+      next.parts -= dump;
+      next.credits = (next.credits ?? 0) + sellYield("parts", dump, next);
     }
   }
 
@@ -602,6 +634,7 @@ export function claimGift(s: GameState): GameState {
   next.ore += next.pendingGift.ore;
   next.parts += next.pendingGift.parts;
   next.spark += next.pendingGift.spark;
+  next.credits = (next.credits ?? 0) + (next.pendingGift.credits ?? 0);
   next.charge += chargeCap(next) * 0.18;
   next.mercySurge = true;
   next.pendingGift = null;
@@ -629,13 +662,37 @@ export function tapSlag(s: GameState, now: number): GameState {
 export function expandBerth(s: GameState): GameState {
   const next = cloneState(s);
   const cost = expandCost(next);
-  if (next.ore < cost.ore || next.parts < cost.parts) return next;
-  next.ore -= cost.ore;
-  next.parts -= cost.parts;
+  if ((next.credits ?? 0) < cost.credits) return next;
+  next.credits -= cost.credits;
   next.berthExtra = (next.berthExtra ?? 0) + cost.add;
   credit(next, "expand");
   pushLog(next, `Berths +${cost.add}. Cap ${berthCap(next)}.`);
   pushBrief(next, { kind: "build", headline: "BERTHS", line: `Pop cap ${berthCap(next)}.`, stamp: "OPEN" });
+  return next;
+}
+
+export function sellStock(s: GameState, kind: "ore" | "parts", n: number): GameState {
+  const next = cloneState(s);
+  const have = kind === "ore" ? next.ore : next.parts;
+  const take = Math.min(have, Math.max(0, n));
+  if (take <= 0) return next;
+  if (kind === "ore") next.ore -= take;
+  else next.parts -= take;
+  next.credits = (next.credits ?? 0) + sellYield(kind, take, next);
+  pushLog(next, `Sold ${Math.floor(take)} ${kind} for CUT.`);
+  return next;
+}
+
+export function raiseZone(s: GameState, id: ZoneId): GameState {
+  const next = cloneState(s);
+  if (!next.zoneRank) next.zoneRank = { spine: 0, hold: 0, nave: 0, fleet: 0, crypt: 0 };
+  const n = next.zoneRank[id] ?? 0;
+  if (n >= 5) return next;
+  const cost = zoneCost(next, id);
+  if ((next.credits ?? 0) < cost) return next;
+  next.credits -= cost;
+  next.zoneRank[id] = n + 1;
+  pushBrief(next, { kind: "build", headline: id.toUpperCase(), line: `Zone rank ${n + 1}.`, stamp: `Z${n + 1}` });
   return next;
 }
 

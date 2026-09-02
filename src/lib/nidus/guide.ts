@@ -126,7 +126,8 @@ const GLOSS: Record<string, string> = {
   ROSE: "Drink a rose for SPARK.",
   CORE: "Crack a core for Echo.",
   SIZE: "TIGHT packs chrome. ROOMY breathes. WATCH hides it. AUTO reads the glass.",
-  LOCAL: "No cloud. Hive lives on this device. Uninstall burns it. EXPORT in RITE → SAVE.",
+  LOCAL: "Three rotating snapshots every two minutes. Oldest burns. EXPORT in RITE → SAVE.",
+  CUT: "Universal credits. Sell ore and robotics. Ranks, marks, expand, zones spend CUT.",
   SONG: "One bed. ANTHEM is Nyx. VOID is space until more of her cuts.",
 };
 
