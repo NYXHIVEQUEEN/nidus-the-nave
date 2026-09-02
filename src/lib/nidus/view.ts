@@ -1,6 +1,8 @@
 const KEY = "nidus.prefs.v1";
 
 export type HelpId = "hull" | "forge" | "raid" | "minds" | "view" | "wake" | "idle";
+export type Density = "auto" | "compact" | "comfort" | "watch";
+export type DensityResolved = "compact" | "comfort" | "watch";
 
 export type ViewPrefs = {
   spinPaused: boolean;
@@ -19,6 +21,8 @@ export type ViewPrefs = {
   lookId: string;
   lookUntil: number;
   seenHelp: Partial<Record<HelpId, boolean>>;
+  density: Density;
+  uiScale: number;
 };
 
 export const CAM_DIR = { x: 0.594, y: 0.259, z: 0.761 };
@@ -53,6 +57,8 @@ let prefs: ViewPrefs = {
   lookId: "",
   lookUntil: 0,
   seenHelp: {},
+  density: "auto",
+  uiScale: 1,
 };
 
 function clamp(n: number, a: number, b: number) {
@@ -84,6 +90,8 @@ function read() {
       lookId: typeof parsed.lookId === "string" ? parsed.lookId : "",
       lookUntil: typeof parsed.lookUntil === "number" ? parsed.lookUntil : 0,
       seenHelp: parsed.seenHelp && typeof parsed.seenHelp === "object" ? parsed.seenHelp : {},
+      density: parsed.density === "compact" || parsed.density === "comfort" || parsed.density === "watch" || parsed.density === "auto" ? parsed.density : "auto",
+      uiScale: typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.82, 1.12) : 1,
     };
   } catch {
     /* keep */
@@ -160,3 +168,23 @@ export function subscribeSpin(fn: () => void) {
     listeners.delete(fn);
   };
 }
+
+export function resolveDensity(p = prefs, w = 390, h = 844, landscape = false): DensityResolved {
+  if (p.density === "compact" || p.density === "comfort" || p.density === "watch") return p.density;
+  if (landscape && h < 520) return "compact";
+  if (h < 720) return "compact";
+  return "comfort";
+}
+
+export function cycleDensity() {
+  const order: Density[] = ["auto", "compact", "comfort", "watch"];
+  const i = order.indexOf(prefs.density);
+  patchPrefs({ density: order[(i + 1) % order.length] ?? "auto" });
+}
+
+export const DENSITY_LABEL: Record<Density, string> = {
+  auto: "AUTO",
+  compact: "TIGHT",
+  comfort: "ROOMY",
+  watch: "WATCH",
+};

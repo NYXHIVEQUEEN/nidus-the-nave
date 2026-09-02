@@ -92,18 +92,27 @@ typed “save”. A green overhaul that never left the sandbox is a lost build.
 14. **Overlapping octa/tetra piles + giant additive cones** read as junk, not
     a cathedral. One lathe nave. Three short window leaks, LOD-gated. RAID
     chrome is an opaque sheet, never transparent text over the hull.
+15. **Left rail `z-20` over a `z-10` sheet** ate FOUNDRY and wrapped SURGE
+    into a column. Rail stays in the 3D zone (`nidus-rail` max-height). Sheet
+    is `z-index: 25`. Tabs `z-30`. Nested VIEW/RITE flyouts, not a second HUD.
+16. **Lock novels on cards** (`NEED SOLAR` wrapping) made tiles uneven empty
+    boxes. Status chips (R1 / NEXT / QUEUE / ICE) plus wreck art with a light
+    veil. Never a wall of lock text on a tile.
 
 ## Successes (keep doing)
 
 - Four-tab HUD + one gold **goal chip**. Always a next verb (GoalDock shows `advise().verb`).
-- Wake draft is three cards, one pick. No gacha. Fractures are the cost.
+- Wake draft is three cards, one pick. No gacha. Fractures are the cost. First pick **PACING** until you SEAT. Existing seated stay seated.
+- First WAKE waits for the Solar Spine. SPARK banks. Not a dump on boot.
 - Idle gift on return (`pendingGift` + CLAIM) plus SLAG plus SURGE. First
   hours are fast on purpose. Long away banks **mercy SURGE**. Streaks stack.
-- Packed PRINT still feeds SPARK + caste XP. Never a dead stamp.
+- Packed PRINT still feeds SPARK + caste XP. Never a dead stamp. AUTO holds two berths until Barracks or EXPAND.
 - First Ice is a short tutorial wreck. RAID chrome lists open wrecks + two
-  locked teases, never a 13-card dump.
+  locked teases, never a 13-card dump. Cleared wrecks read **FARM**.
 - Room finish = **one visible node** on the hull. If you add a room, add a
   socket and a node.
+- Chrome SIZE: AUTO / TIGHT / ROOMY / WATCH. AUTO reads height + rotation. UI SCALE in VIEW. Keyboard U cycles SIZE.
+- Compact hull shows queue + next + one tease, not the whole strip.
 - OrbitControls: drag to rotate, SPIN/HOLD, speed in LOCAL. Hull itself
   does not yaw. Double-tap empty glass recenters NAVE.
 - Save/EXPORT/IMPORT in RITE → SAVE. Confirm before burn.
@@ -117,8 +126,14 @@ typed “save”. A green overhaul that never left the sandbox is a lost build.
 - Green pass → GitHub snapshot the same turn. Do not leave a build only in
   the sandbox.
 - Persist unit tests in `src/lib/nidus/persist.test.ts` prove migrate does
-  not wipe ore/rooms/minds/`started`, plus mercy/overflow/first-ice/claim.
+  not wipe ore/rooms/minds/`started`, plus mercy/overflow/first-ice/claim,
+  spine-gated first wake, pacing first seat, AUTO hold, print focus.
   Run them after any `save.ts` / `sim.ts` / `progress.ts` edit.
+- **Cards share one language:** `.nidus-card` (poly clip + gilt corner) +
+  `.nidus-chip` status. Wrecks keep art visible. Actions are a nowrap row
+  (primary cut + icon cluster). VIEW/RITE nest as `.nidus-fly` subicons.
+- **? guide** sits next to the rail in the 3D zone, never a full-width lecture
+  over the sheet. Wake/gift overlays sit above the tab bar (`bottom-16`).
 
 ## Graphics contract (cathedral pass)
 
@@ -126,14 +141,15 @@ The hull is a **cathedral-factory**, not a crate and not a poly pile.
 
 - **Body:** one wasp-waist `LatheGeometry` nave + keel + ridge. Rooms attach
   as modules. Do not stack octahedrons/tetrahedrons as the hull.
-- **Light:** ACES exposure ~1.28 (Mood shifts on events: PULSAR 1.42, ECLIPSE
+- **Light:** ACES exposure ~1.34 (Mood shifts on events: PULSAR 1.42, ECLIPSE
   0.92). Gilt key, blood furnace, cool rim (cool rim skipped on mobile).
   Window leaks are **three** short additive cones on the mid LOD, not a
   forest of giant shafts. No `EffectComposer` on mobile. No pulsar shaft cone
   on mobile.
 - **Sheet:** `.nidus-sheet` is opaque void + blur. RAID/FORGE/MINDS never
   bleed through the 3D. Collapse still slides the sheet off for idle candy.
-- **Perf:** mobile `dpr` capped at 1.15, desktop 1.5. Stars/embers cut, no
+  Compact caps the sheet at 32dvh. Landscape docks it as a side rail.
+- **Perf:** mobile `dpr` capped at 1.15, desktop 1.5. Stars 56/120, no
   shadows, instance drones + embers + construction sparks. Anisotropy 8/2.
   `window.__nidusPerf` reports `{ calls, triangles, frameMs }`.
   Aim under ~100 draws on a mid hive. Pause work when tab hidden.

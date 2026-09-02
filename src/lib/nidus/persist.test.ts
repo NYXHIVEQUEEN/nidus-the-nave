@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { importSave } from "./save.ts";
-import { cookUnlocked, hiveTitle, roomUnlocked, techUnlocked } from "./progress.ts";
-import { berthCap, chargeCap, defaultState, totalSwarm } from "./content.ts";
-import { applyTick, claimGift, sendRaid, startSurge, tryPrint } from "./sim.ts";
+import { autoHoldBerths, canWakeMinds, cookUnlocked, hiveTitle, postBoostPct, roomUnlocked, techUnlocked, wakeNeed } from "./progress.ts";
+import { berthCap, chargeCap, defaultState, rollCandidates, totalSwarm } from "./content.ts";
+import { applyTick, chooseWake, claimGift, sendRaid, startSurge, tryPrint } from "./sim.ts";
 
 test("importSave keeps ore rooms minds and never blanks the hive", () => {
   const raw = JSON.stringify({
@@ -52,10 +52,12 @@ test("importSave keeps ore rooms minds and never blanks the hive", () => {
   assert.equal(s.tech.orevein.done, true);
   assert.equal(s.minds.length, 1);
   assert.equal(s.minds[0].name, "TEST");
+  assert.equal(s.minds[0].seated, true);
   assert.ok(s.rooms.hangar);
   assert.equal(s.rooms.hangar.built, false);
   assert.ok("cloister" in s.rooms);
   assert.ok(s.casteXp);
+  assert.equal(s.printFocus.n, 0);
 });
 
 test("nested unlocks stay gated until prior nodes exist", () => {
@@ -101,6 +103,7 @@ test("migrate fills mercy streak fields without wiping ore", () => {
   assert.equal(s.lastReturnAt, 0);
   assert.equal(s.ore, 900);
   assert.equal(s.started, true);
+  assert.equal(s.printFocus.caste, "miner");
 });
 
 test("long away banks a gift and mercy without wiping the hive", () => {
@@ -161,4 +164,97 @@ test("claim gift banks charge and mercy", () => {
   assert.ok(next.ore >= 10);
   assert.ok(next.charge > 10);
   assert.ok(next.charge <= cap);
+});
+
+test("first wake waits for the solar spine and banks spark", () => {
+  const now = 2_000_000;
+  const s = defaultState(now);
+  s.lastTick = now - 4000;
+  s.spark = 80;
+  s.sparkNeed = 16;
+  s.rooms.solar.built = false;
+  assert.equal(canWakeMinds(s), false);
+  const wait = applyTick(s, now);
+  assert.equal(wait.waking, null);
+  assert.ok(wait.spark >= 80);
+  wait.rooms.solar.built = true;
+  wait.lastTick = now;
+  const woke = applyTick(wait, now + 2000);
+  assert.ok(woke.waking);
+  assert.equal(woke.waking?.length, 3);
+});
+
+test("first commander starts pacing so SEAT is a verb", () => {
+  const s = defaultState();
+  const rolled = rollCandidates(s);
+  s.waking = rolled.waking;
+  s.rng = rolled.rng;
+  const next = chooseWake(s, 0);
+  assert.equal(next.minds.length, 1);
+  assert.equal(next.minds[0].seated, false);
+  assert.equal(next.waking, null);
+});
+
+test("existing seated commander is not unseated by migrate", () => {
+  const s = importSave(JSON.stringify({
+    version: 1,
+    ore: 80,
+    started: true,
+    minds: [{
+      id: "m1", alive: true, name: "HUSK-7", frame: "warden", rarity: "iron", level: 1, xp: 0, job: "mine",
+      seated: true, wounded: false, portrait: "/nidus/warden.jpg", line: "Ore first.", fracture: "Hoards the ice.",
+      stats: { mine: 3, forge: 1, build: 1, raid: 1, lab: 1 },
+    }],
+  }));
+  assert.ok(s);
+  assert.equal(s.minds[0].seated, true);
+});
+
+test("auto print holds two berths until barracks or expand", () => {
+  const s = defaultState();
+  assert.equal(autoHoldBerths(s), 2);
+  s.rooms.barracks.built = true;
+  assert.equal(autoHoldBerths(s), 0);
+  const t = defaultState();
+  t.berthExtra = 2;
+  assert.equal(autoHoldBerths(t), 0);
+});
+
+test("print focus stacks caste xp without wiping swarm", () => {
+  const s = defaultState();
+  s.ore = 400;
+  s.parts = 200;
+  s.swarm = { miner: 4, fab: 0, builder: 0, lab: 0, striker: 0 };
+  s.printCaste = "miner";
+  let next = s;
+  for (let i = 0; i < 4; i++) next = tryPrint(next);
+  assert.equal(next.printFocus.caste, "miner");
+  assert.ok(next.printFocus.n >= 4);
+  assert.ok((next.casteXp.miner ?? 0) + next.casteLevel.miner > 0);
+  assert.ok(totalSwarm(next) > totalSwarm(s));
+});
+
+test("wake need floors first commander without wiping spark", () => {
+  const s = defaultState();
+  assert.ok(wakeNeed(s) >= 32);
+  s.minds = [{
+    id: "m1", alive: true, name: "HUSK-7", frame: "warden", rarity: "iron", level: 1, xp: 0, job: "mine",
+    seated: false, wounded: false, portrait: "/nidus/warden.jpg", line: "Ore first.", fracture: "Hoards the ice.",
+    stats: { mine: 3, forge: 1, build: 1, raid: 1, lab: 1 },
+  }];
+  s.sparkNeed = 16;
+  assert.equal(wakeNeed(s), 16);
+});
+
+test("post boost percent is larger when seated", () => {
+  const mind = {
+    job: "mine" as const,
+    seated: false,
+    wounded: false,
+    level: 1,
+    stats: { mine: 3, forge: 1, build: 1, raid: 1, lab: 1 },
+  };
+  const pace = postBoostPct(mind);
+  const seat = postBoostPct({ ...mind, seated: true });
+  assert.ok(seat > pace);
 });

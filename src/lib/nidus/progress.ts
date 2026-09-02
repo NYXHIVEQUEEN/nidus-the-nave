@@ -95,6 +95,8 @@ export function hiveStage(s: GameState): Stage {
   if (!s.rooms.solar.built) return { n: 1, of: 12, name: "SPINE", hint: "Raise Solar on the hull." };
   if (totalSwarm(s) < 16) return { n: 2, of: 12, name: "SWARM", hint: "PRINT on FORGE." };
   if (!s.autoPrint) return { n: 3, of: 12, name: "IDLE", hint: "Flip AUTO so it stamps while gone." };
+  if (s.minds.some((m) => m.alive) && !s.minds.some((m) => m.alive && m.seated))
+    return { n: 4, of: 12, name: "SEAT", hint: "SEAT her. Pacing is half the post." };
   if (!s.raidCleared.includes("ice")) return { n: 4, of: 12, name: "WELL", hint: "RAID the Ice Ring." };
   if (!s.rooms.lab.built) return { n: 5, of: 12, name: "GLASS", hint: "Raise the Lab." };
   if (s.minds.filter((m) => m.alive).length === 0) return { n: 6, of: 12, name: "MIND", hint: "Let SPARK fill, then pick." };
@@ -150,4 +152,40 @@ export function nextOpenRoom(s: GameState): RoomId | null {
 export function nextOpenTech(s: GameState): TechId | null {
   const row = TECH.find((t) => !s.tech[t.id]?.done && techUnlocked(s, t.id).ok);
   return row?.id ?? null;
+}
+
+/** First commander waits for the spine so WAKE is a beat, not a dump. */
+export const FIRST_WAKE_SPARK = 32;
+
+export function canWakeMinds(s: GameState): boolean {
+  if (s.minds.some((m) => m.alive)) return true;
+  return Boolean(s.rooms.solar?.built);
+}
+
+export function wakeNeed(s: GameState): number {
+  if (s.minds.some((m) => m.alive)) return s.sparkNeed;
+  return Math.max(s.sparkNeed, FIRST_WAKE_SPARK);
+}
+
+/** AUTO leaves two berths free until Barracks or EXPAND, so packed is a choice. */
+export function autoHoldBerths(s: GameState): number {
+  if (s.rooms.barracks?.built || (s.berthExtra ?? 0) > 0) return 0;
+  return 2;
+}
+
+export function postBoostPct(mind: Pick<Mind, "job" | "seated" | "wounded" | "level" | "stats">): number {
+  const seated = mind.seated ? 1 : 0.55;
+  const talent = (mind.level >= 3 && mind.seated ? 1.12 : 1) * (mind.level >= 8 ? 1.18 : 1);
+  const wound = mind.wounded ? (mind.level >= 5 ? 0.82 : 0.6) : 1;
+  const stat =
+    mind.job === "mine"
+      ? mind.stats.mine
+      : mind.job === "forge"
+        ? mind.stats.forge
+        : mind.job === "build"
+          ? mind.stats.build
+          : mind.job === "lab"
+            ? mind.stats.lab
+            : mind.stats.raid;
+  return Math.max(1, Math.round(24 * seated * stat * wound * talent));
 }

@@ -9,10 +9,12 @@ import {
   CAM_MAX,
   CAM_MIN,
   CAM_PRESETS,
+  DENSITY_LABEL,
   getPrefs,
   patchPrefs,
   subscribeSpin,
   type CamPresetId,
+  type Density,
   type ViewPrefs,
 } from "@/lib/nidus/view";
 import { slotStamp } from "@/lib/nidus/save";
@@ -27,17 +29,17 @@ const CODEX: { id: string; title: string; body: string }[] = [
   { id: "ore", title: "ORE", body: "Mined ice and wreck-slag. Caps if you skip the Ore Bay." },
   { id: "parts", title: "PARTS", body: "Fabs chew ore into parts. Rooms and prints eat parts." },
   { id: "charge", title: "CHARGE", body: "The spine’s blood. Low charge starves every rate. Raise Solar." },
-  { id: "spark", title: "SPARK", body: "Fills while the swarm works. Full bar = three bodies. Pick one. The rest ash." },
+  { id: "spark", title: "SPARK", body: "Fills while the swarm works. First wake waits for the Solar Spine. Then three bodies. Pick one." },
   { id: "echo", title: "ECHO", body: "Residue of unmade or fallen minds. Fuel for Molt." },
   { id: "print", title: "PRINT", body: "Stamp a caste. AUTO keeps stamping while you are gone." },
   { id: "surge", title: "SURGE", body: "A short scream. All rates spike. Idle return mercy lasts longer." },
   { id: "slag", title: "SLAG", body: "Tap the hull. Spare ore and a lick of spark. Packed ore cooks to parts." },
   { id: "idle", title: "IDLE GIFT", body: "Leave. Come back. Claim the extra cut. Streaks stack. CLAIM banks a mercy SURGE." },
   { id: "raid", title: "RAID", body: "Send strikers. Win wrecks. Lose bodies. Ice Ring is the first door." },
-  { id: "mind", title: "COMMANDERS", body: "SPARK fills. Three bodies. One commander stays. Seat her on MINE / MAKE / BUILD / LAB / RAID. Seated = full boost. Pacing = half." },
+  { id: "mind", title: "COMMANDERS", body: "SPARK banks until the spine lights. Three bodies. One commander stays PACING. SEAT her on MINE / MAKE / BUILD / LAB / RAID. The % is the live post. Pacing is half." },
   { id: "molt", title: "MOLT", body: "Reliquary + rite + Echo. Station stays. Nerve grows a layer." },
-  { id: "view", title: "VIEW", body: "VIEW on the left rail. CLOSE inspects. VOID is sky. AUTO HIDE folds chrome after a quiet beat. EYE brings it back. ? on each screen is that screen only." },
-  { id: "ask", title: "?", body: "Left rail. Opens this screen's verbs. Five words. Not a guidebook." },
+  { id: "view", title: "VIEW", body: "VIEW on the left rail. CLOSE inspects. VOID is sky. SIZE packs chrome: TIGHT / ROOMY / WATCH / AUTO. AUTO HIDE folds chrome after a quiet beat. EYE brings it back. HELP on each screen is that screen only." },
+  { id: "size", title: "SIZE", body: "TIGHT packs menus. ROOMY breathes. WATCH hides the sheet so the nave can play. AUTO reads height and rotation. UI SCALE shrinks chrome without hiding verbs. U cycles SIZE." },
   { id: "hide", title: "HIDE", body: "EYE folds chrome so the nave can breathe. Gold chip or SHOW brings it back." },
   ...ROOMS.filter((r) => r.id !== "foundry").map((r) => ({
     id: r.id,
@@ -307,6 +309,31 @@ function ViewMenu({ prefs }: { prefs: ViewPrefs }) {
   };
   return (
     <div className="flex flex-col gap-3">
+      <p className="font-display text-xs tracking-[0.22em] text-gilt">CHROME</p>
+      <p className="text-[0.75rem] text-muted">TIGHT packs menus. ROOMY breathes. WATCH hides the sheet. AUTO reads the glass and rotation.</p>
+      <div className="grid grid-cols-4 gap-1">
+        {(["auto", "compact", "comfort", "watch"] as Density[]).map((id) => (
+          <button
+            key={id}
+            type="button"
+            title={DENSITY_LABEL[id]}
+            onClick={() => patchPrefs({ density: id })}
+            className={cn("nidus-card min-h-12 px-1 py-1 text-center", prefs.density === id && "nidus-card-on")}
+          >
+            <span className="block font-display text-[0.62rem] tracking-[0.14em]">{DENSITY_LABEL[id]}</span>
+          </button>
+        ))}
+      </div>
+      <UnitSlider
+        label="UI SCALE"
+        why="Shrinks chrome without hiding verbs. Live."
+        value={prefs.uiScale}
+        min={0.82}
+        max={1.12}
+        step={0.01}
+        display={prefs.uiScale.toFixed(2)}
+        onChange={(v) => patchPrefs({ uiScale: v })}
+      />
       <p className="font-display text-xs tracking-[0.22em] text-gilt">HOW FAR</p>
       <p className="text-[0.75rem] text-muted">The hull was sitting on the lens. Pick a shot. Drag the slider while you watch the nave. Changes stick.</p>
       <div className="grid grid-cols-4 gap-1">

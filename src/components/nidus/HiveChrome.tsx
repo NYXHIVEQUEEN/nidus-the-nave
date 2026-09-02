@@ -14,19 +14,24 @@ import {
   SlidersHorizontal,
   Volume2,
   VolumeX,
+  Scaling,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GUIDES, firstWhisper, type GuideId } from "@/lib/nidus/guide";
 import {
   applyCamPreset,
   CAM_PRESETS,
+  cycleDensity,
+  DENSITY_LABEL,
   getPrefs,
   helpSeen,
   markHelp,
   patchPrefs,
+  resolveDensity,
   subscribeSpin,
   toggleSpinPaused,
   type CamPresetId,
+  type DensityResolved,
   type HelpId,
 } from "@/lib/nidus/view";
 import { syncAudioGains } from "@/lib/nidus/audio";
@@ -54,7 +59,7 @@ export function RailBtn({
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "nidus-cut flex h-11 w-11 flex-col items-center justify-center text-bone",
+        "nidus-cut nidus-railbtn flex flex-col items-center justify-center text-bone",
         on ? "nidus-cut-on" : "",
         pulse && "nidus-pulse",
       )}
@@ -66,7 +71,7 @@ export function RailBtn({
 }
 
 export function StatusChip({
-  kind,
+  kind = "open",
   children,
 }: {
   kind?: "lit" | "next" | "lock" | "well" | "open";
@@ -93,6 +98,7 @@ export function LeftRail({
   spinPaused,
   collapsed,
   helpPulse,
+  density,
   onHelp,
   onRitePane,
   onMute,
@@ -103,6 +109,7 @@ export function LeftRail({
   spinPaused: boolean;
   collapsed: boolean;
   helpPulse: boolean;
+  density: DensityResolved;
   onHelp: () => void;
   onRitePane: (pane: "opt" | "view" | "codex" | "save") => void;
   onMute: () => void;
@@ -123,9 +130,9 @@ export function LeftRail({
   return (
     <nav
       data-chrome
-      className="nidus-rail pointer-events-auto absolute left-2 top-[max(3.6rem,calc(env(safe-area-inset-top)+2.8rem))] z-20 flex flex-col gap-1 overflow-visible"
+      className="nidus-rail pointer-events-auto absolute left-2 top-[max(3.2rem,calc(env(safe-area-inset-top)+2.4rem))] z-20 flex flex-col gap-1 overflow-visible"
     >
-      <RailBtn label="?" title="This screen — verbs only." pulse={helpPulse} onClick={onHelp}>
+      <RailBtn label="HELP" title="This screen — verbs only." pulse={helpPulse} onClick={onHelp}>
         <HelpCircle className="size-3.5" />
       </RailBtn>
       <div className="relative">
@@ -214,6 +221,17 @@ export function LeftRail({
         )}
       </div>
       <RailBtn
+        label={DENSITY_LABEL[prefs.density]}
+        title="Chrome size. AUTO reads the glass. TIGHT / ROOMY / WATCH."
+        on={density !== "comfort"}
+        onClick={() => {
+          onStay();
+          cycleDensity();
+        }}
+      >
+        <Scaling className="size-3.5" />
+      </RailBtn>
+      <RailBtn
         label={spinPaused ? "HOLD" : "SPIN"}
         title="Idle orbit. HOLD freezes the nave."
         on={spinPaused}
@@ -255,9 +273,9 @@ export function GuideSheet({ screen, onClose, className }: { screen: GuideId; on
   return (
     <div
       className={cn(
-        "nidus-panel pointer-events-auto max-h-[42dvh] overflow-y-auto p-3",
+        "nidus-panel pointer-events-auto max-h-[38dvh] overflow-y-auto p-3",
         className ??
-          "absolute left-14 top-[max(3.6rem,calc(env(safe-area-inset-top)+2.8rem))] z-40 w-[min(19rem,calc(100vw-4.2rem))]",
+          "absolute left-14 top-[max(3.2rem,calc(env(safe-area-inset-top)+2.4rem))] z-40 w-[min(19rem,calc(100vw-4.2rem))]",
       )}
       data-chrome
     >
@@ -271,7 +289,7 @@ export function GuideSheet({ screen, onClose, className }: { screen: GuideId; on
       <ul className="flex flex-col gap-1">
         {g.verbs.map((v) => (
           <li key={v.id} className="flex items-baseline gap-2 border-b border-border/60 pb-1">
-            <StatusChip>{v.label}</StatusChip>
+            <StatusChip kind="open">{v.label}</StatusChip>
             <span className="text-[0.75rem] text-bone">{v.line}</span>
           </li>
         ))}
@@ -287,7 +305,7 @@ export function Whisper({ text, onDone }: { text: string; onDone: () => void }) 
   }, [text, onDone]);
   if (!text) return null;
   return (
-    <p className="pointer-events-none absolute inset-x-14 top-[max(4.6rem,calc(env(safe-area-inset-top)+3.6rem))] z-30 border border-gilt/30 bg-nave/80 px-2 py-1 text-center text-[0.7rem] tracking-[0.08em] text-gilt nidus-whisper">
+    <p className="pointer-events-none absolute inset-x-14 top-[max(4.2rem,calc(env(safe-area-inset-top)+3.2rem))] z-30 border border-gilt/30 bg-nave/80 px-2 py-1 text-center text-[0.7rem] tracking-[0.08em] text-gilt nidus-whisper">
       {text}
     </p>
   );
@@ -299,12 +317,14 @@ export function GoalDock({
   collapsed,
   onExpand,
   verb,
+  why,
 }: {
   goal: string;
   stage: { n: number; of: number; name: string };
   collapsed: boolean;
   onExpand: () => void;
   verb?: string;
+  why?: string;
 }) {
   return (
     <button
@@ -312,10 +332,11 @@ export function GoalDock({
       data-chrome
       onClick={onExpand}
       className={cn(
-        "nidus-card pointer-events-auto mx-auto flex max-w-[22rem] items-center gap-2 px-2 py-1",
+        "nidus-card pointer-events-auto ml-12 mr-2 flex max-w-[22rem] items-center gap-2 px-2 py-1",
         collapsed && "mb-1",
       )}
       aria-label={verb ? `${goal}. ${verb}` : goal}
+      title={why || goal}
     >
       <span className="font-display text-[0.58rem] tabular-nums tracking-[0.16em] text-gilt">
         {stage.n}/{stage.of} {stage.name}
@@ -358,6 +379,31 @@ export function useSyncPrefs() {
     return subscribeSpin(() => setN((n) => n + 1));
   }, []);
   return getPrefs();
+}
+
+export function useViewport() {
+  const [v, setV] = useState({ w: 390, h: 844, landscape: false });
+  useEffect(() => {
+    const on = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      setV({ w, h, landscape: w > h });
+    };
+    on();
+    window.addEventListener("resize", on);
+    window.addEventListener("orientationchange", on);
+    return () => {
+      window.removeEventListener("resize", on);
+      window.removeEventListener("orientationchange", on);
+    };
+  }, []);
+  return v;
+}
+
+export function useDensity(): DensityResolved {
+  const prefs = useSyncPrefs();
+  const vp = useViewport();
+  return resolveDensity(prefs, vp.w, vp.h, vp.landscape);
 }
 
 export function firstLook(id: GuideId, hints: boolean): string | null {

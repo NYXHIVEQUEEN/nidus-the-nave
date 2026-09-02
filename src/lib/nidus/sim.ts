@@ -21,7 +21,7 @@ import {
   totalSwarm,
 } from "./content";
 import { nextBuild, nextRaid, nextRite, pickPrintCaste } from "./advisor";
-import { casteXpNeed, computeHiveRank, cookUnlocked, moltCost, RANK_MAX, roomUnlocked, SALVAGE_COOK, techUnlocked } from "./progress";
+import { casteXpNeed, computeHiveRank, cookUnlocked, moltCost, RANK_MAX, roomUnlocked, SALVAGE_COOK, techUnlocked, autoHoldBerths, canWakeMinds, wakeNeed } from "./progress";
 import { freshRaidBars, markUp, tickBattle } from "./fleet";
 import { rand } from "./rng";
 
@@ -69,6 +69,14 @@ function grantCasteXp(s: GameState, caste: Caste, n = 1) {
     pushBrief(s, { kind: "build", headline: caste.toUpperCase(), line: `Caste marked L${s.casteLevel[caste]}.`, stamp: `L${s.casteLevel[caste]}` });
     pushLog(s, `${caste} L${s.casteLevel[caste]}.`);
   }
+}
+
+function noteFocus(s: GameState, caste: Caste) {
+  if (!s.printFocus) s.printFocus = { caste, n: 0 };
+  if (s.printFocus.caste === caste) s.printFocus.n += 1;
+  else s.printFocus = { caste, n: 1 };
+  const extra = s.printFocus.n >= 8 ? 2 : s.printFocus.n >= 3 ? 1 : 0;
+  grantCasteXp(s, caste, 1 + extra);
 }
 
 function clampRes(s: GameState) {
@@ -158,6 +166,8 @@ export function applyTick(s: GameState, now: number): GameState {
       if (room.rankWork >= workNeed) {
         room.rank = (room.rank ?? 0) + 1;
         room.rankWork = 0;
+        next.ore += 4 + room.rank * 2;
+        next.parts += 2 + room.rank;
         pushBrief(next, { kind: "build", headline: spec.label, line: `Rank ${room.rank} inlaid.`, stamp: `R${room.rank}` });
         pushLog(next, `${spec.label} rank ${room.rank}.`);
         next.rankingRoom = null;
@@ -193,34 +203,36 @@ export function applyTick(s: GameState, now: number): GameState {
 
   if (!next.waking) {
     next.spark += r.sparkPerSec * dt;
-    if (next.spark >= next.sparkNeed && next.minds.filter((m) => m.alive).length < 6) {
+    const need = wakeNeed(next);
+    if (canWakeMinds(next) && next.spark >= need && next.minds.filter((m) => m.alive).length < 6) {
       next.spark = 0;
       next.sparkNeed = Math.round(next.sparkNeed * 1.55 + 12);
       const rolled = rollCandidates(next);
       next.waking = rolled.waking;
       next.rng = rolled.rng;
-      pushBrief(next, { kind: "wake", headline: "SOMEONE WOKE", line: "Three bodies. Pick one." });
+      pushBrief(next, { kind: "wake", headline: "SOMEONE WOKE", line: "Three bodies. Pick one. She waits for a SEAT." });
     }
   }
 
   if (next.autoPrint) {
     if (next.scripts) next.printCaste = pickPrintCaste(next);
+    const hold = autoHoldBerths(next);
     let guard = 0;
-    while (guard++ < 40 && totalSwarm(next) < berthCap(next)) {
+    while (guard++ < 40 && totalSwarm(next) < berthCap(next) - hold) {
       const cost = printCost(next);
       if (next.ore < cost.ore || next.parts < cost.parts) break;
       next.ore -= cost.ore;
       next.parts -= cost.parts;
       next.swarm[next.printCaste] += 1;
       next.printed += 1;
-      grantCasteXp(next, next.printCaste);
-      if (next.tech.printfocus?.done && totalSwarm(next) < berthCap(next)) {
+      noteFocus(next, next.printCaste);
+      if (next.tech.printfocus?.done && totalSwarm(next) < berthCap(next) - hold) {
         next.swarm[next.printCaste] += 1;
-        grantCasteXp(next, next.printCaste);
+        noteFocus(next, next.printCaste);
       }
-      if (next.tech.stamp2?.done && totalSwarm(next) < berthCap(next)) {
+      if (next.tech.stamp2?.done && totalSwarm(next) < berthCap(next) - hold) {
         next.swarm[next.printCaste] += 1;
-        grantCasteXp(next, next.printCaste);
+        noteFocus(next, next.printCaste);
       }
       credit(next, "print", next.printCaste);
     }
@@ -395,7 +407,7 @@ export function tryPrint(s: GameState): GameState {
     next.ore -= cost.ore * 0.4;
     next.parts -= cost.parts * 0.4;
     next.spark += 0.55;
-    grantCasteXp(next, next.printCaste);
+    noteFocus(next, next.printCaste);
     credit(next, "print", next.printCaste);
     pushLog(next, "Packed stamp. Spark, no body.");
     clampRes(next);
@@ -405,15 +417,15 @@ export function tryPrint(s: GameState): GameState {
   next.parts -= cost.parts;
   next.swarm[next.printCaste] += 1;
   next.printed += 1;
-  grantCasteXp(next, next.printCaste);
+  noteFocus(next, next.printCaste);
   credit(next, "print", next.printCaste);
   if (next.tech.printfocus?.done && totalSwarm(next) < berthCap(next)) {
     next.swarm[next.printCaste] += 1;
-    grantCasteXp(next, next.printCaste);
+    noteFocus(next, next.printCaste);
   }
   if (next.tech.stamp2?.done && totalSwarm(next) < berthCap(next)) {
     next.swarm[next.printCaste] += 1;
-    grantCasteXp(next, next.printCaste);
+    noteFocus(next, next.printCaste);
   }
   return next;
 }
@@ -439,7 +451,8 @@ export function chooseWake(s: GameState, index: number): GameState {
   const made = candidateToMind(next.waking[index], next.rng);
   next.rng = made.seed;
   const seatedCount = next.minds.filter((m) => m.alive && m.seated).length;
-  made.mind.seated = seatedCount < throneCap(next);
+  const knowsSeat = next.minds.some((m) => m.seated);
+  made.mind.seated = knowsSeat && seatedCount < throneCap(next);
   next.minds.push(made.mind);
   next.selectedMind = made.mind.id;
   next.waking = null;

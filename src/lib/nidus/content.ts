@@ -267,6 +267,7 @@ export function defaultState(now = Date.now()): GameState {
     mercySurge: false,
     returnStreak: 0,
     lastReturnAt: 0,
+    printFocus: { caste: "miner", n: 0 },
   };
 }
 
@@ -372,7 +373,7 @@ function jobBonus(s: GameState, job: Job): number {
 export function rates(s: GameState, now: number) {
   const surge = now < s.surgeUntil ? (s.tech.longsurge?.done ? 7.2 : s.tech.surgeplus.done ? 6.2 : 5.2) : 1;
   const molt = 1 + s.moltLayer * 0.28;
-  const chargeFactor = s.charge <= 1 ? 0.28 : Math.min(1, s.charge / 12);
+  const chargeFactor = s.charge <= 1 ? (s.rooms.solar.built ? 0.28 : 0.44) : Math.min(1, s.charge / 12);
   const hum = 1.12 + Math.min(0.5, s.hiveAge / 720);
   const idle = 1.28;
   const lvl = (c: Caste) => Math.pow(1.12, s.casteLevel[c]);
@@ -463,10 +464,14 @@ export function nextGoal(s: GameState): string {
   if (!s.rooms.solar.built) return "RAISE THE SOLAR SPINE";
   if (s.waking) return "PICK A MIND";
   if (s.pendingGift) return "CLAIM THE CUT";
+  if (s.minds.some((m) => m.alive) && !s.minds.some((m) => m.alive && m.seated)) return "SEAT YOUR COMMANDER";
   if (s.mercySurge) return "MERCY SURGE";
   if (s.raid) return s.raid.watching ? "COMMAND THE WELL" : "WATCH OR LEAVE — FLEET FIGHTS";
   if (totalSwarm(s) >= berthCap(s) - 1) return "OPEN BERTHS — SWARM IS PACKED";
-  if (s.minds.filter((m) => m.alive).length === 0) return "FILL SPARK — SOMEONE WAKES";
+  if (s.minds.filter((m) => m.alive).length === 0) {
+    if (!s.rooms.solar.built) return "SPINE FIRST — SPARK BANKS";
+    return "FILL SPARK — SOMEONE WAKES";
+  }
   if (s.swarm.striker >= 2 && !s.raid && !s.raidCleared.includes("ice")) return "RAID THE ICE RING";
   if (!s.rooms.lab.built) return "RAISE THE LAB";
   if (!s.autoPrint) return "FLIP AUTO PRINT";

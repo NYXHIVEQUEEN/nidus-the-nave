@@ -1399,19 +1399,19 @@ export function StationScene() {
       onCreated={({ gl, camera }) => {
         gl.setClearColor("#0e0c12");
         gl.toneMapping = ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.28;
+        gl.toneMappingExposure = 1.34;
         const [x, y, z] = camPosition();
         camera.position.set(x, y, z);
       }}
     >
       <fog attach="fog" args={["#160e16", 48, 180]} />
-      <hemisphereLight args={["#c4b8a8", "#1a0c12", 0.7]} />
-      <ambientLight intensity={0.48} />
-      <directionalLight position={[6.5, 8.5, 3.2]} intensity={1.85} color={GILT} />
-      {!mobile && <directionalLight position={[-6, 3, -5]} intensity={0.85} color="#9ec8dc" />}
-      <pointLight position={[0, 1.0, 2.6]} intensity={8} color={BLOOD} distance={12} decay={2} />
-      <pointLight position={[10, 5, -16]} intensity={12} color="#c4a574" distance={60} decay={2} />
-      <Stars radius={90} depth={48} count={mobile ? 70 : 140} factor={2.6} saturation={0} fade speed={REDUCE ? 0 : 0.15} />
+      <hemisphereLight args={["#d4c8b4", "#1a0c12", 0.78]} />
+      <ambientLight intensity={0.54} />
+      <directionalLight position={[6.5, 8.5, 3.2]} intensity={2.05} color={GILT} />
+      {!mobile && <directionalLight position={[-6, 3, -5]} intensity={0.92} color="#9ec8dc" />}
+      <pointLight position={[0, 1.0, 2.6]} intensity={9.2} color={BLOOD} distance={12} decay={2} />
+      <pointLight position={[10, 5, -16]} intensity={13} color="#c4a574" distance={60} decay={2} />
+      <Stars radius={90} depth={48} count={mobile ? 56 : 120} factor={2.6} saturation={0} fade speed={REDUCE ? 0 : 0.15} />
       <Mood />
       <Pulsar />
       <Hull />
@@ -1458,7 +1458,7 @@ function Mood() {
       fog.color.set("#160e16");
       fog.near = 48;
       fog.far = 180;
-      gl.toneMappingExposure = 1.28;
+      gl.toneMappingExposure = 1.34;
     }
   });
   return null;

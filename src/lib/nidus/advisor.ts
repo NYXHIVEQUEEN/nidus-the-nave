@@ -5,12 +5,14 @@ import { roomUnlocked, techUnlocked } from "./progress";
 export type Advice = { chip: string; why: string; verb: string };
 
 export function advise(s: GameState): Advice {
-  if (s.waking) return { chip: "PICK A MIND", why: "Three bodies. One stays.", verb: "WAKE" };
+  if (s.waking) return { chip: "PICK A MIND", why: "Three bodies. One stays. She waits for a SEAT.", verb: "WAKE" };
   if (s.pendingGift) return { chip: "CLAIM THE CUT", why: "Idle haul waiting.", verb: "CLAIM" };
+  if (s.minds.some((m) => m.alive) && !s.minds.some((m) => m.alive && m.seated))
+    return { chip: "SEAT YOUR COMMANDER", why: "Pacing is half. SEAT for the full post.", verb: "SEAT" };
   if (s.mercySurge && Date.now() >= s.surgeUntil && s.charge >= 8)
     return { chip: "MERCY SURGE", why: "Comeback scream. Lasts longer.", verb: "SURGE" };
   if (s.charge < 8) return { chip: "RAISE THE SOLAR SPINE", why: "Charge is starving the swarm.", verb: "BUILD" };
-  if (!s.rooms.solar.built) return { chip: "RAISE THE SOLAR SPINE", why: "No spine, no blood.", verb: "BUILD" };
+  if (!s.rooms.solar.built) return { chip: "RAISE THE SOLAR SPINE", why: "No spine, no blood. SPARK banks until it lights.", verb: "BUILD" };
   if (s.raid) {
     if (!s.raid.watching) return { chip: "WATCH OR BOOST", why: "Fleet is in the well. You can leave; it still fights.", verb: "RAID" };
     return { chip: "COMMAND THE WELL", why: "BOOST spends charge. Leave and it auto-resolves.", verb: "BOOST" };

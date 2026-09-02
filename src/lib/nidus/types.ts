@@ -220,4 +220,5 @@ export type GameState = {
   mercySurge: boolean;
   returnStreak: number;
   lastReturnAt: number;
+  printFocus: { caste: Caste; n: number };
 };

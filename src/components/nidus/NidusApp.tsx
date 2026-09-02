@@ -41,18 +41,20 @@ import {
   framePost,
   gloss,
   hiveStage,
+  mindPostLine,
   packed,
   POSTS,
   raidLockWhy,
   roomLockWhy,
+  sparkBanked,
   sparkHot,
   type GuideId,
 } from "@/lib/nidus/guide";
-import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALVAGE_COOK } from "@/lib/nidus/progress";
+import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALVAGE_COOK, casteXpNeed, postBoostPct, wakeNeed, autoHoldBerths } from "@/lib/nidus/progress";
 import { StationMount } from "./StationMount";
 import { SettingsPanel } from "./SettingsPanel";
-import { GoalDock, GuideSheet, LeftRail, StatusChip, Whisper, muteToggle, useIdleChrome, useSyncPrefs } from "./HiveChrome";
-import { getPrefs, getSpinPaused, helpSeen, lookAtRoom, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
+import { GoalDock, GuideSheet, LeftRail, StatusChip, Whisper, muteToggle, useDensity, useIdleChrome, useSyncPrefs, useViewport } from "./HiveChrome";
+import { cycleDensity, getPrefs, getSpinPaused, helpSeen, lookAtRoom, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
 import type { Caste, Rarity } from "@/lib/nidus/types";
 
 const rarityColor: Record<Rarity, string> = {
@@ -231,6 +233,9 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   const goal = nextGoal(s);
   const stage = hiveStage(s);
   const tip = advise(s);
+  const density = useDensity();
+  const vp = useViewport();
+  const watchChrome = density === "watch" || collapsed;
 
   useEffect(() => {
     if (!prefs.hints) return;
@@ -279,6 +284,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
           patchPrefs({ watchNave: true });
         }
       }
+      if (e.code === "KeyU") cycleDensity();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -291,14 +297,19 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   };
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-void text-bone">
+    <div
+      className={cn("nidus-root relative h-dvh w-full overflow-hidden bg-void text-bone", vp.landscape && "nidus-land")}
+      data-density={watchChrome ? "watch" : density}
+      style={{ ["--nidus-ui-scale" as string]: String(prefs.uiScale) }}
+    >
       <StationMount />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-void/55 via-transparent to-void/80" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-void/40 via-transparent to-void/55" />
       <LeftRail
         muted={muted}
         spinPaused={spinPaused}
         collapsed={collapsed}
         helpPulse={!helpSeen(tab)}
+        density={density}
         onHelp={() => {
           bump();
           setGuide((g) => (g ? null : tab));
@@ -315,14 +326,15 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
         }}
       />
       <div className="pointer-events-none relative z-10 flex h-full flex-col">
-        <ResourceBar compact={collapsed} />
+        <ResourceBar compact={watchChrome || density === "compact"} />
         <div className="min-h-0 flex-1" />
-        <div className="px-3 pb-1">
-          <GoalDock goal={goal} stage={stage} collapsed={collapsed} onExpand={bump} verb={tip.verb} />
+        <div className="px-2 pb-1">
+          <GoalDock goal={goal} stage={stage} collapsed={collapsed} onExpand={bump} verb={tip.verb} why={tip.why} />
         </div>
-        <div data-chrome className={cn("nidus-sheet", collapsed && "nidus-sheet-hide")}>
+        <div data-chrome className={cn("nidus-sheet", watchChrome && "nidus-sheet-hide")}>
+          <p className="px-2 pt-1 text-center text-[0.62rem] tracking-[0.06em] text-muted">{tip.why}</p>
           <main className="min-h-0">
-            <ActiveTab verb={tip.verb} />
+            <ActiveTab verb={tip.verb} compact={density === "compact"} />
           </main>
         </div>
         <TabBar
@@ -377,9 +389,9 @@ function ResourceBar({ compact }: { compact: boolean }) {
         <Chip label="CHARGE" value={fmt(charge)} cap={chargeCap(s)} cur={charge} venom starve={starve} onTap={setOpen} />
         <button type="button" className={cn("min-w-[4rem] text-left", hot && "nidus-spark")} onClick={() => setOpen(open === "SPARK" ? null : "SPARK")}>
           <p className="text-[0.55rem] tracking-[0.18em] text-muted">SPARK</p>
-          <p className="font-display text-xs tabular-nums text-venom">{waking ? "WOKE" : `${Math.floor(spark)}`}</p>
+          <p className="font-display text-xs tabular-nums text-venom">{waking ? "WOKE" : sparkBanked(s) ? "BANK" : `${Math.floor(spark)}`}</p>
           <div className="mt-0.5 h-0.5 w-full bg-iron">
-            <div className="h-0.5 bg-venom" style={{ width: `${Math.min(100, (spark / sparkNeed) * 100)}%` }} />
+            <div className="h-0.5 bg-venom" style={{ width: `${Math.min(100, (spark / wakeNeed(s)) * 100)}%` }} />
           </div>
         </button>
         {echo > 0 && (
@@ -447,12 +459,12 @@ function TabBar({ tab, setTab }: { tab: "hull" | "forge" | "raid" | "minds"; set
           className={cn(
             "nidus-cut relative min-h-11 font-display text-[0.7rem] tracking-[0.22em]",
             tab === t.id ? "nidus-cut-on" : "text-muted",
-            pulse((t.id === "forge" && verb === "PRINT") || (t.id === "raid" && (verb === "RAID" || verb === "BOOST")) || (t.id === "minds" && verb === "WAKE") || (t.id === "hull" && (verb === "BUILD" || verb === "SURGE" || verb === "CLAIM"))),
+            pulse((t.id === "forge" && verb === "PRINT") || (t.id === "raid" && (verb === "RAID" || verb === "BOOST")) || (t.id === "minds" && (verb === "WAKE" || verb === "SEAT")) || (t.id === "hull" && (verb === "BUILD" || verb === "SURGE" || verb === "CLAIM"))),
           )}
           aria-current={tab === t.id ? "page" : undefined}
         >
           {t.label}
-          {t.id === "minds" && (waking || spark >= sparkNeed) && <span className="absolute right-2 top-1 h-1.5 w-1.5 rounded-full bg-venom" />}
+          {t.id === "minds" && (waking || spark >= sparkNeed || verb === "SEAT") && <span className="absolute right-2 top-1 h-1.5 w-1.5 rounded-full bg-venom" />}
           {t.id === "raid" && raiding && <span className="absolute right-2 top-1 h-1.5 w-1.5 rounded-full bg-gilt" />}
           {t.id === "forge" && verb === "PRINT" && <span className="absolute right-2 top-1 h-1.5 w-1.5 rounded-full bg-gilt" />}
           {t.id === "hull" && (gift || verb === "BUILD") && <span className="absolute right-2 top-1 h-1.5 w-1.5 rounded-full bg-gilt" />}
@@ -462,15 +474,15 @@ function TabBar({ tab, setTab }: { tab: "hull" | "forge" | "raid" | "minds"; set
   );
 }
 
-function ActiveTab({ verb }: { verb: string }) {
+function ActiveTab({ verb, compact }: { verb: string; compact: boolean }) {
   const tab = useNidus((s) => s.tab);
-  if (tab === "forge") return <ForgeTab verb={verb} />;
-  if (tab === "raid") return <RaidTab verb={verb} />;
-  if (tab === "minds") return <MindsTab />;
-  return <HullTab verb={verb} />;
+  if (tab === "forge") return <ForgeTab verb={verb} compact={compact} />;
+  if (tab === "raid") return <RaidTab verb={verb} compact={compact} />;
+  if (tab === "minds") return <MindsTab compact={compact} />;
+  return <HullTab verb={verb} compact={compact} />;
 }
 
-function HullTab({ verb }: { verb: string }) {
+function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
   const surge = useNidus((s) => s.surge);
   const surgeUntil = useNidus((s) => s.surgeUntil);
   const rooms = useNidus((s) => s.rooms);
@@ -499,12 +511,20 @@ function HullTab({ verb }: { verb: string }) {
     return !roomLockWhy(s, r.id);
   });
   const tease = ROOMS.find((r) => !strip.some((x) => x.id === r.id) && Boolean(roomLockWhy(s, r.id)));
-  const shown = tease ? [...strip, tease] : strip;
+  const shown = compact
+    ? ([ROOMS.find((r) => r.id === queued), nextRoom, tease, s.rankingRoom ? ROOMS.find((r) => r.id === s.rankingRoom) : undefined].filter(
+        (r): r is (typeof ROOMS)[number] => Boolean(r),
+      ) as (typeof ROOMS)[number][])
+        .filter((r, i, a) => a.findIndex((x) => x.id === r.id) === i)
+        .slice(0, 4)
+    : tease
+      ? [...strip, tease]
+      : strip;
   const nested = ROOMS.length - shown.length;
 
   return (
-    <div className="pointer-events-none flex flex-col justify-end gap-1.5 p-2">
-      {s.orders?.length > 0 && (
+    <div className="pointer-events-none flex flex-col justify-end gap-1 p-2">
+      {s.orders?.length > 0 && !compact && (
         <div className="pointer-events-auto nidus-strip">
           {s.orders.map((o) => (
             <div key={o.id} className="nidus-card min-w-32 px-1.5 py-1">
@@ -514,6 +534,15 @@ function HullTab({ verb }: { verb: string }) {
                 <div className="h-0.5 bg-venom" style={{ width: `${Math.min(100, (o.have / o.need) * 100)}%` }} />
               </div>
             </div>
+          ))}
+        </div>
+      )}
+      {s.orders?.length > 0 && compact && (
+        <div className="pointer-events-none flex justify-center gap-1">
+          {s.orders.map((o) => (
+            <span key={o.id} className="nidus-chip nidus-chip-open" title={o.label}>
+              {o.have}/{o.need}
+            </span>
           ))}
         </div>
       )}
@@ -549,7 +578,8 @@ function HullTab({ verb }: { verb: string }) {
                   chime("snap");
                 }}
                 className={cn(
-                  "nidus-card w-[5.5rem] min-h-[4.4rem] px-1.5 py-1.5 text-left",
+                  "nidus-card w-[5.2rem] px-1.5 py-1.5 text-left",
+                  compact ? "min-h-[3.6rem]" : "min-h-[4.2rem]",
                   st.built && "nidus-card-on",
                   lock && "nidus-card-lock",
                   pulse(isNext && verb === "BUILD"),
@@ -565,7 +595,7 @@ function HullTab({ verb }: { verb: string }) {
             <p className="self-center px-1 font-display text-[0.5rem] tracking-[0.14em] text-muted">+{nested} NESTS</p>
           )}
         </div>
-        {why && <p className="px-1 pt-1 text-center text-[0.65rem] text-gilt">{why}</p>}
+        {why && !compact && <p className="px-1 pt-1 text-center text-[0.65rem] text-gilt">{why}</p>}
       </div>
       <div className="pointer-events-auto nidus-actions">
         <button
@@ -611,7 +641,7 @@ function HullTab({ verb }: { verb: string }) {
       </div>
       <p className="pointer-events-none text-center text-[0.58rem] tracking-[0.16em] text-muted">
         {totalSwarm(s)}/{berthCap(s)}
-        {full ? " PACKED" : " BERTHS"} · {s.minds.filter((m) => m.alive).length} MINDS · L{moltLayer}
+        {full ? " PACKED" : autoHoldBerths(s) > 0 ? " · AUTO HOLDS 2" : " BERTHS"} · {s.minds.filter((m) => m.alive).length} MINDS · L{moltLayer}
       </p>
       {nextRoom && (
         <p className="pointer-events-none text-center font-display text-[0.55rem] tracking-[0.18em] text-gilt">
@@ -622,7 +652,7 @@ function HullTab({ verb }: { verb: string }) {
   );
 }
 
-function ForgeTab({ verb }: { verb: string }) {
+function ForgeTab({ verb, compact }: { verb: string; compact: boolean }) {
   const printCaste = useNidus((s) => s.printCaste);
   const setPrintCaste = useNidus((s) => s.setPrintCaste);
   const print = useNidus((s) => s.print);
@@ -637,6 +667,7 @@ function ForgeTab({ verb }: { verb: string }) {
   const cap = berthCap(s);
   const pop = expandCost(s);
   const full = packed(s);
+  const jammed = totalSwarm(s) >= cap;
   const icons: Record<Caste, typeof Pickaxe> = { miner: Pickaxe, fab: Factory, builder: Hammer, lab: FlaskConical, striker: Swords };
   return (
     <div className="pointer-events-auto flex flex-col justify-end gap-2 p-2" data-chrome>
@@ -645,6 +676,7 @@ function ForgeTab({ verb }: { verb: string }) {
           <p className="font-display text-[0.65rem] tracking-[0.24em] text-gilt">SWARM</p>
           <p className={cn("font-display text-[0.58rem] tabular-nums tracking-[0.14em]", full ? "text-blood-bright" : "text-muted")}>
             {totalSwarm(s)}/{cap}
+            {s.printFocus && s.printFocus.n >= 3 ? ` · FOCUS ×${s.printFocus.n}` : ""}
           </p>
         </div>
         <div className="grid grid-cols-5 gap-1">
@@ -653,11 +685,14 @@ function ForgeTab({ verb }: { verb: string }) {
             const on = printCaste === c.id;
             const mk = hullMark[c.id] ?? 0;
             return (
-              <button key={c.id} type="button" onClick={() => setPrintCaste(c.id)} className={cn("nidus-cut flex min-h-16 flex-col items-center justify-center gap-0.5", on && "nidus-cut-on")}>
+              <button key={c.id} type="button" title={`${c.verb} caste. Same caste stacks FOCUS.`} onClick={() => setPrintCaste(c.id)} className={cn("nidus-cut flex flex-col items-center justify-center gap-0.5", compact ? "min-h-12" : "min-h-16", on && "nidus-cut-on")}>
                 <Icon className="size-3.5 text-gilt" />
                 <span className="font-display text-[0.52rem] tracking-[0.12em]">{c.label}</span>
                 <span className="font-display text-base tabular-nums leading-none">{swarm[c.id]}</span>
-                <span className="font-display text-[0.48rem] tracking-[0.1em] text-muted">{markName(mk)}</span>
+                {!compact && <span className="font-display text-[0.48rem] tracking-[0.1em] text-muted">{markName(mk)}</span>}
+                <div className="mt-0.5 h-0.5 w-8 bg-iron">
+                  <div className="h-0.5 bg-gilt" style={{ width: `${Math.min(100, ((s.casteXp?.[c.id] ?? 0) / Math.max(1, casteXpNeed(s.casteLevel[c.id] ?? 0))) * 100)}%` }} />
+                </div>
               </button>
             );
           })}
@@ -687,8 +722,8 @@ function ForgeTab({ verb }: { verb: string }) {
         </div>
       </div>
       <div className="nidus-actions">
-        <button type="button" title={full ? "Packed. Stamp still feeds SPARK and caste XP." : `${cost.ore} ore · ${cost.parts} parts.`} onClick={() => { print(); chime("print"); }} className={cn("nidus-cut nidus-cut-on min-h-11 flex-1 font-display tracking-[0.28em]", pulse(verb === "PRINT" || full))}>
-          <span className="block text-[0.8rem]">{full ? "PRINT SPARK" : "PRINT"}</span>
+        <button type="button" title={jammed ? "Packed. Stamp still feeds SPARK and caste XP." : `${cost.ore} ore · ${cost.parts} parts.`} onClick={() => { print(); chime("print"); }} className={cn("nidus-cut nidus-cut-on min-h-11 flex-1 font-display tracking-[0.28em]", pulse(verb === "PRINT" || jammed))}>
+          <span className="block text-[0.8rem]">{jammed ? "PRINT SPARK" : "PRINT"}</span>
           <span className="block font-sans text-[0.55rem] tabular-nums tracking-[0.08em] text-bone/80">{cost.ore}o · {cost.parts}p</span>
         </button>
         <button type="button" title="Stamp while you are gone." onClick={toggleAuto} className={cn("nidus-cut nidus-iconbtn", autoPrint ? "nidus-cut-venom" : "text-muted", pulse(verb === "AUTO" && !autoPrint))}>
@@ -700,7 +735,7 @@ function ForgeTab({ verb }: { verb: string }) {
   );
 }
 
-function RaidTab({ verb }: { verb: string }) {
+function RaidTab({ verb, compact }: { verb: string; compact: boolean }) {
   const raidNode = useNidus((s) => s.raid?.node ?? null);
   const raidEnds = useNidus((s) => s.raid?.endsAt ?? 0);
   const raidHp = useNidus((s) => s.raid?.hp ?? 0);
@@ -725,7 +760,7 @@ function RaidTab({ verb }: { verb: string }) {
   const shownRaids = [...unlocked, ...lockedTease];
   const nestedWrecks = RAIDS.length - shownRaids.length;
   return (
-    <div className="pointer-events-auto flex max-h-[40dvh] flex-col justify-end gap-1.5 overflow-y-auto p-2" data-chrome>
+    <div className={cn("pointer-events-auto flex flex-col justify-end gap-1.5 overflow-y-auto p-2", compact ? "max-h-[32dvh]" : "max-h-[40dvh]")} data-chrome>
       <div className="nidus-card flex items-center justify-between px-2 py-1.5">
         <div>
           <p className="font-display text-[0.58rem] tracking-[0.18em] text-gilt">{markName(mark)}</p>
@@ -777,7 +812,7 @@ function RaidTab({ verb }: { verb: string }) {
                   disabled={!open}
                   title={spec.line}
                   onClick={() => useNidus.getState().cook(k)}
-                  className={cn("nidus-cut min-h-9 px-2 font-display text-[0.52rem] tracking-[0.12em]", open ? "nidus-cut-gilt" : "text-iron")}
+                  className={cn("nidus-cut min-h-9 px-2 font-display text-[0.52rem] tracking-[0.12em]", open ? "nidus-cut-gilt nidus-pulse" : "text-iron")}
                 >
                   {spec.label} {k.toUpperCase()}
                 </button>
@@ -795,9 +830,9 @@ function RaidTab({ verb }: { verb: string }) {
         const firstIce = node.id === "ice" && !done;
         const wait = firstIce ? node.seconds * 0.78 : node.seconds;
         const chipKind = open ? (firstIce ? "open" : done ? "lit" : "next") : "lock";
-        const chip = open ? (firstIce ? "FIRST" : done ? (times > 1 ? `×${times}` : "AGAIN") : "OPEN") : shortLock(why);
+        const chip = open ? (firstIce ? "FIRST" : done ? (times > 0 ? `FARM ×${times}` : "AGAIN") : "OPEN") : shortLock(why);
         return (
-          <button key={node.id} type="button" disabled={!open || Boolean(raidNode) || strikers < need} title={why || node.blurb} onClick={() => { send(node.id); chime("raid"); }} className={cn("nidus-card relative min-h-[4.4rem] w-full overflow-hidden text-left", !open && "nidus-card-lock", pulse(open && verb === "RAID" && node.id === "ice" && !raidNode))}>
+          <button key={node.id} type="button" disabled={!open || Boolean(raidNode) || strikers < need} title={why || node.blurb} onClick={() => { send(node.id); chime("raid"); }} className={cn("nidus-card relative w-full overflow-hidden text-left", compact ? "min-h-[3.6rem]" : "min-h-[4.4rem]", !open && "nidus-card-lock", pulse(open && verb === "RAID" && node.id === "ice" && !raidNode))}>
             <img src={node.image} alt="" className="nidus-card-art" crossOrigin="anonymous" />
             <div className="nidus-card-veil" />
             <div className="relative z-10 flex h-full items-end justify-between gap-2 p-2">
@@ -821,7 +856,7 @@ function RaidTab({ verb }: { verb: string }) {
   );
 }
 
-function MindsTab() {
+function MindsTab({ compact }: { compact: boolean }) {
   const minds = useNidus((s) => s.minds);
   const selected = useNidus((s) => s.selectedMind);
   const selectMind = useNidus((s) => s.selectMind);
@@ -851,16 +886,17 @@ function MindsTab() {
   }
 
   if (!mind) {
-    const pct = Math.min(100, (spark / Math.max(1, sparkNeed)) * 100);
+    const pct = Math.min(100, (spark / Math.max(1, wakeNeed(s))) * 100);
+    const banked = sparkBanked(s);
     return (
       <div className="pointer-events-none flex items-end justify-center p-4">
         <div className="nidus-card w-full max-w-sm p-3 text-center">
-          <p className="font-display text-[0.7rem] tracking-[0.2em] text-gilt">NO COMMANDER YET</p>
-          <p className="mt-1 text-[0.8rem] text-bone">SPARK fills while the swarm works. Full bar. Three bodies. One stays.</p>
+          <p className="font-display text-[0.7rem] tracking-[0.2em] text-gilt">{banked ? "SPARK BANKS" : "NO COMMANDER YET"}</p>
+          <p className="mt-1 text-[0.8rem] text-bone">{banked ? "Raise the Solar Spine. Then three bodies. One stays." : "SPARK fills while the swarm works. Full bar. Three bodies. One stays."}</p>
           <div className="mt-2 h-1.5 bg-iron">
             <div className="h-1.5 bg-venom" style={{ width: `${pct}%` }} />
           </div>
-          <p className="mt-1 text-[0.65rem] tabular-nums text-muted">{Math.floor(spark)} / {sparkNeed}</p>
+          <p className="mt-1 text-[0.65rem] tabular-nums text-muted">{Math.floor(spark)} / {wakeNeed(s)}</p>
         </div>
       </div>
     );
@@ -872,16 +908,17 @@ function MindsTab() {
   return (
     <div className="pointer-events-auto flex flex-col justify-end gap-1.5 p-2" data-chrome>
       <div className="nidus-card relative overflow-hidden">
-        <img src={mind.portrait} alt="" className="h-32 w-full object-cover object-top" crossOrigin="anonymous" />
+        <img src={mind.portrait} alt="" className={cn("w-full object-cover object-top", compact ? "h-20" : "h-28")} crossOrigin="anonymous" />
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-void to-transparent p-2">
           <div className="mb-0.5 flex items-center gap-1.5">
             <StatusChip kind={mind.seated ? "next" : "open"}>{mind.seated ? "SEATED" : "PACING"}</StatusChip>
             {mind.wounded && <StatusChip kind="lock">WOUND</StatusChip>}
           </div>
-          <h2 className="font-display text-2xl leading-none">{mind.name}</h2>
+          <h2 className={cn("font-display leading-none", compact ? "text-xl" : "text-2xl")}>{mind.name}</h2>
           <p className={cn("font-display text-[0.65rem] tracking-[0.16em]", rarityColor[mind.rarity])}>
             {spec.label} · {born.label} → {post.label}
           </p>
+          <p className="font-display text-[0.58rem] tracking-[0.1em] text-gilt">{mindPostLine(mind)}</p>
           {mindTalent(mind.level) && (
             <p className="font-display text-[0.55rem] tracking-[0.14em] text-venom">{mindTalent(mind.level)?.label}</p>
           )}
@@ -915,8 +952,8 @@ function MindsTab() {
         })}
       </div>
       <div className="nidus-actions">
-        <button type="button" className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.62rem] tracking-[0.12em]", mind.seated && "nidus-cut-venom")} onClick={() => seat(mind.id)}>
-          {mind.seated ? "UNSEAT" : "SEAT"}
+        <button type="button" title={mind.seated ? "Half post while pacing." : `SEAT for +${postBoostPct({ ...mind, seated: true })}% ${post.label}.`} className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.62rem] tracking-[0.12em]", mind.seated && "nidus-cut-venom", !mind.seated && "nidus-pulse")} onClick={() => seat(mind.id)}>
+          {mind.seated ? "UNSEAT" : `SEAT +${postBoostPct({ ...mind, seated: true })}%`}
         </button>
         <button
           type="button"
@@ -954,20 +991,20 @@ function WakeOverlay() {
   return (
     <div className="pointer-events-auto absolute inset-x-0 top-0 bottom-16 z-40 flex flex-col justify-end bg-void/92 p-3" data-chrome>
       <p className="mb-1 text-center font-display text-[0.7rem] tracking-[0.24em] text-gilt">THREE COMMANDERS. ONE POST.</p>
-      <p className="mb-2 text-center text-[0.7rem] text-muted">Pick the job you need. The rest ash.</p>
+      <p className="mb-2 text-center text-[0.7rem] text-muted">Pick the job you need. She starts PACING. You SEAT her.</p>
       <div className="grid grid-cols-3 gap-2">
         {waking.map((c, i) => {
           const post = framePost(c.frame);
           const top = (Object.entries(c.stats) as [string, number][]).sort((a, b) => b[1] - a[1])[0];
           return (
             <button key={c.name + i} type="button" onClick={() => { pick(i); chime("wake"); }} className="nidus-card overflow-hidden bg-nave text-left">
-              <img src={c.portrait} alt="" className="h-28 w-full object-cover object-top" crossOrigin="anonymous" />
+              <img src={c.portrait} alt="" className="h-20 w-full object-cover object-top" crossOrigin="anonymous" />
               <div className="p-1.5">
                 <p className="font-display text-[0.7rem] tracking-[0.16em] text-gilt">{post.label}</p>
                 <p className={cn("font-display text-[0.58rem] tracking-[0.12em]", rarityColor[c.rarity])}>{FRAMES[c.frame].label}</p>
                 <p className="font-display text-sm leading-tight">{c.name}</p>
                 <p className="text-[0.7rem] text-bone">{post.does}</p>
-                <p className="text-[0.6rem] tabular-nums text-muted">{top?.[0].toUpperCase()} {top?.[1]}</p>
+                <p className="text-[0.6rem] tabular-nums text-muted">{top?.[0].toUpperCase()} {top?.[1]} · SEAT LATER</p>
               </div>
             </button>
           );

@@ -24,6 +24,9 @@ function migrate(raw: GameState): GameState {
   if (typeof merged.mercySurge !== "boolean") merged.mercySurge = false;
   if (typeof merged.returnStreak !== "number") merged.returnStreak = 0;
   if (typeof merged.lastReturnAt !== "number") merged.lastReturnAt = 0;
+  if (!merged.printFocus || typeof merged.printFocus.n !== "number") {
+    merged.printFocus = { caste: merged.printCaste || "miner", n: 0 };
+  }
   if (!merged.lastSaveAt) merged.lastSaveAt = 0;
   if (!merged.slagAt) merged.slagAt = 0;
   if (typeof merged.autoBuild !== "boolean") merged.autoBuild = false;
