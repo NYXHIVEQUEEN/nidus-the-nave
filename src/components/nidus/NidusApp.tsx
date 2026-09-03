@@ -55,7 +55,7 @@ import {
   type GuideId,
 } from "@/lib/nidus/guide";
 import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALVAGE_COOK, casteXpNeed, postBoostPct, wakeNeed, autoHoldBerths } from "@/lib/nidus/progress";
-import { StationMount } from "./StationMount";
+import { ChromeBound, StationMount } from "./StationMount";
 import { SettingsPanel } from "./SettingsPanel";
 import { GoalDock, GuideSheet, LeftRail, StatusChip, Whisper, muteToggle, useDensity, useIdleChrome, useSyncPrefs, useViewport } from "./HiveChrome";
 import { cycleDensity, getPrefs, getSpinPaused, helpSeen, lookAtRoom, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
@@ -240,7 +240,13 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   const s = useNidus();
   const goal = nextGoal(s);
   const stage = hiveStage(s);
-  const tip = advise(s);
+  const tip = (() => {
+    try {
+      return advise(s);
+    } catch {
+      return { chip: "GROW THE SWARM", why: "Idle is the engine.", verb: "IDLE" };
+    }
+  })();
   const density = useDensity();
   const vp = useViewport();
   const watchChrome = density === "watch" || collapsed;
@@ -313,6 +319,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   };
 
   return (
+    <ChromeBound>
     <div
       className={cn("nidus-root relative h-dvh w-full overflow-hidden bg-void text-bone", vp.landscape && "nidus-land")}
       data-density={watchChrome ? "watch" : density}
@@ -373,6 +380,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
       {gift && !waking && <GiftOverlay />}
       {showBrief && !waking && !gift && <BriefOverlay />}
     </div>
+    </ChromeBound>
   );
 }
 

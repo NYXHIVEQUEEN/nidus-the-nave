@@ -26,6 +26,30 @@ class HullBound extends Component<{ children: ReactNode }, { failed: boolean }> 
   }
 }
 
+export class ChromeBound extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(_err: Error, _info: ErrorInfo) {
+    /* chrome stutters; hive stays */
+  }
+  render() {
+    if (this.state.failed) {
+      return (
+        <button
+          type="button"
+          className="absolute inset-0 z-50 flex items-center justify-center bg-void/90 font-display text-sm tracking-[0.28em] text-gilt"
+          onClick={() => this.setState({ failed: false })}
+        >
+          CHROME STUTTER · TAP
+        </button>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function StationMount() {
   const [on, setOn] = useState(false);
   useEffect(() => setOn(true), []);

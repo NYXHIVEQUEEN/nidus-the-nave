@@ -309,46 +309,48 @@ function Dock({ id, rank = 0, children }: { id: string; rank?: number; children:
 }
 
 function Hull() {
-  const solar = useNidus((s) => s.rooms.solar.built);
-  const orebay = useNidus((s) => s.rooms.orebay.built);
-  const silo = useNidus((s) => s.rooms.silo.built);
-  const barracks = useNidus((s) => s.rooms.barracks.built);
-  const hangar = useNidus((s) => s.rooms.hangar.built);
-  const gundeck = useNidus((s) => s.rooms.gundeck.built);
-  const lab = useNidus((s) => s.rooms.lab.built);
-  const nerve = useNidus((s) => s.rooms.nerve.built);
-  const reliquary = useNidus((s) => s.rooms.reliquary.built);
-  const cloister = useNidus((s) => s.rooms.cloister?.built ?? false);
-  const choir = useNidus((s) => s.rooms.choir?.built ?? false);
-  const vault = useNidus((s) => s.rooms.vault?.built ?? false);
-  const crypt = useNidus((s) => s.rooms.crypt?.built ?? false);
-  const apse = useNidus((s) => s.rooms.apse?.built ?? false);
-  const spire = useNidus((s) => s.rooms.spire?.built ?? false);
-  const crucible = useNidus((s) => s.rooms.crucible?.built ?? false);
-  const mill = useNidus((s) => s.rooms.mill?.built ?? false);
-  const refinery = useNidus((s) => s.rooms.refinery?.built ?? false);
-  const sensor = useNidus((s) => s.rooms.sensor?.built ?? false);
-  const armory = useNidus((s) => s.rooms.armory?.built ?? false);
-  const dock = useNidus((s) => s.rooms.dock?.built ?? false);
-  const gallery = useNidus((s) => s.rooms.gallery?.built ?? false);
+  const solar = useNidus((s) => Boolean(s.rooms.solar?.built));
+  const orebay = useNidus((s) => Boolean(s.rooms.orebay?.built));
+  const silo = useNidus((s) => Boolean(s.rooms.silo?.built));
+  const barracks = useNidus((s) => Boolean(s.rooms.barracks?.built));
+  const hangar = useNidus((s) => Boolean(s.rooms.hangar?.built));
+  const gundeck = useNidus((s) => Boolean(s.rooms.gundeck?.built));
+  const lab = useNidus((s) => Boolean(s.rooms.lab?.built));
+  const nerve = useNidus((s) => Boolean(s.rooms.nerve?.built));
+  const reliquary = useNidus((s) => Boolean(s.rooms.reliquary?.built));
+  const cloister = useNidus((s) => Boolean(s.rooms.cloister?.built));
+  const choir = useNidus((s) => Boolean(s.rooms.choir?.built));
+  const vault = useNidus((s) => Boolean(s.rooms.vault?.built));
+  const crypt = useNidus((s) => Boolean(s.rooms.crypt?.built));
+  const apse = useNidus((s) => Boolean(s.rooms.apse?.built));
+  const spire = useNidus((s) => Boolean(s.rooms.spire?.built));
+  const crucible = useNidus((s) => Boolean(s.rooms.crucible?.built));
+  const mill = useNidus((s) => Boolean(s.rooms.mill?.built));
+  const refinery = useNidus((s) => Boolean(s.rooms.refinery?.built));
+  const sensor = useNidus((s) => Boolean(s.rooms.sensor?.built));
+  const armory = useNidus((s) => Boolean(s.rooms.armory?.built));
+  const dock = useNidus((s) => Boolean(s.rooms.dock?.built));
+  const gallery = useNidus((s) => Boolean(s.rooms.gallery?.built));
   const roomsLit = useNidus(
     (s) =>
-      Number(s.rooms.solar.built) +
-      Number(s.rooms.orebay.built) +
-      Number(s.rooms.silo.built) +
-      Number(s.rooms.barracks.built) +
-      Number(s.rooms.hangar.built) +
-      Number(s.rooms.gundeck.built) +
-      Number(s.rooms.lab.built) +
-      Number(s.rooms.nerve.built) +
-      Number(s.rooms.reliquary.built) +
-      Number(s.rooms.cloister?.built) +
-      Number(s.rooms.choir?.built) +
-      Number(s.rooms.vault?.built) +
-      Number(s.rooms.crypt?.built) +
-      Number(s.rooms.apse?.built) +
-      Number(s.rooms.spire?.built) +
-      Number(s.rooms.crucible?.built),
+      Number(Boolean(s.rooms.solar?.built)) +
+      Number(Boolean(s.rooms.orebay?.built)) +
+      Number(Boolean(s.rooms.silo?.built)) +
+      Number(Boolean(s.rooms.barracks?.built)) +
+      Number(Boolean(s.rooms.hangar?.built)) +
+      Number(Boolean(s.rooms.gundeck?.built)) +
+      Number(Boolean(s.rooms.lab?.built)) +
+      Number(Boolean(s.rooms.nerve?.built)) +
+      Number(Boolean(s.rooms.reliquary?.built)) +
+      Number(Boolean(s.rooms.cloister?.built)) +
+      Number(Boolean(s.rooms.choir?.built)) +
+      Number(Boolean(s.rooms.vault?.built)) +
+      Number(Boolean(s.rooms.crypt?.built)) +
+      Number(Boolean(s.rooms.apse?.built)) +
+      Number(Boolean(s.rooms.spire?.built)) +
+      Number(Boolean(s.rooms.crucible?.built)) +
+      Number(Boolean(s.rooms.mill?.built)) +
+      Number(Boolean(s.rooms.refinery?.built)),
   );
   const molt = useNidus((s) => s.moltLayer);
   const raidEnds = useNidus((s) => s.raid?.endsAt ?? 0);
@@ -393,15 +395,15 @@ function Hull() {
     if (!spec || !st) return 0;
     return Math.min(1, st.progress / Math.max(1, spec.work));
   });
-  const solarRank = useNidus((s) => s.rooms.solar.rank ?? 0);
-  const orebayRank = useNidus((s) => s.rooms.orebay.rank ?? 0);
-  const siloRank = useNidus((s) => s.rooms.silo.rank ?? 0);
-  const barracksRank = useNidus((s) => s.rooms.barracks.rank ?? 0);
-  const hangarRank = useNidus((s) => s.rooms.hangar.rank ?? 0);
-  const gundeckRank = useNidus((s) => s.rooms.gundeck.rank ?? 0);
-  const labRank = useNidus((s) => s.rooms.lab.rank ?? 0);
-  const nerveRank = useNidus((s) => s.rooms.nerve.rank ?? 0);
-  const reliquaryRank = useNidus((s) => s.rooms.reliquary.rank ?? 0);
+  const solarRank = useNidus((s) => s.rooms.solar?.rank ?? 0);
+  const orebayRank = useNidus((s) => s.rooms.orebay?.rank ?? 0);
+  const siloRank = useNidus((s) => s.rooms.silo?.rank ?? 0);
+  const barracksRank = useNidus((s) => s.rooms.barracks?.rank ?? 0);
+  const hangarRank = useNidus((s) => s.rooms.hangar?.rank ?? 0);
+  const gundeckRank = useNidus((s) => s.rooms.gundeck?.rank ?? 0);
+  const labRank = useNidus((s) => s.rooms.lab?.rank ?? 0);
+  const nerveRank = useNidus((s) => s.rooms.nerve?.rank ?? 0);
+  const reliquaryRank = useNidus((s) => s.rooms.reliquary?.rank ?? 0);
   const cloisterRank = useNidus((s) => s.rooms.cloister?.rank ?? 0);
   const choirRank = useNidus((s) => s.rooms.choir?.rank ?? 0);
   const vaultRank = useNidus((s) => s.rooms.vault?.rank ?? 0);
@@ -409,6 +411,8 @@ function Hull() {
   const apseRank = useNidus((s) => s.rooms.apse?.rank ?? 0);
   const spireRank = useNidus((s) => s.rooms.spire?.rank ?? 0);
   const crucibleRank = useNidus((s) => s.rooms.crucible?.rank ?? 0);
+  const millRank = useNidus((s) => s.rooms.mill?.rank ?? 0);
+  const refineryRank = useNidus((s) => s.rooms.refinery?.rank ?? 0);
 
   const { plate, glass, grate, filigree, blood, hazard, arch, sleep, rift, titans, rivet, giltMap, rose, voidMap, ember, bone, height, rough } = useHullTextures();
   const drones = useRef<InstancedMesh>(null);
@@ -765,7 +769,7 @@ function Hull() {
       if ((far && !watchNave) || hidden) tn.visible = false;
       else {
         const n = tendonTargets.length;
-        for (let i = 0; i < 16; i++) {
+        for (let i = 0; i < 24; i++) {
           if (i >= n) {
             dummy.position.set(0, -80, 0);
             dummy.scale.setScalar(0.001);
@@ -1188,7 +1192,7 @@ function Hull() {
       )}
       {orebay && (
         <Dock id="orebay" rank={orebayRank}>
-          <mesh geometry={hopperGeo}>
+          <mesh geometry={hopperGeo} dispose={null}>
             <meshStandardMaterial map={grate} color={BONE} metalness={0.62} roughness={0.4} />
           </mesh>
           <mesh position={[0, 0.04, 0]} rotation={[Math.PI / 2, 0, 0]}>
@@ -1333,21 +1337,21 @@ function Hull() {
       )}
       {crucible && (
         <Dock id="crucible" rank={crucibleRank}>
-          <mesh geometry={bowlGeo}>
+          <mesh geometry={bowlGeo} dispose={null}>
             <meshStandardMaterial map={ember} color="#c45a4a" metalness={0.55} roughness={0.36} emissive={bloodC} emissiveIntensity={1.1} toneMapped={false} />
           </mesh>
         </Dock>
       )}
       {mill && (
-        <Dock id="mill">
-          <mesh geometry={hopperGeo}>
+        <Dock id="mill" rank={millRank}>
+          <mesh geometry={hopperGeo} dispose={null}>
             <meshStandardMaterial map={grate} color="#8a7358" metalness={0.7} roughness={0.35} />
           </mesh>
         </Dock>
       )}
       {refinery && (
-        <Dock id="refinery">
-          <mesh geometry={bowlGeo}>
+        <Dock id="refinery" rank={refineryRank}>
+          <mesh geometry={bowlGeo} dispose={null}>
             <meshStandardMaterial map={ember} color="#c4a574" metalness={0.6} roughness={0.32} emissive={gilt} emissiveIntensity={0.4} />
           </mesh>
         </Dock>
@@ -1394,7 +1398,7 @@ function Hull() {
       )}
       {apse && (
         <Dock id="apse" rank={apseRank}>
-          <mesh geometry={apseGeo}>
+          <mesh geometry={apseGeo} dispose={null}>
             <meshStandardMaterial map={rose} color={BLOOD} metalness={0.48} roughness={0.36} emissive={bloodC} emissiveIntensity={1.2} toneMapped={false} />
           </mesh>
         </Dock>
@@ -1467,7 +1471,7 @@ function Hull() {
         <sphereGeometry args={[0.016, 5, 5]} />
         <meshBasicMaterial color={GILT} transparent opacity={0.85} toneMapped={false} blending={AdditiveBlending} depthWrite={false} />
       </instancedMesh>
-      <instancedMesh ref={tendons} args={[undefined, undefined, 16]} visible={false}>
+      <instancedMesh ref={tendons} args={[undefined, undefined, 24]} visible={false}>
         <cylinderGeometry args={[0.022, 0.016, 1, 6]} />
         <meshStandardMaterial color="#8a7358" metalness={0.86} roughness={0.32} emissive={gilt} emissiveIntensity={0.18} />
       </instancedMesh>

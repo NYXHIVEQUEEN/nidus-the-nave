@@ -47,6 +47,7 @@ export function ensureHive(s: GameState): GameState {
       if (typeof room.progress !== "number" || Number.isNaN(room.progress)) room.progress = 0;
       if (typeof room.rank !== "number" || Number.isNaN(room.rank)) room.rank = room.built ? 1 : 0;
       if (typeof room.rankWork !== "number" || Number.isNaN(room.rankWork)) room.rankWork = 0;
+      room.rank = Math.max(0, Math.min(RANK_MAX, room.rank));
     }
   }
   if (!s.tech || typeof s.tech !== "object") s.tech = {} as GameState["tech"];
@@ -64,11 +65,14 @@ export function ensureHive(s: GameState): GameState {
   else {
     for (const id of ["spine", "hold", "nave", "fleet", "crypt"] as const) {
       if (typeof s.zoneRank[id] !== "number" || Number.isNaN(s.zoneRank[id])) s.zoneRank[id] = 0;
+      s.zoneRank[id] = Math.max(0, Math.min(RANK_MAX, s.zoneRank[id]));
     }
   }
   if (s.queuedRoom && !s.rooms[s.queuedRoom]) s.queuedRoom = null;
   if (s.rankingRoom && !s.rooms[s.rankingRoom]) s.rankingRoom = null;
   if (s.activeTech && !s.tech[s.activeTech]) s.activeTech = null;
+  if (!s.casteLevel) s.casteLevel = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
+  if (!s.hullMark) s.hullMark = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
   return s;
 }
 
@@ -104,6 +108,8 @@ function credit(s: GameState, kind: Order["kind"], target = "any", n = 1) {
 
 function grantCasteXp(s: GameState, caste: Caste, n = 1) {
   if (!s.casteXp) s.casteXp = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
+  if (!s.casteLevel) s.casteLevel = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
+  if (typeof s.casteLevel[caste] !== "number") s.casteLevel[caste] = 0;
   s.casteXp[caste] = (s.casteXp[caste] ?? 0) + n;
   let guard = 0;
   while (guard++ < 8 && s.casteXp[caste] >= casteXpNeed(s.casteLevel[caste])) {

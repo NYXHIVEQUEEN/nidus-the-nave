@@ -60,10 +60,10 @@ let prefs: ViewPrefs = {
   lookId: "",
   lookUntil: 0,
   seenHelp: {},
-  density: "auto",
-  uiScale: 1.06,
-  musicBed: "anthem",
-  prefsGen: 2,
+  density: "compact" as Density,
+  uiScale: 0.68,
+  musicBed: "anthem" as MusicBed,
+  prefsGen: 3,
 };
 
 function clamp(n: number, a: number, b: number) {
@@ -95,10 +95,15 @@ function read() {
       lookId: typeof parsed.lookId === "string" ? parsed.lookId : "",
       lookUntil: typeof parsed.lookUntil === "number" ? parsed.lookUntil : 0,
       seenHelp: parsed.seenHelp && typeof parsed.seenHelp === "object" ? parsed.seenHelp : {},
-      density: parsed.density === "compact" || parsed.density === "comfort" || parsed.density === "watch" || parsed.density === "auto" ? parsed.density : "auto",
-      uiScale: typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.88, 1.22) : 1.06,
+      density:
+        (parsed.prefsGen ?? 0) >= 3 &&
+        (parsed.density === "compact" || parsed.density === "comfort" || parsed.density === "watch" || parsed.density === "auto")
+          ? parsed.density
+          : "compact",
+      uiScale:
+        (parsed.prefsGen ?? 0) >= 3 && typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.55, 1.22) : 0.68,
       musicBed: parsed.musicBed === "void" ? "void" : "anthem",
-      prefsGen: 2,
+      prefsGen: 3,
     };
   } catch {
     /* keep */
@@ -127,6 +132,7 @@ export function getPrefs() {
 
 export function patchPrefs(partial: Partial<ViewPrefs>) {
   prefs = { ...prefs, ...partial };
+  prefs.uiScale = clamp(prefs.uiScale, 0.55, 1.22);
   emit();
 }
 

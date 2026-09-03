@@ -346,4 +346,26 @@ test("queue and rank with CUT do not throw when mill is missing from an old hive
   assert.ok(ticked.rooms.mill);
 });
 
+test("thirteen sequential ranks with CUT do not throw or wipe the hive", () => {
+  let s = defaultState();
+  s.credits = 4000;
+  s.parts = 80;
+  s.swarm.builder = 8;
+  s.rooms.foundry = { built: true, progress: 0, rank: 1, rankWork: 0 };
+  s.rooms.solar = { built: true, progress: 28, rank: 0, rankWork: 0 };
+  s.rooms.orebay = { built: true, progress: 40, rank: 0, rankWork: 0 };
+  s.lastTick = 1_000_000;
+  const ids = ["foundry", "solar", "orebay"] as const;
+  for (let i = 0; i < 13; i++) {
+    const id = ids[i % ids.length];
+    s = queueRoom(s, id);
+    s = applyTick(s, 1_000_000 + (i + 1) * 8000);
+    assert.ok((s.credits ?? 0) >= 0);
+    assert.ok((s.rooms.solar?.rank ?? 0) <= 5);
+  }
+  assert.equal(s.rooms.foundry.built, true);
+  assert.ok(s.printed >= 0);
+});
+
+
 

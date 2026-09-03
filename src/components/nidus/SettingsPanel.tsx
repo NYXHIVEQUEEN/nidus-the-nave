@@ -95,7 +95,7 @@ export function SettingsPanel({
   const research = useNidus((s) => s.research);
   const active = useNidus((s) => s.activeTech);
   const tech = useNidus((s) => s.tech);
-  const lab = useNidus((s) => s.rooms.lab.built);
+  const lab = useNidus((s) => Boolean(s.rooms.lab?.built));
   const fileRef = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState("");
   const hits = CODEX.filter((c) => !q || `${c.title} ${c.body}`.toLowerCase().includes(q.toLowerCase()));
@@ -114,7 +114,7 @@ export function SettingsPanel({
                 tab === t ? "nidus-cut-on" : "text-muted",
               )}
             >
-              {t === "view" ? "VIEW" : t === "opt" ? "LOCAL" : t === "codex" ? "CODEX" : "SAVE"}
+              {t === "view" ? "VIEW" : t === "opt" ? "SETTINGS" : t === "codex" ? "CODEX" : "SAVE"}
             </button>
           ))}
         </div>

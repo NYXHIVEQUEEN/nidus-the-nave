@@ -65,7 +65,7 @@ export function RailBtn({
       )}
     >
       {children}
-      <span className="mt-0.5 font-display text-[0.42rem] tracking-[0.14em]">{label}</span>
+      <span className="mt-px max-w-full truncate px-0.5 font-display text-[0.38rem] leading-none tracking-[0.08em]">{label}</span>
     </button>
   );
 }
@@ -132,17 +132,17 @@ export function LeftRail({
       data-chrome
       className="nidus-rail pointer-events-auto absolute left-2 top-[max(3.2rem,calc(env(safe-area-inset-top)+2.4rem))] z-20 flex flex-col gap-1 overflow-visible"
     >
-      <RailBtn label="HELP" title="This screen — verbs only." pulse={helpPulse} onClick={onHelp}>
-        <HelpCircle className="size-3.5" />
+      <RailBtn label="HELP" title="This screen — what the buttons do." pulse={helpPulse} onClick={onHelp}>
+        <HelpCircle className="size-3" />
       </RailBtn>
       <div className="relative">
         <RailBtn
           label="VIEW"
-          title="Shots. Nested — CLOSE to VOID."
+          title="Camera shots. CLOSE to VOID."
           on={fly === "view"}
           onClick={() => openFly("view")}
         >
-          <Aperture className="size-3.5" />
+          <Aperture className="size-3" />
         </RailBtn>
         {fly === "view" && (
           <div className="nidus-fly" role="menu" aria-label="View shots">
@@ -159,7 +159,7 @@ export function LeftRail({
                     setFly(null);
                   }}
                 >
-                  <Aperture className="size-3.5" />
+                  <Aperture className="size-3" />
                 </RailBtn>
               );
             })}
@@ -171,22 +171,22 @@ export function LeftRail({
                 onRitePane("view");
               }}
             >
-              <SlidersHorizontal className="size-3.5" />
+              <SlidersHorizontal className="size-3" />
             </RailBtn>
           </div>
         )}
       </div>
       <div className="relative">
         <RailBtn
-          label="RITE"
-          title="Lab, pews, music. Nested."
+          label="SETTINGS"
+          title="Settings — size, sound, lab, save."
           on={fly === "rite"}
           onClick={() => openFly("rite")}
         >
-          <Settings2 className="size-3.5" />
+          <Settings2 className="size-3" />
         </RailBtn>
         {fly === "rite" && (
-          <div className="nidus-fly" role="menu" aria-label="Rite panes">
+          <div className="nidus-fly" role="menu" aria-label="Settings">
             <RailBtn
               label="LAB"
               title="Rites and hive mind."
@@ -195,7 +195,7 @@ export function LeftRail({
                 onRitePane("opt");
               }}
             >
-              <FlaskConical className="size-3.5" />
+              <FlaskConical className="size-3" />
             </RailBtn>
             <RailBtn
               label="CODEX"
@@ -205,51 +205,50 @@ export function LeftRail({
                 onRitePane("codex");
               }}
             >
-              <BookOpen className="size-3.5" />
+              <BookOpen className="size-3" />
             </RailBtn>
             <RailBtn
               label="SAVE"
-              title="Pews, export, import."
+              title="Local pews, export, import."
               onClick={() => {
                 setFly(null);
                 onRitePane("save");
               }}
             >
-              <Save className="size-3.5" />
+              <Save className="size-3" />
+            </RailBtn>
+            <RailBtn
+              label="SIZE"
+              title={`Chrome size. Now ${DENSITY_LABEL[prefs.density]}. Tap to cycle TIGHT / ROOMY / WATCH.`}
+              on={density !== "compact"}
+              onClick={() => {
+                onStay();
+                cycleDensity();
+              }}
+            >
+              <Scaling className="size-3" />
+            </RailBtn>
+            <RailBtn
+              label={spinPaused ? "HOLD" : "SPIN"}
+              title="Idle orbit. HOLD freezes the nave."
+              on={spinPaused}
+              onClick={() => toggleSpinPaused()}
+            >
+              {spinPaused ? <Pause className="size-3" /> : <RotateCw className="size-3" />}
+            </RailBtn>
+            <RailBtn
+              label={muted ? "MUTE" : "SOUND"}
+              title="Mute the anthem and the hive."
+              on={muted}
+              onClick={() => {
+                onMute();
+              }}
+            >
+              {muted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
             </RailBtn>
           </div>
         )}
       </div>
-      <RailBtn
-        label={DENSITY_LABEL[prefs.density]}
-        title="Chrome size. AUTO reads the glass. TIGHT / ROOMY / WATCH."
-        on={density !== "comfort"}
-        onClick={() => {
-          onStay();
-          cycleDensity();
-        }}
-      >
-        <Scaling className="size-3.5" />
-      </RailBtn>
-      <RailBtn
-        label={spinPaused ? "HOLD" : "SPIN"}
-        title="Idle orbit. HOLD freezes the nave."
-        on={spinPaused}
-        onClick={() => toggleSpinPaused()}
-      >
-        {spinPaused ? <Pause className="size-3.5" /> : <RotateCw className="size-3.5" />}
-      </RailBtn>
-      <RailBtn
-        label={muted ? "MUTE" : "SONG"}
-        title="Mute the anthem and the hive."
-        on={muted}
-        onClick={() => {
-          setFly(null);
-          onMute();
-        }}
-      >
-        {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
-      </RailBtn>
       <RailBtn
         label={collapsed ? "SHOW" : "HIDE"}
         title="Fold chrome. Watch the nave."
@@ -259,7 +258,7 @@ export function LeftRail({
           onCollapse();
         }}
       >
-        {collapsed ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+        {collapsed ? <Eye className="size-3" /> : <EyeOff className="size-3" />}
       </RailBtn>
     </nav>
   );
@@ -334,7 +333,7 @@ export function GoalDock({
       data-chrome
       onClick={onExpand}
       className={cn(
-        "nidus-card pointer-events-auto ml-12 mr-2 flex max-w-[24rem] items-center gap-2 px-2.5 py-1.5",
+        "nidus-card pointer-events-auto ml-9 mr-2 flex max-w-[24rem] items-center gap-2 px-2 py-1",
         collapsed && "mb-1",
       )}
       aria-label={verb ? `${goal}. ${verb}` : goal}
