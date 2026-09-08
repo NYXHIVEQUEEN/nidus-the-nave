@@ -39,7 +39,7 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
       { id: "surge", label: "SURGE", line: "Short scream. Mercy after idle lasts longer." },
       { id: "slag", label: "SLAG", line: "Tap ore + spark. Overflow cooks to parts." },
       { id: "hive", label: "HIVE", line: "Mind stamps, builds, raids for you." },
-      { id: "set", label: "SETTINGS", line: "Size, sound, lab, save. Nested under the gear." },
+      { id: "set", label: "SETTINGS", line: "Opens nested rails. SIZE, SOUND, LAB, SAVE." },
       { id: "size", label: "SIZE", line: "In SETTINGS. TIGHT / ROOMY / WATCH." },
       { id: "hide", label: "EYE", line: "Folds chrome. Station stays." },
     ],

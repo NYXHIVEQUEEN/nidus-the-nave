@@ -235,7 +235,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   const prefs = useSyncPrefs();
   const spinPaused = useSyncExternalStore(subscribeSpin, getSpinPaused, getSpinPaused);
   const locked = waking || gift;
-  const { collapsed, setCollapsed, bump } = useIdleChrome(locked || riteOpen || Boolean(guide));
+  const { collapsed, bump, showChrome, toggleHide } = useIdleChrome(locked || riteOpen || Boolean(guide));
   const whispered = useState(() => new Set<string>())[0];
   const s = useNidus();
   const goal = nextGoal(s);
@@ -299,21 +299,14 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
         const st = useNidus.getState();
         if (st.raid) st.watchWell(!st.raid.watching);
       }
-      if (e.code === "KeyH") {
-        if (collapsed) bump();
-        else {
-          setCollapsed(true);
-          patchPrefs({ watchNave: true });
-        }
-      }
+      if (e.code === "KeyH") toggleHide();
       if (e.code === "KeyU") cycleDensity();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [collapsed, bump, setCollapsed, setTab]);
+  }, [toggleHide, setTab]);
 
   const openRitePane = (pane: "opt" | "view" | "codex" | "save") => {
-    bump();
     setRiteStart(pane);
     setRiteOpen(true);
   };
@@ -335,25 +328,18 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
         helpPulse={!helpSeen(tab)}
         density={density}
         onHelp={() => {
-          bump();
           setGuide((g) => (g ? null : tab));
         }}
         onRitePane={openRitePane}
         onStay={bump}
         onMute={() => muteToggle(muted, setMuted)}
-        onCollapse={() => {
-          if (collapsed) bump();
-          else {
-            setCollapsed(true);
-            patchPrefs({ watchNave: true });
-          }
-        }}
+        onCollapse={toggleHide}
       />
       <div className="pointer-events-none relative z-10 flex h-full flex-col">
         <ResourceBar compact={watchChrome || density === "compact"} />
         <div className="min-h-0 flex-1" />
         <div className="px-2 pb-1">
-          <GoalDock goal={goal} stage={stage} collapsed={collapsed} onExpand={bump} verb={tip.verb} why={tip.why} pct={buildPct} />
+          <GoalDock goal={goal} stage={stage} collapsed={collapsed} onExpand={showChrome} verb={tip.verb} why={tip.why} pct={buildPct} />
         </div>
         <div data-chrome className={cn("nidus-sheet", watchChrome && "nidus-sheet-hide")}>
           <p className="px-2 pt-1 text-center text-[0.62rem] tracking-[0.06em] text-muted">{tip.why}</p>
@@ -364,7 +350,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
         <TabBar
           tab={tab}
           setTab={(id) => {
-            bump();
+            showChrome();
             setTab(id);
           }}
         />
@@ -372,7 +358,10 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
       {whisper && prefs.hints && <Whisper text={whisper} onDone={() => setWhisper(null)} />}
       {guide && <GuideSheet screen={guide} onClose={() => setGuide(null)} />}
       {riteOpen && (
-        <div className="pointer-events-auto absolute inset-x-3 bottom-16 z-40" data-chrome>
+        <div
+          className="pointer-events-auto absolute left-[5.4rem] top-[max(3.2rem,calc(env(safe-area-inset-top)+2.4rem))] z-40 w-[min(18rem,calc(100vw-6.2rem))]"
+          data-chrome
+        >
           <SettingsPanel start={riteStart} onClose={() => setRiteOpen(false)} />
         </div>
       )}
@@ -482,14 +471,14 @@ function TabBar({ tab, setTab }: { tab: "hull" | "forge" | "raid" | "minds"; set
     { id: "minds" as const, label: "MINDS" },
   ];
   return (
-    <nav data-chrome className="pointer-events-auto relative z-30 grid grid-cols-4 gap-1 border-t border-border bg-nave/95 px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] pt-1.5">
+    <nav data-chrome className="pointer-events-auto relative z-30 flex gap-2 bg-transparent px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1">
       {tabs.map((t) => (
         <button
           key={t.id}
           type="button"
           onClick={() => setTab(t.id)}
           className={cn(
-            "nidus-cut relative min-h-11 font-display text-[0.7rem] tracking-[0.22em]",
+            "nidus-cut nidus-plate relative min-h-11 flex-1 font-display text-[0.7rem] tracking-[0.22em]",
             tab === t.id ? "nidus-cut-on" : "text-muted",
             pulse((t.id === "forge" && verb === "PRINT") || (t.id === "raid" && (verb === "RAID" || verb === "BOOST")) || (t.id === "minds" && (verb === "WAKE" || verb === "SEAT")) || (t.id === "hull" && (verb === "BUILD" || verb === "SURGE" || verb === "CLAIM"))),
           )}
@@ -554,7 +543,7 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
           ))}
         </div>
       )}
-      <div className="pointer-events-auto flex flex-col gap-1.5">
+      <div className="pointer-events-auto flex flex-col gap-2">
         {ZONES.map((z) => {
           const rows = ROOMS.filter((r) => r.zone === z.id && (r.id === "foundry" || rooms[r.id]?.built || queued === r.id || !roomLockWhy(s, r.id) || r.id === nextRoom?.id));
           if (rows.length === 0) return null;

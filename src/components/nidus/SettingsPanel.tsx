@@ -101,7 +101,7 @@ export function SettingsPanel({
   const hits = CODEX.filter((c) => !q || `${c.title} ${c.body}`.toLowerCase().includes(q.toLowerCase()));
 
   return (
-    <div className="nidus-panel pointer-events-auto max-h-[70dvh] overflow-y-auto p-3">
+    <div className="pointer-events-auto max-h-[70dvh] overflow-y-auto p-2">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="grid grid-cols-4 gap-1">
           {(["view", "opt", "codex", "save"] as const).map((t) => (

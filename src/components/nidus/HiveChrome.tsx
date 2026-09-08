@@ -103,7 +103,7 @@ export function LeftRail({
   onRitePane,
   onMute,
   onCollapse,
-  onStay,
+  onStay: _onStay,
 }: {
   muted: boolean;
   spinPaused: boolean;
@@ -123,19 +123,26 @@ export function LeftRail({
     return Math.abs(prefs.camDist - p.camDist) < 0.6 && Math.abs(prefs.camFov - p.camFov) < 1.5;
   };
   const openFly = (id: "view" | "rite") => {
-    onStay();
     setFly((cur) => (cur === id ? null : id));
   };
 
   return (
     <nav
       data-chrome
-      className="nidus-rail pointer-events-auto absolute left-2 top-[max(3.2rem,calc(env(safe-area-inset-top)+2.4rem))] z-20 flex flex-col gap-1 overflow-visible"
+      className="nidus-rail pointer-events-auto absolute left-2 top-[max(3.2rem,calc(env(safe-area-inset-top)+2.4rem))] z-40 flex flex-row items-start gap-1 overflow-visible"
     >
-      <RailBtn label="HELP" title="This screen — what the buttons do." pulse={helpPulse} onClick={onHelp}>
-        <HelpCircle className="size-3" />
-      </RailBtn>
-      <div className="relative">
+      <div className="flex flex-col gap-1">
+        <RailBtn
+          label="HELP"
+          title="This screen — what the buttons do."
+          pulse={helpPulse}
+          onClick={() => {
+            setFly(null);
+            onHelp();
+          }}
+        >
+          <HelpCircle className="size-3" />
+        </RailBtn>
         <RailBtn
           label="VIEW"
           title="Camera shots. CLOSE to VOID."
@@ -144,39 +151,6 @@ export function LeftRail({
         >
           <Aperture className="size-3" />
         </RailBtn>
-        {fly === "view" && (
-          <div className="nidus-fly" role="menu" aria-label="View shots">
-            {(Object.keys(CAM_PRESETS) as CamPresetId[]).map((id) => {
-              const p = CAM_PRESETS[id];
-              return (
-                <RailBtn
-                  key={id}
-                  label={p.label}
-                  title={p.why}
-                  on={presetOn(id)}
-                  onClick={() => {
-                    applyCamPreset(id);
-                    setFly(null);
-                  }}
-                >
-                  <Aperture className="size-3" />
-                </RailBtn>
-              );
-            })}
-            <RailBtn
-              label="LENS"
-              title="Distance, field, pinch."
-              onClick={() => {
-                setFly(null);
-                onRitePane("view");
-              }}
-            >
-              <SlidersHorizontal className="size-3" />
-            </RailBtn>
-          </div>
-        )}
-      </div>
-      <div className="relative">
         <RailBtn
           label="SETTINGS"
           title="Settings — size, sound, lab, save."
@@ -185,81 +159,85 @@ export function LeftRail({
         >
           <Settings2 className="size-3" />
         </RailBtn>
-        {fly === "rite" && (
-          <div className="nidus-fly" role="menu" aria-label="Settings">
-            <RailBtn
-              label="LAB"
-              title="Rites and hive mind."
-              onClick={() => {
-                setFly(null);
-                onRitePane("opt");
-              }}
-            >
-              <FlaskConical className="size-3" />
-            </RailBtn>
-            <RailBtn
-              label="CODEX"
-              title="Dictionary. Not a lecture."
-              onClick={() => {
-                setFly(null);
-                onRitePane("codex");
-              }}
-            >
-              <BookOpen className="size-3" />
-            </RailBtn>
-            <RailBtn
-              label="SAVE"
-              title="Local pews, export, import."
-              onClick={() => {
-                setFly(null);
-                onRitePane("save");
-              }}
-            >
-              <Save className="size-3" />
-            </RailBtn>
-            <RailBtn
-              label="SIZE"
-              title={`Chrome size. Now ${DENSITY_LABEL[prefs.density]}. Tap to cycle TIGHT / ROOMY / WATCH.`}
-              on={density !== "compact"}
-              onClick={() => {
-                onStay();
-                cycleDensity();
-              }}
-            >
-              <Scaling className="size-3" />
-            </RailBtn>
-            <RailBtn
-              label={spinPaused ? "HOLD" : "SPIN"}
-              title="Idle orbit. HOLD freezes the nave."
-              on={spinPaused}
-              onClick={() => toggleSpinPaused()}
-            >
-              {spinPaused ? <Pause className="size-3" /> : <RotateCw className="size-3" />}
-            </RailBtn>
-            <RailBtn
-              label={muted ? "MUTE" : "SOUND"}
-              title="Mute the anthem and the hive."
-              on={muted}
-              onClick={() => {
-                onMute();
-              }}
-            >
-              {muted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
-            </RailBtn>
-          </div>
-        )}
+        <RailBtn
+          label={collapsed ? "SHOW" : "HIDE"}
+          title="Fold the bottom sheet. Rail stays. SHOW brings it back."
+          on={collapsed}
+          onClick={() => {
+            setFly(null);
+            onCollapse();
+          }}
+        >
+          {collapsed ? <Eye className="size-3" /> : <EyeOff className="size-3" />}
+        </RailBtn>
       </div>
-      <RailBtn
-        label={collapsed ? "SHOW" : "HIDE"}
-        title="Fold chrome. Watch the nave."
-        on={collapsed}
-        onClick={() => {
-          setFly(null);
-          onCollapse();
-        }}
-      >
-        {collapsed ? <Eye className="size-3" /> : <EyeOff className="size-3" />}
-      </RailBtn>
+      {fly === "view" && (
+        <div className="flex flex-col gap-1" role="menu" aria-label="View shots">
+          {(Object.keys(CAM_PRESETS) as CamPresetId[]).map((id) => {
+            const p = CAM_PRESETS[id];
+            return (
+              <RailBtn
+                key={id}
+                label={p.label}
+                title={p.why}
+                on={presetOn(id)}
+                onClick={() => applyCamPreset(id)}
+              >
+                <Aperture className="size-3" />
+              </RailBtn>
+            );
+          })}
+        </div>
+      )}
+      {fly === "rite" && (
+        <div className="flex flex-col gap-1" role="menu" aria-label="Settings">
+          <RailBtn
+            label="SIZE"
+            title={`Chrome size. Now ${DENSITY_LABEL[prefs.density]}.`}
+            on={density !== "compact"}
+            onClick={() => cycleDensity()}
+          >
+            <Scaling className="size-3" />
+          </RailBtn>
+          <RailBtn
+            label={spinPaused ? "HOLD" : "SPIN"}
+            title="Idle orbit. HOLD freezes the nave."
+            on={spinPaused}
+            onClick={() => toggleSpinPaused()}
+          >
+            {spinPaused ? <Pause className="size-3" /> : <RotateCw className="size-3" />}
+          </RailBtn>
+          <RailBtn
+            label={muted ? "MUTE" : "SOUND"}
+            title="Mute the anthem and the hive."
+            on={muted}
+            onClick={() => onMute()}
+          >
+            {muted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
+          </RailBtn>
+          <RailBtn
+            label="LAB"
+            title="Rites and hive mind."
+            onClick={() => onRitePane("opt")}
+          >
+            <FlaskConical className="size-3" />
+          </RailBtn>
+          <RailBtn
+            label="CODEX"
+            title="Dictionary. Not a lecture."
+            onClick={() => onRitePane("codex")}
+          >
+            <BookOpen className="size-3" />
+          </RailBtn>
+          <RailBtn
+            label="SAVE"
+            title="Local pews, export, import."
+            onClick={() => onRitePane("save")}
+          >
+            <Save className="size-3" />
+          </RailBtn>
+        </div>
+      )}
     </nav>
   );
 }
@@ -352,29 +330,34 @@ export function GoalDock({
   );
 }
 
-export function useIdleChrome(locked: boolean) {
+export function useIdleChrome(_locked: boolean) {
   const [collapsed, setCollapsed] = useState(false);
   const [poke, setPoke] = useState(0);
   const prefs = useSyncPrefs();
-  const bump = () => {
+  const bump = () => setPoke((n) => n + 1);
+  const showChrome = () => {
     setCollapsed(false);
     patchPrefs({ watchNave: false });
     setPoke((n) => n + 1);
   };
+  const toggleHide = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      patchPrefs({ watchNave: next });
+      return next;
+    });
+    setPoke((n) => n + 1);
+  };
   useEffect(() => {
-    if (locked || !prefs.autoHide) {
-      setCollapsed(false);
-      patchPrefs({ watchNave: false });
-      return;
-    }
+    if (!prefs.autoHide || collapsed) return;
     const t = window.setTimeout(() => {
       setCollapsed(true);
       patchPrefs({ watchNave: true });
       if (!helpSeen("idle") && prefs.hints) markHelp("idle");
     }, 8000);
     return () => window.clearTimeout(t);
-  }, [poke, locked, prefs.autoHide, prefs.hints]);
-  return { collapsed, setCollapsed, bump, autoHide: prefs.autoHide };
+  }, [poke, prefs.autoHide, prefs.hints, collapsed]);
+  return { collapsed, setCollapsed, bump, showChrome, toggleHide, autoHide: prefs.autoHide };
 }
 
 export function useSyncPrefs() {
