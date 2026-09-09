@@ -425,7 +425,7 @@ function ResourceBar({ compact }: { compact: boolean }) {
         <Chip label="CUT" value={fmt(credits ?? 0)} sub={`${fmt((r.creditsPerSec ?? 0) * 60)}/m`} cap={Math.max(80, (credits ?? 0) + 40)} cur={credits ?? 0} venom onTap={setOpen} />
         <Chip label="ORE" value={fmt(ore)} sub={`${fmt(r.orePerSec * 60)}/m`} cap={oreCap(s)} cur={ore} onTap={setOpen} />
         <Chip label="PARTS" value={fmt(parts)} sub={`${fmt(r.partsPerSec * 60)}/m`} cap={partsCap(s)} cur={parts} onTap={setOpen} />
-        <Chip label="CHARGE" value={fmt(charge)} sub={`${r.chargeGen - r.chargeDrain >= 0 ? "+" : ""}${fmt((r.chargeGen - r.chargeDrain) * 60)}/m`} cap={chargeCap(s)} cur={charge} venom starve={starve} onTap={setOpen} />
+        <Chip label="SPIRIT" value={fmt(charge)} sub={`${r.chargeGen - r.chargeDrain >= 0 ? "+" : ""}${fmt((r.chargeGen - r.chargeDrain) * 60)}/m`} cap={chargeCap(s)} cur={charge} venom starve={starve} onTap={setOpen} />
         <Chip label="SPARK" value={waking ? "CALL" : sparkBanked(s) ? "BANK" : `${Math.floor(spark)}`} sub={`+${fmt(r.sparkPerSec * 60)}/m`} cap={wakeNeed(s)} cur={spark} venom onTap={setOpen} />
         {echo > 0 && (
           <button type="button" className="text-left" onClick={() => setOpen(open === "ECHO" ? null : "ECHO")}>
@@ -462,10 +462,10 @@ function Chip({
   label, value, sub, cap, cur, venom, starve, onTap,
 }: { label: string; value: string; sub?: string; cap: number; cur: number; venom?: boolean; starve?: boolean; onTap: (k: string | null) => void }) {
   return (
-    <button type="button" className={cn("min-w-[3.2rem] shrink-0 text-left", starve && "nidus-pulse", cur / cap > 0.92 && "nidus-cap")} title={cur / cap > 0.92 ? `${label} packed` : undefined} onClick={() => onTap(label)}>
-      <p className="text-[0.55rem] tracking-[0.18em] text-muted">{label}</p>
-      <p className={cn("font-display text-xs tabular-nums", venom ? "text-venom" : "text-bone")}>{value}</p>
-      {sub && <p className="text-[0.55rem] tabular-nums text-gilt-dim">{sub}</p>}
+    <button type="button" className={cn("min-w-[2.4rem] shrink-0 text-left", starve && "nidus-pulse", cur / cap > 0.92 && "nidus-cap")} title={gloss(label) || `${label}`} onClick={() => onTap(label)}>
+      <p className="text-[0.48rem] tracking-[0.14em] text-muted">{label}</p>
+      <p className={cn("font-display text-[0.7rem] tabular-nums", venom ? "text-venom" : "text-bone")}>{value}</p>
+      {sub && <p className="text-[0.48rem] tabular-nums text-gilt-dim">{sub}</p>}
       <div className="mt-0.5 h-0.5 w-10 bg-iron">
         <div className={cn("h-0.5", venom ? "bg-venom" : "bg-gilt")} style={{ width: `${Math.min(100, (cur / cap) * 100)}%` }} />
       </div>
@@ -505,7 +505,7 @@ function RaidRail() {
           <button type="button" className={cn("nidus-cut mb-1 min-h-9 w-full font-display text-[0.52rem] tracking-[0.12em]", watching && "nidus-cut-venom")} onClick={() => watchWell(!watching)}>
             {watching ? "WATCHING" : "WATCH"}
           </button>
-          <button type="button" disabled={boosted || s.charge < 8} className={cn("nidus-cut min-h-9 w-full font-display text-[0.52rem] tracking-[0.12em]", boosted && "nidus-cut-gilt")} onClick={() => { boostWell(); chime("surge"); }}>
+          <button type="button" disabled={boosted || s.charge < 5} title="Spend 5 SPIRIT. 20s command." className={cn("nidus-cut min-h-8 w-full font-display text-[0.48rem] tracking-[0.12em]", boosted && "nidus-cut-gilt")} onClick={() => { boostWell(); chime("surge"); }}>
             {boosted ? "FIRE" : "BOOST"}
           </button>
         </div>
@@ -550,14 +550,14 @@ function TabBar({ tab, setTab }: { tab: Tab; setTab: (id: Tab) => void }) {
     { id: "minds", label: "MINDS" },
   ];
   return (
-    <nav data-chrome className="pointer-events-auto relative z-30 flex gap-1 bg-transparent px-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1">
+    <nav data-chrome className="pointer-events-auto relative z-30 flex gap-1 bg-transparent px-2 pb-[max(0.28rem,env(safe-area-inset-bottom))] pt-0.5">
       {tabs.map((t) => (
         <button
           key={t.id}
           type="button"
           onClick={() => setTab(t.id)}
           className={cn(
-            "nidus-cut relative flex h-9 min-h-9 min-w-0 flex-1 items-center justify-center font-display text-[0.52rem] tracking-[0.12em]",
+            "nidus-cut relative flex h-7 min-h-7 min-w-0 flex-1 items-center justify-center font-display text-[0.46rem] tracking-[0.1em]",
             tab === t.id ? "nidus-cut-on" : "text-muted",
             pulse(
               (t.id === "forge" && verb === "PRINT") ||
@@ -695,13 +695,13 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
       <div className="pointer-events-auto nidus-actions">
         <button
           type="button"
-          disabled={surging}
+          disabled={surging || s.charge < 6}
           onClick={() => {
             surge();
             chime("surge");
           }}
-          className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.75rem] tracking-[0.32em]", surging ? "nidus-cut-venom" : "nidus-cut-on", pulse(verb === "SURGE" || (mercy && !surging)))}
-          title={mercy && !surging ? "Comeback scream. Lasts longer." : "Short scream. All rates spike."}
+          className={cn("nidus-cut min-h-9 flex-1 font-display text-[0.62rem] tracking-[0.24em]", surging ? "nidus-cut-venom" : "nidus-cut-on", pulse(verb === "SURGE" || (mercy && !surging)))}
+          title={s.charge < 6 ? "Need 6 SPIRIT." : mercy && !surging ? "Spend 6 SPIRIT. Longer sprint." : "Spend 6 SPIRIT. Swarm sprints ~30s."}
         >
           <span className="inline-flex items-center justify-center gap-1"><Zap className="size-3.5" />{surging ? "SURGING" : mercy ? "MERCY" : "SURGE"}</span>
         </button>
@@ -977,7 +977,7 @@ function RaidTab({ verb, compact }: { verb: string; compact: boolean }) {
               <button type="button" title={watching ? "Leave — fleet still fights at 18% bonus." : "Watching cuts 18% faster."} className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.7rem] tracking-[0.16em]", watching ? "nidus-cut-venom" : "", pulse(verb === "RAID" && !watching))} onClick={() => watchWell(!watching)}>
                 {watching ? "WATCHING" : "WATCH"}
               </button>
-              <button type="button" disabled={boosted || s.charge < 8} title="Spends 8 charge. Twenty seconds of command." className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.7rem] tracking-[0.16em]", boosted ? "nidus-cut-gilt" : "text-gilt", pulse(verb === "BOOST"))} onClick={() => { boostWell(); chime("surge"); }}>
+              <button type="button" disabled={boosted || s.charge < 5} title="Spend 5 SPIRIT. 20s command." className={cn("nidus-cut min-h-9 flex-1 font-display text-[0.62rem] tracking-[0.16em]", boosted ? "nidus-cut-gilt" : "text-gilt", pulse(verb === "BOOST"))} onClick={() => { boostWell(); chime("surge"); }}>
                 {boosted ? "COMMAND" : "BOOST"}
               </button>
             </div>
@@ -1172,8 +1172,8 @@ function MindsTab({ compact }: { compact: boolean }) {
         </button>
         <button
           type="button"
-          disabled={!mind.wounded || s.charge < (s.tech.flesh2?.done ? 2 : s.tech.mindheal?.done ? 4 : 8)}
-          title="Charge mends a wound."
+          disabled={!mind.wounded || s.charge < (s.tech.flesh2?.done ? 1 : s.tech.mindheal?.done ? 2 : 4)}
+          title="Spend SPIRIT. Clears the wound."
           className="nidus-cut nidus-iconbtn text-venom disabled:opacity-40"
           onClick={() => {
             useNidus.getState().heal(mind.id);
@@ -1253,7 +1253,7 @@ function GiftOverlay() {
         <p className="mt-1 font-display text-lg tabular-nums text-bone">
           {fmt(gift.ore)} ORE · {fmt(gift.parts)} PARTS · +{gift.spark} SPARK
         </p>
-        {mercy && <p className="mt-1 text-[0.7rem] text-muted">CLAIM banks a mercy SURGE and a lick of charge.</p>}
+        {mercy && <p className="mt-1 text-[0.62rem] text-muted">CLAIM banks a mercy SURGE and a lick of SPIRIT.</p>}
         <button type="button" className="nidus-cut nidus-cut-on mt-3 min-h-11 w-full font-display tracking-[0.28em] text-bone" onClick={() => { claim(); chime("claim"); }}>
           CLAIM
         </button>

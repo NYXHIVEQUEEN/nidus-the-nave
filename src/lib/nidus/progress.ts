@@ -117,7 +117,7 @@ export const SALVAGE_COOK: Record<
 > = {
   ice: { need: 2, ore: 42, label: "MELT", line: "Ice becomes ore." },
   plate: { need: 2, parts: 26, label: "STAMP", line: "Plate becomes parts." },
-  bone: { need: 2, charge: 28, spark: 5, label: "BURN", line: "Bone feeds charge." },
+  bone: { need: 2, charge: 6, spark: 2, label: "BURN", line: "Bone feeds SPIRIT." },
   rose: { need: 1, spark: 16, label: "DRINK", line: "Rose fills SPARK." },
   core: { need: 1, echo: 2, label: "CRACK", line: "Core becomes Echo." },
 };

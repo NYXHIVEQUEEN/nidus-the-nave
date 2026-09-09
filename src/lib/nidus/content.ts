@@ -127,7 +127,7 @@ export const ZONES: { id: ZoneId; label: string; hint: string }[] = [
 
 export const ROOMS: RoomSpec[] = [
   { id: "foundry", label: "FOUNDRY", parts: 0, work: 0, blurb: "The stamp.", bonus: "Prints drones.", tier: 0, zone: "spine" },
-  { id: "solar", label: "SOLAR SPINE", parts: 14, work: 28, blurb: "Charge blood.", bonus: "+charge /s", tier: 0, zone: "spine" },
+  { id: "solar", label: "SOLAR SPINE", parts: 14, work: 28, blurb: "Makes SPIRIT.", bonus: "+spirit /s", tier: 0, zone: "spine" },
   { id: "orebay", label: "ORE BAY", parts: 22, work: 42, requires: "solar", blurb: "Ice hold.", bonus: "+ore cap", tier: 1, zone: "hold" },
   { id: "barracks", label: "BARRACKS", parts: 26, work: 52, requires: "solar", blurb: "Berths.", bonus: "+18 pop", tier: 1, zone: "nave" },
   { id: "silo", label: "SILO", parts: 38, work: 70, requires: "orebay", blurb: "Idle vault.", bonus: "+offline hrs", tier: 2, zone: "hold" },
@@ -143,7 +143,7 @@ export const ROOMS: RoomSpec[] = [
   { id: "choir", label: "CHOIR", parts: 58, work: 96, requires: "nerve", blurb: "Pews sing.", bonus: "minds XP faster", tier: 3, zone: "nave" },
   { id: "vault", label: "VAULT", parts: 70, work: 120, requires: "silo", blurb: "Deep hold.", bonus: "fat caps", tier: 3, zone: "hold" },
   { id: "crypt", label: "CRYPT", parts: 66, work: 110, requires: "hangar", also: "lab", blurb: "Echo cellar.", bonus: "+echo on death", tier: 3, zone: "crypt" },
-  { id: "spire", label: "SPIRE", parts: 78, work: 140, requires: "gundeck", blurb: "Lancet tower.", bonus: "+fleet +charge", tier: 4, zone: "fleet" },
+  { id: "spire", label: "SPIRE", parts: 78, work: 140, requires: "gundeck", blurb: "Lancet tower.", bonus: "+fleet +spirit", tier: 4, zone: "fleet" },
   { id: "apse", label: "APSE", parts: 96, work: 170, requires: "reliquary", needMolt: 1, blurb: "Molt mouth.", bonus: "cheaper molt", tier: 4, zone: "crypt" },
   { id: "mill", label: "STAMP MILL", parts: 32, work: 58, requires: "orebay", blurb: "Parts to CUT.", bonus: "sells robotics", tier: 1, zone: "spine" },
   { id: "refinery", label: "REFINERY", parts: 48, work: 84, requires: "mill", blurb: "Cut the slag.", bonus: "+CUT /s", tier: 2, zone: "hold" },
@@ -215,7 +215,7 @@ export const TECH: TechSpec[] = [
   { id: "mindxp2", label: "DEEP FRAME", work: 165, parts: 42, blurb: "Commanders rank faster.", requires: "framexp", needRoom: "choir", tier: 3 },
   { id: "moltcheap", label: "SOFT MOLT", work: 180, parts: 48, blurb: "Molt costs less Echo.", requires: "moltlock", tier: 3 },
   { id: "berthdeep", label: "BONE BERTHS", work: 170, parts: 44, blurb: "+22 pop cap.", requires: "huskbeds", tier: 3 },
-  { id: "solar2", label: "TWIN SPINE", work: 155, parts: 38, blurb: "Second charge vein.", requires: "solarfeed", tier: 2 },
+  { id: "solar2", label: "TWIN SPINE", work: 155, parts: 38, blurb: "Second spirit vein.", requires: "solarfeed", tier: 2 },
   { id: "slagvein", label: "SLAG VEIN", work: 100, parts: 22, blurb: "Slag rains ore.", requires: "slagplus", tier: 1 },
   { id: "salvage2", label: "GREED EYE", work: 170, parts: 44, blurb: "Salvage cooks richer.", requires: "salvage", tier: 2 },
   { id: "flesh2", label: "DEEP WICK", work: 140, parts: 34, blurb: "Heal almost free.", requires: "mindheal", tier: 2 },
@@ -247,7 +247,7 @@ export function defaultState(now = Date.now()): GameState {
     parts: 36,
     credits: 18,
     autoSell: true,
-    charge: 52,
+    charge: 10,
     spark: 0,
     sparkNeed: 16,
     echo: 0,
@@ -353,12 +353,12 @@ export function partsCap(s: GameState): number {
 
 export function chargeCap(s: GameState): number {
   return (
-    90 +
-    (s.rooms.solar?.built ? 160 : 0) +
-    (s.rooms.silo?.built ? 90 : 0) +
-    (s.rooms.spire?.built ? 70 : 0) +
-    (s.rooms.solar.rank ?? 0) * 24 +
-    (s.tech.solar2?.done ? 80 : 0)
+    16 +
+    (s.rooms.solar?.built ? 10 : 0) +
+    (s.rooms.solar?.rank ?? 0) * 4 +
+    (s.rooms.silo?.built ? 6 : 0) +
+    (s.rooms.spire?.built ? 5 : 0) +
+    (s.tech.solar2?.done ? 6 : 0)
   );
 }
 
@@ -420,7 +420,7 @@ function jobBonus(s: GameState, job: Job): number {
 export function rates(s: GameState, now: number) {
   const surge = now < s.surgeUntil ? (s.tech.longsurge?.done ? 7.2 : s.tech.surgeplus?.done ? 6.2 : 5.2) : 1;
   const molt = 1 + s.moltLayer * 0.28;
-  const chargeFactor = s.charge <= 1 ? (s.rooms.solar?.built ? 0.28 : 0.44) : Math.min(1, s.charge / 12);
+  const chargeFactor = s.charge <= 2 ? 0.48 : Math.min(1, s.charge / 8);
   const hum = 1.12 + Math.min(0.5, s.hiveAge / 720);
   const idle = 1.28;
   const lvl = (c: Caste) => Math.pow(1.12, s.casteLevel?.[c] ?? 0);
@@ -497,13 +497,17 @@ export function rates(s: GameState, now: number) {
     hum *
     (1 + s.minds.filter((m) => m.alive && m.seated).length * 0.08);
   const chargeGen =
-    0.12 +
-    (s.rooms.solar?.built ? 0.42 : 0) +
-    (s.rooms.solar.rank ?? 0) * 0.1 +
-    (s.rooms.spire?.built ? 0.12 : 0) +
-    (s.tech.solarfeed?.done ? 0.18 : 0) +
-    (s.tech.solar2?.done ? 0.22 : 0);
-  const chargeDrain = 0.0016 * totalSwarm(s) + (s.minds.some((m) => m.fracture.includes("Burns charge")) ? 0.02 : 0);
+    0.026 +
+    (s.rooms.solar?.built ? 0.048 : 0) +
+    (s.rooms.solar?.rank ?? 0) * 0.01 +
+    (s.rooms.spire?.built ? 0.014 : 0) +
+    (s.tech.solarfeed?.done ? 0.012 : 0) +
+    (s.tech.solar2?.done ? 0.016 : 0);
+  const chargeDrain =
+    0.016 +
+    0.0055 * totalSwarm(s) +
+    (now < s.surgeUntil ? 0.04 : 0) +
+    (s.minds.some((m) => m.fracture.includes("Burns charge")) ? 0.02 : 0);
   const zHold = 1 + (s.zoneRank?.hold ?? 0) * 0.04;
   const zSpine = 1 + (s.zoneRank?.spine ?? 0) * 0.04;
   const zNave = 1 + (s.zoneRank?.nave ?? 0) * 0.04;

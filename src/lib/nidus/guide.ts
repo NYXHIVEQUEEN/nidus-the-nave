@@ -36,10 +36,10 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
     verbs: [
       { id: "goal", label: "GOLD CHIP", line: "The one next verb." },
       { id: "rooms", label: "NODES", line: "Tap a dark room to raise it. Tap a lit room to RANK it." },
-      { id: "surge", label: "SURGE", line: "Short scream. Mercy after idle lasts longer." },
+      { id: "surge", label: "SURGE", line: "Spends 6 SPIRIT. Swarm sprints ~30s." },
       { id: "slag", label: "SLAG", line: "Tap ore + spark. Overflow cooks to parts." },
       { id: "hive", label: "HIVE", line: "Mind stamps, builds, raids for you." },
-      { id: "set", label: "SETTINGS", line: "Opens nested rails. SIZE, SOUND, LAB, SAVE." },
+      { id: "set", label: "SETTINGS", line: "Opens nested rails. SIZE, SOUND, SAVE." },
       { id: "size", label: "SIZE", line: "In SETTINGS. TIGHT / ROOMY / WATCH." },
       { id: "hide", label: "EYE", line: "Folds chrome. Station stays." },
     ],
@@ -56,6 +56,16 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
       { id: "mark", label: "MARK", line: "Ranks that caste. Strikers hit harder." },
     ],
   },
+  lab: {
+    id: "lab",
+    title: "LAB",
+    blurb: "Rites inlay bonuses. Lab room first.",
+    verbs: [
+      { id: "rite", label: "RITE", line: "Spend parts. One rite cooks at a time." },
+      { id: "lock", label: "LOCKED", line: "Needs the Lab module, or a prior rite." },
+      { id: "done", label: "DONE", line: "Permanent. Hive keeps it on molt." },
+    ],
+  },
   raid: {
     id: "raid",
     title: "RAID",
@@ -63,7 +73,7 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
     verbs: [
       { id: "send", label: "SEND", line: "Tap an open wreck. Hulls leave." },
       { id: "watch", label: "WATCH", line: "18% faster cut. Leave — it still fights." },
-      { id: "boost", label: "BOOST", line: "Spends charge. Command bonus." },
+      { id: "boost", label: "BOOST", line: "Spends 5 SPIRIT. Twenty seconds of command." },
       { id: "farm", label: "FARM", line: "Cleared wrecks pay again. Nested stay locked." },
       { id: "lock", label: "LOCKED", line: "Needs a prior wreck or room." },
     ],
@@ -76,7 +86,7 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
       { id: "pick", label: "WAKE", line: "Three bodies. One commander stays. She starts PACING." },
       { id: "post", label: "POST", line: "MINE ore. MAKE parts. BUILD rooms. LAB spark. RAID hulls." },
       { id: "seat", label: "SEAT", line: "Full boost. Number is the live % on that rate." },
-      { id: "heal", label: "HEAL", line: "Wounded commanders cut the boost." },
+      { id: "heal", label: "HEAL", line: "Spends SPIRIT. Wounded cut her boost." },
       { id: "mark", label: "MARK", line: "Echo ranks her. UNMAKE if she sours." },
     ],
   },
@@ -115,21 +125,22 @@ export function mindPostLine(mind: Pick<Mind, "job" | "seated" | "wounded" | "le
 }
 
 const GLOSS: Record<string, string> = {
-  ORE: "Ice and wreck-slag. Caps without Ore Bay.",
-  PARTS: "Fabs chew ore. Rooms eat parts.",
-  CHARGE: "Spine blood. Low charge starves every rate.",
-  SPARK: "Banks until the spine lights. Then three bodies. One stays.",
-  ECHO: "Fallen minds. Fuel for molt.",
+  ORE: "Mined ice. Fabs eat it. Sell extra for CUT.",
+  PARTS: "Forged bits. Rooms and rites spend these.",
+  SPIRIT: "Hive will. SURGE, BOOST, HEAL, PRINT sip it. Empty = swarm crawls.",
+  CHARGE: "Hive will. SURGE, BOOST, HEAL, PRINT sip it. Empty = swarm crawls.",
+  SPARK: "Banks until Solar. Then CALL one officer.",
+  ECHO: "Fallen minds. Spend to molt.",
   RANK: "Hive layer. Rooms, rites, wrecks, molt.",
   ICE: "Melt two ice for ore.",
   PLATE: "Stamp two plate for parts.",
-  BONE: "Burn two bone for charge.",
+  BONE: "Burn two bone for SPIRIT.",
   ROSE: "Drink a rose for SPARK.",
   CORE: "Crack a core for Echo.",
-  SIZE: "TIGHT packs chrome. ROOMY breathes. WATCH hides it. AUTO reads the glass.",
-  LOCAL: "Three rotating snapshots every two minutes. Oldest burns. EXPORT in RITE → SAVE.",
-  CUT: "Universal credits. Sell ore and robotics. Ranks, marks, expand, zones spend CUT.",
-  SONG: "One bed. ANTHEM is Nyx. VOID is space until more of her cuts.",
+  SIZE: "TIGHT packs chrome. ROOMY breathes. WATCH hides it.",
+  LOCAL: "Three local snapshots. Oldest burns. No cloud.",
+  CUT: "Credits. Sell ore and parts. Ranks and expand spend CUT.",
+  SONG: "One bed. ANTHEM is Nyx. VOID is space.",
 };
 
 export function gloss(label: string): string {
@@ -168,7 +179,7 @@ export function sparkBanked(s: GameState): boolean {
 }
 
 export function chargeStarve(s: GameState): boolean {
-  return s.charge < 8;
+  return s.charge < 4;
 }
 
 /** Quiet first-look line. One shot. Not a tutorial tree. */
@@ -176,6 +187,7 @@ export function firstWhisper(id: GuideId): string {
   if (id === "wake") return "WAKE opens the nave.";
   if (id === "hull") return "Gold chip is the next verb. SIZE packs chrome.";
   if (id === "forge") return "PRINT stamps. Same caste stacks FOCUS.";
+  if (id === "lab") return "Rites live here. Not in SETTINGS.";
   if (id === "raid") return "First ice is a short cut. WATCH pays.";
   if (id === "minds") return "SEAT her. The % is the live post.";
   return "Pinch empty glass. EYE hides chrome.";

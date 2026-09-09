@@ -145,15 +145,16 @@ test("first ice raid is a shorter tutorial wreck", () => {
   assert.ok((next.raid?.endsAt ?? 0) - now < 32_000);
 });
 
-test("mercy surge lasts longer then clears the flag", () => {
-  const s = defaultState();
-  s.mercySurge = true;
+test("surge spends spirit and a dry hive cannot scream", () => {
   const now = 1_000_000;
-  const next = startSurge(s, now);
-  assert.equal(next.mercySurge, false);
-  assert.ok(next.surgeUntil - now > 32_000);
-  const plain = startSurge(defaultState(), now);
-  assert.equal(plain.surgeUntil - now, 32_000);
+  const dry = defaultState();
+  dry.charge = 2;
+  assert.equal(startSurge(dry, now).surgeUntil, dry.surgeUntil);
+  const wet = defaultState();
+  wet.charge = 10;
+  const next = startSurge(wet, now);
+  assert.ok(next.charge < 10);
+  assert.equal(next.surgeUntil - now, 32_000);
 });
 
 test("claim gift banks charge and mercy", () => {

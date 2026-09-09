@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
 import { useNidus } from "@/lib/nidus/store";
 import { CASTES, FRAMES, RAIDS, ROOMS, TECH } from "@/lib/nidus/content";
-import { techUnlocked } from "@/lib/nidus/progress";
 import {
   applyCamPreset,
   bumpCam,
@@ -23,12 +22,12 @@ import { openNyxSpotify, setMusicBed, syncAudioGains } from "@/lib/nidus/audio";
 const CODEX: { id: string; title: string; body: string }[] = [
   { id: "hive", title: "HIVE", body: "You are the lone brain. Drones are meat. Minds are rare sparks that wake and take a body." },
   { id: "scripts", title: "HIVE MIND", body: "Flip HIVE on the hull. The nave prints, builds, rites, and raids without a guide. You can still steer." },
-  { id: "watch", title: "WATCH", body: "A raid orbits a wreck. WATCH to see the well. BOOST spends charge. Leave — it still fights." },
+  { id: "watch", title: "WATCH", body: "A raid orbits. WATCH to see it. BOOST spends SPIRIT. Leave — it still fights." },
   { id: "mark", title: "MARK", body: "Striker hulls rank DART → RELIQUARY. Spend ore and parts. Bigger mark, harder well." },
   { id: "slot", title: "SLOTS", body: "Three local pews besides the live hive. STASH copies. LOAD swaps. Live save is never wiped by a slot." },
   { id: "ore", title: "ORE", body: "Mined ice and wreck-slag. Caps if you skip the Ore Bay." },
   { id: "parts", title: "PARTS", body: "Fabs chew ore into parts. Rooms and prints eat parts." },
-  { id: "charge", title: "CHARGE", body: "The spine’s blood. Low charge starves every rate. Raise Solar." },
+  { id: "spirit", title: "SPIRIT", body: "Hive will. SURGE, BOOST, HEAL, PRINT sip it. Empty swarm crawls. Raise Solar." },
   { id: "song", title: "SONG", body: "One bed. ANTHEM is Rules of Engagement — Nytheria Nyx. VOID is a space pad until more of her cuts. The hive never stacks the anthem on itself. NYX ON SPOTIFY opens her catalog. Spotify cannot play inside the nave." },
   { id: "echo", title: "ECHO", body: "Residue of unmade or fallen minds. Fuel for Molt." },
   { id: "print", title: "PRINT", body: "Stamp a caste. AUTO keeps stamping while you are gone." },
@@ -92,10 +91,6 @@ export function SettingsPanel({
   const toggleAutoRaid = useNidus((s) => s.toggleAutoRaid);
   const toggleAutoRite = useNidus((s) => s.toggleAutoRite);
   const toggleAuto = useNidus((s) => s.toggleAuto);
-  const research = useNidus((s) => s.research);
-  const active = useNidus((s) => s.activeTech);
-  const tech = useNidus((s) => s.tech);
-  const lab = useNidus((s) => Boolean(s.rooms.lab?.built));
   const fileRef = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState("");
   const hits = CODEX.filter((c) => !q || `${c.title} ${c.body}`.toLowerCase().includes(q.toLowerCase()));
@@ -181,31 +176,7 @@ export function SettingsPanel({
             <Toggle on={autoRite} label="RITE" onClick={() => toggleAutoRite()} />
             <Toggle on={prefs.hints} label="HINTS" onClick={() => patchPrefs({ hints: !prefs.hints })} />
           </div>
-          <p className="text-[0.7rem] text-muted">HIVE stamps, raises, rites, and raids so you do not need a guide.</p>
-          <p className="font-display text-xs tracking-[0.2em] text-gilt">RITES</p>
-          {!lab && <p className="text-sm text-muted">Raise the Lab first.</p>}
-          <div className="grid grid-cols-2 gap-2">
-            {TECH.map((t) => {
-              const st = tech[t.id];
-              const lock = techUnlocked(useNidus.getState(), t.id);
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  disabled={!lab || st.done || !lock.ok}
-                  onClick={() => research(t.id)}
-                  className={cn(
-                    "nidus-cut px-2 py-2 text-left",
-                    st.done ? "nidus-cut-gilt" : active === t.id ? "text-venom" : lock.ok ? "text-bone" : "text-iron",
-                  )}
-                >
-                  <p className="font-display text-[0.65rem] tracking-[0.16em]">{t.label}</p>
-                  <p className="text-[0.65rem] text-muted">{lock.ok || st.done ? t.blurb : lock.why}</p>
-                  <p className="text-[0.7rem] tabular-nums text-muted">{st.done ? "DONE" : `${Math.floor((st.progress / t.work) * 100)}% · T${t.tier}`}</p>
-                </button>
-              );
-            })}
-          </div>
+          <p className="text-[0.7rem] text-muted">HIVE stamps, raises, rites, and raids so you do not need a guide. Rites live on the LAB tab.</p>
         </div>
       )}
 
@@ -365,8 +336,8 @@ function ViewMenu({ prefs }: { prefs: ViewPrefs }) {
         label="UI SCALE"
         why="Shrinks chrome without hiding verbs. Live."
         value={prefs.uiScale}
-        min={0.88}
-        max={1.22}
+        min={0.5}
+        max={1}
         step={0.01}
         display={prefs.uiScale.toFixed(2)}
         onChange={(v) => patchPrefs({ uiScale: v })}

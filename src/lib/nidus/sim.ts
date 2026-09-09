@@ -385,7 +385,7 @@ function tickInner(s: GameState, now: number): GameState {
     next.eventKind = kind;
     next.eventUntil = now + gap;
     if (kind === "PULSAR") {
-      next.charge += 16 + (next.rooms.solar.rank ?? 0) * 5;
+      next.charge += 4 + (next.rooms.solar?.rank ?? 0);
       pushLog(next, "Pulsar cone drinks the spine.");
     } else if (kind === "GROAN") {
       next.parts += 10 + next.swarm.builder;
@@ -402,7 +402,7 @@ function tickInner(s: GameState, now: number): GameState {
       pushLog(next, "A rose opens in the cloister.");
     } else if (kind === "ECLIPSE") {
       next.echo += 1;
-      next.charge = Math.max(8, next.charge - 6);
+      next.charge = Math.max(2, next.charge - 3);
       pushLog(next, "The pulsar hides. Echo beads.");
     } else {
       next.spark += 6;
@@ -520,6 +520,7 @@ export function tryPrint(s: GameState): GameState {
   }
   next.ore -= cost.ore;
   next.parts -= cost.parts;
+  if (next.charge > 0.4) next.charge -= 0.35;
   next.swarm[next.printCaste] += 1;
   next.printed += 1;
   noteFocus(next, next.printCaste);
@@ -674,8 +675,8 @@ export function boostRaid(s: GameState, now: number): GameState {
   const next = cloneState(s);
   if (!next.raid) return next;
   if (now < next.raid.boostUntil) return next;
-  if (next.charge < 8) return next;
-  next.charge -= 8;
+  if (next.charge < 5) return next;
+  next.charge -= 5;
   next.raid.boostUntil = now + 20000;
   next.raid.beat = "COMMAND";
   return next;
@@ -692,8 +693,11 @@ export function upMark(s: GameState, caste: GameState["printCaste"]): GameState 
 export function startSurge(s: GameState, now: number): GameState {
   const next = cloneState(s);
   if (now < next.surgeUntil) return next;
+  const cost = 6;
+  if (next.charge < cost) return next;
+  next.charge -= cost;
   const mercy = next.mercySurge;
-  const dur = next.tech.longsurge?.done ? 58000 : next.tech.surgeplus.done ? 45000 : 32000;
+  const dur = next.tech.longsurge?.done ? 58000 : next.tech.surgeplus?.done ? 45000 : 32000;
   next.surgeUntil = now + Math.round(dur * (mercy ? 1.35 : 1));
   next.mercySurge = false;
   credit(next, "surge");
@@ -805,7 +809,7 @@ export function healMind(s: GameState, mindId: string): GameState {
   const next = cloneState(s);
   const m = next.minds.find((x) => x.id === mindId);
   if (!m || !m.alive || !m.wounded) return next;
-  const cost = next.tech.flesh2?.done ? 2 : next.tech.mindheal?.done ? 4 : 8;
+  const cost = next.tech.flesh2?.done ? 1 : next.tech.mindheal?.done ? 2 : 4;
   if (next.charge < cost) return next;
   next.charge -= cost;
   m.wounded = false;
