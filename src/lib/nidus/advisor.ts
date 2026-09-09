@@ -8,7 +8,7 @@ export function advise(s: GameState): Advice {
   if (s.waking) return { chip: "A BODY ANSWERS", why: "TAKE or PASS. One officer.", verb: "WAKE" };
   if (s.pendingGift) return { chip: "CLAIM THE CUT", why: "Idle haul waiting.", verb: "CLAIM" };
   if (!s.rooms.solar?.built) return { chip: "RAISE SOLAR", why: "No spine, no blood. SPARK banks until it lights.", verb: "BUILD" };
-  if (s.charge < 4) return { chip: "RAISE SOLAR", why: "SPIRIT is empty. Swarm crawls.", verb: "BUILD" };
+  if (s.spark < 4) return { chip: "RAISE SOLAR", why: "SPARK is empty. Swarm crawls.", verb: "BUILD" };
   const live = s.minds.filter((m) => m.alive).length;
   if (live === 0)
     return { chip: "CALL AN OFFICER", why: "SPARK buys one body. TAKE or PASS.", verb: "WAKE" };
@@ -16,11 +16,11 @@ export function advise(s: GameState): Advice {
     return { chip: "CALL AN OFFICER", why: "Another seat if you spend SPARK.", verb: "WAKE" };
   if (s.minds.some((m) => m.alive) && !s.minds.some((m) => m.alive && m.seated))
     return { chip: "SEAT YOUR COMMANDER", why: "Pacing is half. SEAT for the full post.", verb: "SEAT" };
-  if (s.mercySurge && Date.now() >= s.surgeUntil && s.charge >= 6)
-    return { chip: "MERCY SURGE", why: "Spend 6 SPIRIT. Comeback sprint.", verb: "SURGE" };
+  if (s.mercySurge && Date.now() >= s.surgeUntil && s.spark >= 8)
+    return { chip: "MERCY SURGE", why: "Spend 8 SPARK. Comeback sprint.", verb: "SURGE" };
   if (s.raid) {
     if (!s.raid.watching) return { chip: "WATCH OR BOOST", why: "Fleet is in the well. You can leave; it still fights.", verb: "RAID" };
-    return { chip: "COMMAND THE WELL", why: "BOOST spends 5 SPIRIT. Leave and it still fights.", verb: "BOOST" };
+    return { chip: "COMMAND THE WELL", why: "BOOST spends 6 SPARK. Leave and it still fights.", verb: "BOOST" };
   }
   if (totalSwarm(s) >= berthCap(s) - 1)
     return { chip: "OPEN BERTHS", why: "Swarm is packed. Expand pop or raise barracks.", verb: "EXPAND" };
@@ -43,7 +43,7 @@ export function advise(s: GameState): Advice {
 }
 
 export function pickPrintCaste(s: GameState): Caste {
-  if (s.charge < 5 || !s.rooms.solar?.built) return "miner";
+  if (s.spark < 5 || !s.rooms.solar?.built) return "miner";
   if (s.parts < 8 && s.ore > 20) return "fab";
   if (s.queuedRoom && s.swarm.builder < 4) return "builder";
   const next = RAIDS.find((r) => raidUnlocked(s, r.id) && !s.raidCleared.includes(r.id));

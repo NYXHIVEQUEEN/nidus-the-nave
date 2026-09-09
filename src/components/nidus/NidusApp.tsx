@@ -21,7 +21,7 @@ import {
   TECH,
   ZONES,
   berthCap,
-  chargeCap,
+  sparkCap,
   expandCost,
   oreCap,
   partsCap,
@@ -56,7 +56,7 @@ import {
   sparkHot,
   type GuideId,
 } from "@/lib/nidus/guide";
-import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALVAGE_COOK, casteXpNeed, postBoostPct, wakeNeed, autoHoldBerths, callNeed, OFFICER_CAP, techUnlocked } from "@/lib/nidus/progress";
+import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALVAGE_COOK, casteXpNeed, postBoostPct, autoHoldBerths, callNeed, OFFICER_CAP, techUnlocked } from "@/lib/nidus/progress";
 import { ChromeBound, StationMount } from "./StationMount";
 import { SettingsPanel } from "./SettingsPanel";
 import { GoalDock, GuideSheet, LeftRail, StatusChip, Whisper, muteToggle, useDensity, useIdleChrome, useSyncPrefs, useViewport } from "./HiveChrome";
@@ -399,9 +399,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
 function ResourceBar({ compact }: { compact: boolean }) {
   const ore = useNidus((s) => s.ore);
   const parts = useNidus((s) => s.parts);
-  const charge = useNidus((s) => s.charge);
   const spark = useNidus((s) => s.spark);
-  const sparkNeed = useNidus((s) => s.sparkNeed);
   const echo = useNidus((s) => s.echo);
   const credits = useNidus((s) => s.credits);
   const hiveRank = useNidus((s) => s.hiveRank);
@@ -425,8 +423,7 @@ function ResourceBar({ compact }: { compact: boolean }) {
         <Chip label="CUT" value={fmt(credits ?? 0)} sub={`${fmt((r.creditsPerSec ?? 0) * 60)}/m`} cap={Math.max(80, (credits ?? 0) + 40)} cur={credits ?? 0} venom onTap={setOpen} />
         <Chip label="ORE" value={fmt(ore)} sub={`${fmt(r.orePerSec * 60)}/m`} cap={oreCap(s)} cur={ore} onTap={setOpen} />
         <Chip label="PARTS" value={fmt(parts)} sub={`${fmt(r.partsPerSec * 60)}/m`} cap={partsCap(s)} cur={parts} onTap={setOpen} />
-        <Chip label="SPIRIT" value={fmt(charge)} sub={`${r.chargeGen - r.chargeDrain >= 0 ? "+" : ""}${fmt((r.chargeGen - r.chargeDrain) * 60)}/m`} cap={chargeCap(s)} cur={charge} venom starve={starve} onTap={setOpen} />
-        <Chip label="SPARK" value={waking ? "CALL" : sparkBanked(s) ? "BANK" : `${Math.floor(spark)}`} sub={`+${fmt(r.sparkPerSec * 60)}/m`} cap={wakeNeed(s)} cur={spark} venom onTap={setOpen} />
+        <Chip label="SPARK" value={waking ? "CALL" : sparkBanked(s) ? "BANK" : `${Math.floor(spark)}`} sub={`${(r.sparkPerSec - (r.sparkDrain ?? 0)) >= 0 ? "+" : ""}${fmt((r.sparkPerSec - (r.sparkDrain ?? 0)) * 60)}/m`} cap={sparkCap(s)} cur={spark} venom starve={starve} onTap={setOpen} />
         {echo > 0 && (
           <button type="button" className="text-left" onClick={() => setOpen(open === "ECHO" ? null : "ECHO")}>
             <p className="text-[0.55rem] tracking-[0.18em] text-muted">ECHO</p>
@@ -505,7 +502,7 @@ function RaidRail() {
           <button type="button" className={cn("nidus-cut mb-1 min-h-9 w-full font-display text-[0.52rem] tracking-[0.12em]", watching && "nidus-cut-venom")} onClick={() => watchWell(!watching)}>
             {watching ? "WATCHING" : "WATCH"}
           </button>
-          <button type="button" disabled={boosted || s.charge < 5} title="Spend 5 SPIRIT. 20s command." className={cn("nidus-cut min-h-8 w-full font-display text-[0.48rem] tracking-[0.12em]", boosted && "nidus-cut-gilt")} onClick={() => { boostWell(); chime("surge"); }}>
+          <button type="button" disabled={boosted || s.spark < 6} title="Spend 6 SPARK. 20s command." className={cn("nidus-cut min-h-8 w-full font-display text-[0.48rem] tracking-[0.12em]", boosted && "nidus-cut-gilt")} onClick={() => { boostWell(); chime("surge"); }}>
             {boosted ? "FIRE" : "BOOST"}
           </button>
         </div>
@@ -695,13 +692,13 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
       <div className="pointer-events-auto nidus-actions">
         <button
           type="button"
-          disabled={surging || s.charge < 6}
+          disabled={surging || s.spark < 8}
           onClick={() => {
             surge();
             chime("surge");
           }}
           className={cn("nidus-cut min-h-9 flex-1 font-display text-[0.62rem] tracking-[0.24em]", surging ? "nidus-cut-venom" : "nidus-cut-on", pulse(verb === "SURGE" || (mercy && !surging)))}
-          title={s.charge < 6 ? "Need 6 SPIRIT." : mercy && !surging ? "Spend 6 SPIRIT. Longer sprint." : "Spend 6 SPIRIT. Swarm sprints ~30s."}
+          title={s.spark < 8 ? "Need 8 SPARK." : mercy && !surging ? "Spend 8 SPARK. Longer sprint." : "Spend 8 SPARK. Swarm sprints ~30s."}
         >
           <span className="inline-flex items-center justify-center gap-1"><Zap className="size-3.5" />{surging ? "SURGING" : mercy ? "MERCY" : "SURGE"}</span>
         </button>
@@ -977,7 +974,7 @@ function RaidTab({ verb, compact }: { verb: string; compact: boolean }) {
               <button type="button" title={watching ? "Leave — fleet still fights at 18% bonus." : "Watching cuts 18% faster."} className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.7rem] tracking-[0.16em]", watching ? "nidus-cut-venom" : "", pulse(verb === "RAID" && !watching))} onClick={() => watchWell(!watching)}>
                 {watching ? "WATCHING" : "WATCH"}
               </button>
-              <button type="button" disabled={boosted || s.charge < 5} title="Spend 5 SPIRIT. 20s command." className={cn("nidus-cut min-h-9 flex-1 font-display text-[0.62rem] tracking-[0.16em]", boosted ? "nidus-cut-gilt" : "text-gilt", pulse(verb === "BOOST"))} onClick={() => { boostWell(); chime("surge"); }}>
+              <button type="button" disabled={boosted || s.spark < 6} title="Spend 6 SPARK. 20s command." className={cn("nidus-cut min-h-9 flex-1 font-display text-[0.62rem] tracking-[0.16em]", boosted ? "nidus-cut-gilt" : "text-gilt", pulse(verb === "BOOST"))} onClick={() => { boostWell(); chime("surge"); }}>
                 {boosted ? "COMMAND" : "BOOST"}
               </button>
             </div>
@@ -1172,8 +1169,8 @@ function MindsTab({ compact }: { compact: boolean }) {
         </button>
         <button
           type="button"
-          disabled={!mind.wounded || s.charge < (s.tech.flesh2?.done ? 1 : s.tech.mindheal?.done ? 2 : 4)}
-          title="Spend SPIRIT. Clears the wound."
+          disabled={!mind.wounded || s.spark < (s.tech.flesh2?.done ? 2 : s.tech.mindheal?.done ? 3 : 5)}
+          title="Spend SPARK. Clears the wound."
           className="nidus-cut nidus-iconbtn text-venom disabled:opacity-40"
           onClick={() => {
             useNidus.getState().heal(mind.id);
@@ -1253,7 +1250,7 @@ function GiftOverlay() {
         <p className="mt-1 font-display text-lg tabular-nums text-bone">
           {fmt(gift.ore)} ORE · {fmt(gift.parts)} PARTS · +{gift.spark} SPARK
         </p>
-        {mercy && <p className="mt-1 text-[0.62rem] text-muted">CLAIM banks a mercy SURGE and a lick of SPIRIT.</p>}
+        {mercy && <p className="mt-1 text-[0.62rem] text-muted">CLAIM banks a mercy SURGE and a lick of SPARK.</p>}
         <button type="button" className="nidus-cut nidus-cut-on mt-3 min-h-11 w-full font-display tracking-[0.28em] text-bone" onClick={() => { claim(); chime("claim"); }}>
           CLAIM
         </button>

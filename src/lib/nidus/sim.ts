@@ -6,6 +6,7 @@ import {
   berthCap,
   candidateToMind,
   chargeCap,
+  sparkCap,
   expandCost,
   offlineCapSec,
   oreCap,
@@ -152,7 +153,7 @@ function clampRes(s: GameState) {
   s.parts = Math.max(0, Math.min(parts, partsCap(s)));
   s.charge = Math.max(0, Math.min(charge, chargeCap(s)));
   s.credits = Math.max(0, Number.isFinite(s.credits) ? s.credits ?? 0 : 0);
-  s.spark = Math.max(0, Number.isFinite(s.spark) ? s.spark : 0);
+  s.spark = Math.max(0, Math.min(Number.isFinite(s.spark) ? s.spark : 0, sparkCap(s)));
 }
 
 /** Sim pipeline (architecture): res → rooms → rites → spark → print → scripts → battle → clamp. View never writes this. */
@@ -291,7 +292,7 @@ function tickInner(s: GameState, now: number): GameState {
   }
 
   if (!next.waking) {
-    next.spark += r.sparkPerSec * dt;
+    next.spark += (r.sparkPerSec - (r.sparkDrain ?? 0)) * dt;
   }
 
   if (next.autoPrint) {
@@ -520,7 +521,7 @@ export function tryPrint(s: GameState): GameState {
   }
   next.ore -= cost.ore;
   next.parts -= cost.parts;
-  if (next.charge > 0.4) next.charge -= 0.35;
+  if (next.spark > 0.5) next.spark -= 0.4;
   next.swarm[next.printCaste] += 1;
   next.printed += 1;
   noteFocus(next, next.printCaste);
@@ -675,8 +676,8 @@ export function boostRaid(s: GameState, now: number): GameState {
   const next = cloneState(s);
   if (!next.raid) return next;
   if (now < next.raid.boostUntil) return next;
-  if (next.charge < 5) return next;
-  next.charge -= 5;
+  if (next.spark < 6) return next;
+  next.spark -= 6;
   next.raid.boostUntil = now + 20000;
   next.raid.beat = "COMMAND";
   return next;
@@ -693,9 +694,9 @@ export function upMark(s: GameState, caste: GameState["printCaste"]): GameState 
 export function startSurge(s: GameState, now: number): GameState {
   const next = cloneState(s);
   if (now < next.surgeUntil) return next;
-  const cost = 6;
-  if (next.charge < cost) return next;
-  next.charge -= cost;
+  const cost = 8;
+  if (next.spark < cost) return next;
+  next.spark -= cost;
   const mercy = next.mercySurge;
   const dur = next.tech.longsurge?.done ? 58000 : next.tech.surgeplus?.done ? 45000 : 32000;
   next.surgeUntil = now + Math.round(dur * (mercy ? 1.35 : 1));
@@ -809,9 +810,9 @@ export function healMind(s: GameState, mindId: string): GameState {
   const next = cloneState(s);
   const m = next.minds.find((x) => x.id === mindId);
   if (!m || !m.alive || !m.wounded) return next;
-  const cost = next.tech.flesh2?.done ? 1 : next.tech.mindheal?.done ? 2 : 4;
-  if (next.charge < cost) return next;
-  next.charge -= cost;
+  const cost = next.tech.flesh2?.done ? 2 : next.tech.mindheal?.done ? 3 : 5;
+  if (next.spark < cost) return next;
+  next.spark -= cost;
   m.wounded = false;
   pushLog(next, `${m.name} stitched.`);
   return next;

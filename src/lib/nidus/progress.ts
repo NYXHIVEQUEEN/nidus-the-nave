@@ -117,7 +117,7 @@ export const SALVAGE_COOK: Record<
 > = {
   ice: { need: 2, ore: 42, label: "MELT", line: "Ice becomes ore." },
   plate: { need: 2, parts: 26, label: "STAMP", line: "Plate becomes parts." },
-  bone: { need: 2, charge: 6, spark: 2, label: "BURN", line: "Bone feeds SPIRIT." },
+  bone: { need: 2, spark: 5, label: "BURN", line: "Bone feeds SPARK." },
   rose: { need: 1, spark: 16, label: "DRINK", line: "Rose fills SPARK." },
   core: { need: 1, echo: 2, label: "CRACK", line: "Core becomes Echo." },
 };
@@ -157,13 +157,13 @@ export function nextOpenTech(s: GameState): TechId | null {
 }
 
 /** First commander waits for the spine so WAKE is a beat, not a dump. */
-export const FIRST_WAKE_SPARK = 32;
+export const FIRST_WAKE_SPARK = 12;
 export const OFFICER_CAP = 5;
 
 export function callNeed(s: GameState): number {
   const n = s.minds.filter((m) => m.alive).length;
-  if (n === 0) return Math.max(24, FIRST_WAKE_SPARK);
-  return Math.round(40 * Math.pow(1.8, n));
+  if (n === 0) return FIRST_WAKE_SPARK;
+  return Math.round(14 * Math.pow(1.45, n));
 }
 
 export function canWakeMinds(s: GameState): boolean {

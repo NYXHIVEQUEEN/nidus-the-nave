@@ -36,7 +36,7 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
     verbs: [
       { id: "goal", label: "GOLD CHIP", line: "The one next verb." },
       { id: "rooms", label: "NODES", line: "Tap a dark room to raise it. Tap a lit room to RANK it." },
-      { id: "surge", label: "SURGE", line: "Spends 6 SPIRIT. Swarm sprints ~30s." },
+      { id: "surge", label: "SURGE", line: "Spends 8 SPARK. Swarm sprints ~30s." },
       { id: "slag", label: "SLAG", line: "Tap ore + spark. Overflow cooks to parts." },
       { id: "hive", label: "HIVE", line: "Mind stamps, builds, raids for you." },
       { id: "set", label: "SETTINGS", line: "Opens nested rails. SIZE, SOUND, SAVE." },
@@ -73,7 +73,7 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
     verbs: [
       { id: "send", label: "SEND", line: "Tap an open wreck. Hulls leave." },
       { id: "watch", label: "WATCH", line: "18% faster cut. Leave — it still fights." },
-      { id: "boost", label: "BOOST", line: "Spends 5 SPIRIT. Twenty seconds of command." },
+      { id: "boost", label: "BOOST", line: "Spends 6 SPARK. Twenty seconds of command." },
       { id: "farm", label: "FARM", line: "Cleared wrecks pay again. Nested stay locked." },
       { id: "lock", label: "LOCKED", line: "Needs a prior wreck or room." },
     ],
@@ -86,7 +86,7 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
       { id: "pick", label: "WAKE", line: "Three bodies. One commander stays. She starts PACING." },
       { id: "post", label: "POST", line: "MINE ore. MAKE parts. BUILD rooms. LAB spark. RAID hulls." },
       { id: "seat", label: "SEAT", line: "Full boost. Number is the live % on that rate." },
-      { id: "heal", label: "HEAL", line: "Spends SPIRIT. Wounded cut her boost." },
+      { id: "heal", label: "HEAL", line: "Spends SPARK. Wounded cut her boost." },
       { id: "mark", label: "MARK", line: "Echo ranks her. UNMAKE if she sours." },
     ],
   },
@@ -127,14 +127,14 @@ export function mindPostLine(mind: Pick<Mind, "job" | "seated" | "wounded" | "le
 const GLOSS: Record<string, string> = {
   ORE: "Mined ice. Fabs eat it. Sell extra for CUT.",
   PARTS: "Forged bits. Rooms and rites spend these.",
-  SPIRIT: "Hive will. SURGE, BOOST, HEAL, PRINT sip it. Empty = swarm crawls.",
-  CHARGE: "Hive will. SURGE, BOOST, HEAL, PRINT sip it. Empty = swarm crawls.",
-  SPARK: "Banks until Solar. Then CALL one officer.",
+  SPIRIT: "Old name. SPARK is the spend now.",
+  CHARGE: "Gone. SPARK is the spend. Solar feeds it.",
+  SPARK: "Hive will. SURGE, BOOST, HEAL, CALL, PRINT sip it. Empty = swarm crawls.",
   ECHO: "Fallen minds. Spend to molt.",
   RANK: "Hive layer. Rooms, rites, wrecks, molt.",
   ICE: "Melt two ice for ore.",
   PLATE: "Stamp two plate for parts.",
-  BONE: "Burn two bone for SPIRIT.",
+  BONE: "Burn two bone for SPARK.",
   ROSE: "Drink a rose for SPARK.",
   CORE: "Crack a core for Echo.",
   SIZE: "TIGHT packs chrome. ROOMY breathes. WATCH hides it.",
@@ -179,7 +179,7 @@ export function sparkBanked(s: GameState): boolean {
 }
 
 export function chargeStarve(s: GameState): boolean {
-  return s.charge < 4;
+  return s.spark < 4;
 }
 
 /** Quiet first-look line. One shot. Not a tutorial tree. */

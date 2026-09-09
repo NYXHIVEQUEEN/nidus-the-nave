@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { importSave } from "./save.ts";
 import { autoHoldBerths, canWakeMinds, cookUnlocked, hiveTitle, postBoostPct, roomUnlocked, techUnlocked, wakeNeed } from "./progress.ts";
-import { berthCap, chargeCap, defaultState, rollCandidates, totalSwarm } from "./content.ts";
+import { berthCap, chargeCap, defaultState, rollCandidates, sparkCap, totalSwarm } from "./content.ts";
 import { applyTick, chooseWake, claimGift, queueRoom, sendRaid, startCall, startSurge, tryPrint } from "./sim.ts";
 import { advise, nextBuild } from "./advisor.ts";
 
@@ -145,15 +145,15 @@ test("first ice raid is a shorter tutorial wreck", () => {
   assert.ok((next.raid?.endsAt ?? 0) - now < 32_000);
 });
 
-test("surge spends spirit and a dry hive cannot scream", () => {
+test("surge spends spark and a dry hive cannot scream", () => {
   const now = 1_000_000;
   const dry = defaultState();
-  dry.charge = 2;
+  dry.spark = 2;
   assert.equal(startSurge(dry, now).surgeUntil, dry.surgeUntil);
   const wet = defaultState();
-  wet.charge = 10;
+  wet.spark = 16;
   const next = startSurge(wet, now);
-  assert.ok(next.charge < 10);
+  assert.ok(next.spark < 16);
   assert.equal(next.surgeUntil - now, 32_000);
 });
 
@@ -180,7 +180,8 @@ test("first wake waits for the solar spine and banks spark", () => {
   assert.equal(canWakeMinds(s), false);
   const wait = applyTick(s, now);
   assert.equal(wait.waking, null);
-  assert.ok(wait.spark >= 80);
+  assert.ok(wait.spark > 0);
+  assert.ok(wait.spark <= sparkCap(wait) + 0.01);
   wait.rooms.solar.built = true;
   wait.lastTick = now;
   const banked = applyTick(wait, now + 2000);
@@ -242,7 +243,7 @@ test("print focus stacks caste xp without wiping swarm", () => {
 
 test("wake need floors first commander without wiping spark", () => {
   const s = defaultState();
-  assert.ok(wakeNeed(s) >= 32);
+  assert.ok(wakeNeed(s) >= 12);
   s.minds = [{
     id: "m1", alive: true, name: "HUSK-7", frame: "warden", rarity: "iron", level: 1, xp: 0, job: "mine",
     seated: false, wounded: false, portrait: "/nidus/warden.jpg", line: "Ore first.", fracture: "Hoards the ice.",
@@ -294,7 +295,7 @@ test("raising the solar spine does not crash the tick or the next node", () => {
   s.charge = 20;
   s.spark = 40;
   s.lastTick = 1_000_000;
-  s = applyTick(s, 1_000_000 + 400_000);
+  s = applyTick(s, 1_000_000 + 800_000);
   assert.equal(s.rooms.solar.built, true);
   assert.doesNotThrow(() => applyTick(s, 1_000_000 + 90_000));
   const rolled = rollCandidates(s);
