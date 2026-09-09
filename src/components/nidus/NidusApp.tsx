@@ -196,7 +196,7 @@ function TitleScreen({
   const [ask, setAsk] = useState(false);
   return (
     <div className="relative flex h-dvh w-full flex-col items-center justify-end overflow-hidden bg-void">
-      <img src="/nidus/title.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" crossOrigin="anonymous" />
+      <img src="/nidus/title.jpg" alt="" className="absolute inset-0 h-full w-full object-cover object-[center_28%]" crossOrigin="anonymous" />
       <div className="absolute inset-0 bg-gradient-to-b from-void/40 via-void/20 to-void" />
       <button
         type="button"
