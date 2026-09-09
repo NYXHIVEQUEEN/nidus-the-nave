@@ -319,7 +319,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
       style={{ ["--nidus-ui-scale" as string]: String(prefs.uiScale) }}
     >
       <StationMount />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-void/35 via-transparent to-void/6" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-void/12 via-transparent to-void/8" />
       <div className="nidus-vignette pointer-events-none absolute inset-0" />
       <LeftRail
         muted={muted}
@@ -359,7 +359,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
       {guide && <GuideSheet screen={guide} onClose={() => setGuide(null)} />}
       {riteOpen && (
         <div
-          className="pointer-events-auto absolute left-[5.4rem] top-[max(3.2rem,calc(env(safe-area-inset-top)+2.4rem))] z-40 w-[min(18rem,calc(100vw-6.2rem))]"
+          className="pointer-events-auto absolute inset-x-2 bottom-[3.5rem] z-40 max-h-[42dvh] overflow-y-auto"
           data-chrome
         >
           <SettingsPanel start={riteStart} onClose={() => setRiteOpen(false)} />

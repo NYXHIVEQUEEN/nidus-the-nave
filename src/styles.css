@@ -445,15 +445,15 @@
 
 .nidus-vignette {
   background:
-    radial-gradient(ellipse at 16% 10%, rgba(255, 214, 160, 0.14), transparent 28%),
-    radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(8, 6, 8, 0.58) 100%);
+    radial-gradient(ellipse at 18% 8%, rgba(255, 210, 170, 0.1), transparent 32%),
+    radial-gradient(ellipse at 50% 42%, transparent 58%, rgba(8, 6, 8, 0.28) 100%);
 }
 
 .nidus-railbtn {
-  height: calc(1.95rem * var(--nidus-ui-scale, 1));
-  width: calc(2.55rem * var(--nidus-ui-scale, 1));
-  min-height: 1.85rem;
-  min-width: 2.35rem;
+  height: calc(2.15rem * var(--nidus-ui-scale, 1));
+  width: calc(3.15rem * var(--nidus-ui-scale, 1));
+  min-height: 2.05rem;
+  min-width: 2.9rem;
 }
 
 .nidus-root[data-density="compact"] .nidus-sheet {
@@ -473,8 +473,8 @@
 }
 
 .nidus-root[data-density="compact"] .nidus-railbtn {
-  height: 1.85rem;
-  width: 2.45rem;
+  height: 2.05rem;
+  width: 3.05rem;
 }
 
 .nidus-root[data-density="compact"] nav.grid {

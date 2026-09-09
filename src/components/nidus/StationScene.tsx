@@ -345,70 +345,28 @@ function ShipDress({
 }) {
   return (
     <group>
-      {solar && (
-        <mesh position={[0, 0.62, 0.08]}>
-          <boxGeometry args={[0.07, 0.58, 1.42]} />
-          <meshStandardMaterial map={plate} color="#d4c4b0" metalness={0.58} roughness={0.42} />
-        </mesh>
-      )}
-      {silo && (
-        <mesh position={[0, 0.48, -0.55]}>
-          <cylinderGeometry args={[0.11, 0.13, 0.42, 8]} />
-          <meshStandardMaterial map={grate} color="#b8a894" metalness={0.65} roughness={0.38} />
-        </mesh>
-      )}
-      {orebay && (
-        <mesh position={[0.48, -0.02, -0.18]}>
-          <boxGeometry args={[0.28, 0.22, 0.7]} />
-          <meshStandardMaterial map={plate} color="#b7a894" metalness={0.6} roughness={0.46} />
-        </mesh>
-      )}
-      {barracks && (
-        <mesh position={[-0.48, 0.04, 0.22]}>
-          <boxGeometry args={[0.26, 0.2, 0.55]} />
-          <meshStandardMaterial map={plate} color="#c4b6a2" metalness={0.55} roughness={0.48} />
-        </mesh>
-      )}
-      {hangar && (
-        <mesh position={[0, -0.36, -0.92]}>
-          <boxGeometry args={[0.42, 0.16, 0.55]} />
-          <meshStandardMaterial map={grate} color="#8a7a68" metalness={0.62} roughness={0.4} />
-        </mesh>
-      )}
-      {gundeck && (
-        <mesh position={[0, 0.08, -1.72]} rotation={[0.15, 0, 0]}>
-          <boxGeometry args={[0.1, 0.08, 0.55]} />
-          <meshStandardMaterial map={bone} color="#5a4a40" metalness={0.78} roughness={0.3} />
-        </mesh>
-      )}
-      {lab && (
-        <mesh position={[0.22, 0.42, 0.58]}>
-          <sphereGeometry args={[0.13, 10, 8]} />
-          <meshStandardMaterial map={glass} color="#b8d4c0" metalness={0.35} roughness={0.22} transparent opacity={0.92} />
-        </mesh>
-      )}
-      {nerve && (
-        <mesh position={[0, 0.58, 0.18]}>
-          <boxGeometry args={[0.16, 0.28, 0.2]} />
-          <meshStandardMaterial map={giltMap} color="#e8d4a8" metalness={0.62} roughness={0.36} emissive="#c4a574" emissiveIntensity={0.25} />
-        </mesh>
-      )}
-      {spire && (
-        <mesh position={[0, 0.22, -2.05]}>
-          <coneGeometry args={[0.07, 0.42, 6]} />
-          <meshStandardMaterial map={giltMap} color="#c4a574" metalness={0.7} roughness={0.28} />
-        </mesh>
-      )}
-      {hiveRank >= 3 && (
-        <mesh position={[0, 0.28, 0.08]}>
-          <boxGeometry args={[0.82, 0.05, 2.4]} />
-          <meshStandardMaterial map={giltMap} color="#c4a574" metalness={0.72} roughness={0.32} />
+      {hiveRank >= 2 && (
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.08]}>
+          <torusGeometry args={[0.565, 0.012, 8, 40]} />
+          <meshStandardMaterial map={giltMap} color={GILT} metalness={0.82} roughness={0.28} emissive={GILT} emissiveIntensity={0.18} />
         </mesh>
       )}
       {molt > 0 && (
-        <mesh position={[0, 0.02, 0.08]}>
-          <boxGeometry args={[0.88, 0.06, 3.12]} />
-          <meshStandardMaterial color="#7a1f2b" metalness={0.55} roughness={0.4} emissive="#7a1f2b" emissiveIntensity={0.18} />
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.15]}>
+          <torusGeometry args={[0.55 + molt * 0.02, 0.012, 8, 36]} />
+          <meshStandardMaterial color={BLOOD} metalness={0.6} roughness={0.35} emissive={BLOOD} emissiveIntensity={0.28 + molt * 0.12} />
+        </mesh>
+      )}
+      {solar && (
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.55]}>
+          <torusGeometry args={[0.5, 0.01, 6, 28]} />
+          <meshStandardMaterial color="#d8c8b4" metalness={0.7} roughness={0.32} emissive="#d8c8b4" emissiveIntensity={0.16} />
+        </mesh>
+      )}
+      {nerve && (
+        <mesh position={[0, 0.02, 0.12]}>
+          <sphereGeometry args={[0.07, 12, 10]} />
+          <meshStandardMaterial map={glass} color="#b8d4c0" metalness={0.3} roughness={0.2} emissive={GILT} emissiveIntensity={0.35} transparent opacity={0.92} />
         </mesh>
       )}
     </group>
@@ -572,22 +530,24 @@ function Hull() {
   const emberCount = mobile ? 22 : 38;
 
   const gilt = useMemo(() => new Color(GILT), []);
-  const venom = useMemo(() => new Color(VENOM), []);
   const bloodC = useMemo(() => new Color(BLOOD), []);
   const naveGeo = useMemo(() => {
     const pts = [
-      new Vector2(0.08, 2.02),
-      new Vector2(0.26, 1.82),
-      new Vector2(0.4, 1.35),
-      new Vector2(0.46, 0.7),
-      new Vector2(0.5, 0.05),
-      new Vector2(0.46, -0.7),
-      new Vector2(0.38, -1.4),
-      new Vector2(0.24, -1.88),
-      new Vector2(0.08, -2.08),
+      new Vector2(0.04, 2.18),
+      new Vector2(0.2, 2.08),
+      new Vector2(0.34, 1.92),
+      new Vector2(0.46, 1.45),
+      new Vector2(0.54, 0.7),
+      new Vector2(0.56, 0.05),
+      new Vector2(0.52, -0.65),
+      new Vector2(0.42, -1.35),
+      new Vector2(0.26, -1.88),
+      new Vector2(0.1, -2.14),
+      new Vector2(0.0, -2.28),
     ];
-    const g = new LatheGeometry(pts, 20);
+    const g = new LatheGeometry(pts, 48);
     g.rotateX(Math.PI / 2);
+    g.computeVertexNormals();
     return g;
   }, []);
   const hopperGeo = useMemo(
@@ -670,7 +630,7 @@ function Hull() {
     if (furnace.current) {
       const tide = eventKind === "TIDE" || eventKind === "FURNACE" || surging;
       furnace.current.intensity =
-        (far ? 1.4 : (tide ? 3.2 : 2.2) + Math.sin(t * 4) * 0.25 + glow * 0.5) * (watchNave ? 1.1 : 1);
+        (far ? 0.6 : (tide ? 1.4 : 1.1) + Math.sin(t * 4) * 0.12 + glow * 0.25) * (watchNave ? 1.05 : 1);
       furnace.current.color.set(eventKind === "PULSAR" ? GILT : eventKind === "ROSE" ? VENOM : BLOOD);
     }
     if (naveMat.current) {
@@ -708,7 +668,7 @@ function Hull() {
         for (let i = 0; i < 16; i++) {
           const side = i % 2 ? 1 : -1;
           const z = -1.58 + Math.floor(i / 2) * 0.39;
-          dummy.position.set(side * 0.4, 0.08 + (i % 4) * 0.04, z);
+          dummy.position.set(side * 0.53, 0.04 + (i % 4) * 0.03, z);
           dummy.scale.set(1, 1.1, 1);
           dummy.rotation.set(0, side > 0 ? Math.PI / 2 : -Math.PI / 2, 0);
           dummy.updateMatrix();
@@ -756,8 +716,8 @@ function Hull() {
       hangarGlow.current.emissiveIntensity = raiding ? 0.9 + Math.sin(t * 6) * 0.35 : 0.12;
     }
     if (leakLite.current) {
-      leakLite.current.intensity = 2.2 + glow * 3.2 + Math.sin(t * 2.1) * 0.6 + (surging ? 2 : 0) + (eventKind === "PULSAR" ? 2.4 : 0);
-      leakLite.current.color.set(eventKind === "ECLIPSE" ? "#4a3a58" : GILT);
+      leakLite.current.intensity = 0.35 + glow * 0.4 + Math.sin(t * 2.1) * 0.08 + (surging ? 0.3 : 0);
+      leakLite.current.color.set(eventKind === "ECLIPSE" ? "#4a3a58" : "#c4a090");
     }
 
     if (scaffoldRef.current) {
@@ -842,7 +802,7 @@ function Hull() {
       else {
         for (let i = 0; i < emberCount; i++) {
           const life = (t * (0.35 + (i % 5) * 0.05) + i * 0.37) % 1;
-          dummy.position.set(((i * 17) % 10) * 0.04 - 0.2, -0.05 + life * 1.1, 2.05 + ((i * 13) % 7) * 0.04);
+          dummy.position.set(((i * 17) % 10) * 0.04 - 0.2, -0.05 + life * 0.35, 2.05 + life * 0.95);
           dummy.scale.setScalar(0.4 + (1 - life) * 0.8);
           dummy.rotation.set(0, 0, 0);
           dummy.updateMatrix();
@@ -867,7 +827,7 @@ function Hull() {
           mo.setMatrixAt(i, dummy.matrix);
         }
         mo.instanceMatrix.needsUpdate = true;
-        mo.visible = true;
+        mo.visible = false;
       }
     }
 
@@ -959,236 +919,68 @@ function Hull() {
       <mesh geometry={naveGeo}>
         <meshStandardMaterial
           ref={naveMat}
-          map={rivet}
+          map={plate}
           bumpMap={height}
-          bumpScale={0.07}
+          bumpScale={0.11}
           roughnessMap={rough}
-          color="#9a8c78"
-          metalness={0.7}
-          roughness={0.48}
+          color="#c9b9a4"
+          metalness={0.58}
+          roughness={0.38}
           emissive={gilt}
-          emissiveIntensity={0.03}
-          polygonOffset
-          polygonOffsetFactor={1}
+          emissiveIntensity={0.04}
         />
       </mesh>
-      <mesh position={[0, 0.08, 0.05]}>
-        <boxGeometry args={[0.78, 0.42, 3.05]} />
-        <meshStandardMaterial map={plate} bumpMap={height} bumpScale={0.08} roughnessMap={rough} color="#b7a894" metalness={0.62} roughness={0.5} />
+      <mesh geometry={naveGeo} scale={[1.012, 1.012, 1]}>
+        <meshStandardMaterial
+          map={rivet}
+          bumpMap={height}
+          bumpScale={0.05}
+          color="#b0a090"
+          metalness={0.64}
+          roughness={0.42}
+          transparent
+          opacity={0.35}
+          depthWrite={false}
+        />
       </mesh>
-      <mesh position={[0, 0.36, 0.1]}>
-        <boxGeometry args={[0.34, 0.2, 2.15]} />
-        <meshStandardMaterial map={plate} bumpMap={height} bumpScale={0.05} roughnessMap={rough} color="#c4b6a2" metalness={0.55} roughness={0.5} />
+      <mesh position={[0, 0, 2.12]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.22, 0.3, 0.32, 20]} />
+        <meshStandardMaterial map={ember} color="#3a2c28" metalness={0.72} roughness={0.3} />
       </mesh>
-      <mesh position={[0, 0.06, 0.12]}>
-        <boxGeometry args={[1.72, 0.18, 0.52]} />
-        <meshStandardMaterial map={plate} bumpMap={height} bumpScale={0.06} roughnessMap={rough} color="#b0a28e" metalness={0.64} roughness={0.46} />
+      <mesh position={[0, 0, 2.28]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.12, 0.16, 0.1, 16]} />
+        <meshStandardMaterial color="#1a1010" metalness={0.5} roughness={0.4} emissive="#ff6a4a" emissiveIntensity={0.8} />
       </mesh>
-      <mesh position={[0, -0.28, 0.05]}>
-        <boxGeometry args={[0.18, 0.16, 3.18]} />
-        <meshStandardMaterial map={bone} color="#3a322c" metalness={0.8} roughness={0.3} />
-      </mesh>
-      {[-0.4, 0.4].map((x) => (
-        <mesh key={`string-${x}`} position={[x, -0.2, 0.05]}>
-          <boxGeometry args={[0.055, 0.09, 3.0]} />
-          <meshStandardMaterial map={bone} color="#4a4038" metalness={0.82} roughness={0.28} />
-        </mesh>
-      ))}
-      {[-1.15, -0.4, 0.38, 1.12].map((z) => (
-        <group key={`rib-${z}`} position={[0, 0.08, z]}>
-          <mesh position={[0, 0.24, 0]}>
-            <boxGeometry args={[0.82, 0.045, 0.055]} />
-            <meshStandardMaterial color="#3a342e" metalness={0.84} roughness={0.28} />
-          </mesh>
-          <mesh position={[0, -0.24, 0]}>
-            <boxGeometry args={[0.82, 0.045, 0.055]} />
-            <meshStandardMaterial color="#3a342e" metalness={0.84} roughness={0.28} />
-          </mesh>
-          <mesh position={[0.4, 0, 0]}>
-            <boxGeometry args={[0.045, 0.5, 0.055]} />
-            <meshStandardMaterial color="#3a342e" metalness={0.84} roughness={0.28} />
-          </mesh>
-          <mesh position={[-0.4, 0, 0]}>
-            <boxGeometry args={[0.045, 0.5, 0.055]} />
-            <meshStandardMaterial color="#3a342e" metalness={0.84} roughness={0.28} />
-          </mesh>
-        </group>
-      ))}
-      {[-0.55, 0.55].map((x) => (
-        <mesh key={`butt-${x}`} position={[x, -0.02, 0.12]} rotation={[0, 0, x > 0 ? -0.45 : 0.45]}>
-          <boxGeometry args={[0.55, 0.06, 0.1]} />
-          <meshStandardMaterial map={bone} color="#c8bba8" metalness={0.55} roughness={0.42} />
-        </mesh>
-      ))}
-      {[-0.95, 0.55].map((z) => (
-        <group key={`hatch-${z}`}>
-          <mesh position={[0.402, 0.1, z]} rotation={[0, Math.PI / 2, 0]}>
-            <boxGeometry args={[0.26, 0.18, 0.022]} />
-            <meshStandardMaterial map={grate} bumpMap={height} bumpScale={0.04} color="#6a5a4c" metalness={0.72} roughness={0.38} />
-          </mesh>
-          <mesh position={[0.416, 0.1, z]} rotation={[0, Math.PI / 2, 0]}>
-            <boxGeometry args={[0.2, 0.12, 0.01]} />
-            <meshStandardMaterial map={filigree} color="#c4a574" metalness={0.65} roughness={0.32} />
-          </mesh>
-        </group>
-      ))}
-      {[-1.35, -0.7, 0.05, 0.75, 1.4].map((z) =>
-        [-0.07, 0.07].map((x) => (
-          <mesh key={`bolt-${x}-${z}`} position={[x, -0.36, z]}>
-            <boxGeometry args={[0.035, 0.028, 0.035]} />
-            <meshStandardMaterial map={rivet} color="#4a4038" metalness={0.86} roughness={0.26} />
-          </mesh>
-        )),
-      )}
-      <Decal position={[0, 0.47, 0.1]} rotation={[-0.12, 0, 0]} size={[0.28, 1.6]} map={filigree} opacity={0.55} emissive={gilt} eInt={0.12} />
-      {[-1.1, -0.35, 0.4, 1.15].map((z) => (
-        <mesh key={`seam-${z}`} position={[0, 0.08, z]}>
-          <boxGeometry args={[0.8, 0.44, 0.04]} />
-          <meshStandardMaterial color="#9a8c78" metalness={0.7} roughness={0.36} />
-        </mesh>
-      ))}
-      <mesh position={[0, 0, 2.08]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.22, 0.28, 0.34, 10]} />
-        <meshStandardMaterial map={ember} color="#3a2c28" metalness={0.7} roughness={0.32} />
-      </mesh>
-      <mesh position={[0, 0, 2.28]}>
-        <circleGeometry args={[0.1, 16]} />
-        <meshBasicMaterial color="#ff6a4a" toneMapped={false} />
-      </mesh>
-      <mesh position={[0, 0, -2.02]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.2, 0.24, 0.16, 10]} />
-        <meshStandardMaterial map={voidMap} color="#2a221c" metalness={0.72} roughness={0.38} />
-      </mesh>
-
-      <group ref={microRef}>
-      {[-0.42, 0.42].map((x) => (
-        <mesh key={`pipe-${x}`} position={[x, 0.32, 0.05]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.028, 0.028, 2.4, 8]} />
-          <meshStandardMaterial color="#4a4038" metalness={0.85} roughness={0.32} />
-        </mesh>
-      ))}
-      {[-0.9, -0.2, 0.5, 1.15].map((z, i) => (
-        <mesh key={`ant-${z}`} position={[i % 2 ? 0.12 : -0.12, 0.58, z]} rotation={[0.15, 0, i % 2 ? 0.1 : -0.1]}>
-          <cylinderGeometry args={[0.01, 0.016, 0.28 + (i % 3) * 0.08, 5]} />
-          <meshStandardMaterial color="#3a342e" metalness={0.88} roughness={0.28} />
-        </mesh>
-      ))}
-      <mesh position={[0.18, 0.62, 0.55]} rotation={[0.6, 0.2, 0]}>
-        <cylinderGeometry args={[0.012, 0.012, 0.16, 5]} />
-        <meshStandardMaterial color="#3a342e" metalness={0.88} roughness={0.28} />
-      </mesh>
-      <mesh position={[0.18, 0.72, 0.62]} rotation={[Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.07, 10]} />
-        <meshStandardMaterial map={grate} color="#c4b8a6" metalness={0.7} roughness={0.32} side={DoubleSide} />
-      </mesh>
-      {[-1.2, 0.2, 1.1].map((z) => (
-        <mesh key={`vent-${z}`} position={[0, -0.42, z]} rotation={[0.4, 0, 0]}>
-          <boxGeometry args={[0.12, 0.04, 0.18]} />
-          <meshStandardMaterial map={grate} color="#6a5a4c" metalness={0.7} roughness={0.4} />
-        </mesh>
-      ))}
-      <instancedMesh ref={windows} args={[undefined, undefined, 16]} visible={false}>
-        <boxGeometry args={[0.045, 0.07, 0.028]} />
-        <meshStandardMaterial ref={winMat} color={GILT} emissive={gilt} emissiveIntensity={0.7} toneMapped={false} />
-      </instancedMesh>
-
-      {[-0.95, 0, 0.95].map((z, i) => (
-        <group key={`lancet-${z}`}>
-          <mesh position={[0.4, 0.08, z]} rotation={[0, Math.PI / 2, 0]}>
-            <planeGeometry args={[0.16, 0.32]} />
-            <meshStandardMaterial color="#1c1612" metalness={0.7} roughness={0.45} />
-          </mesh>
-          <mesh position={[0.405, 0.08, z]} rotation={[0, Math.PI / 2, 0]}>
-            <planeGeometry args={[0.14, 0.3]} />
-            <meshStandardMaterial
-              ref={i === 0 ? glassMat : undefined}
-              map={rose}
-              color={i % 2 ? venom : gilt}
-              emissive={i % 2 ? venom : gilt}
-              emissiveIntensity={0.45 + glow * 0.45}
-              metalness={0.08}
-              roughness={0.16}
-              toneMapped={false}
-            />
-          </mesh>
-          <mesh position={[0.408, 0.08, z]} rotation={[0, Math.PI / 2, 0]}>
-            <ringGeometry args={[0.072, 0.088, 4]} />
-            <meshStandardMaterial color="#3a342e" metalness={0.88} roughness={0.28} />
-          </mesh>
-          <mesh position={[0.405, 0.26, z]} rotation={[0, Math.PI / 2, 0]}>
-            <coneGeometry args={[0.07, 0.14, 3]} />
-            <meshStandardMaterial map={rose} color={GILT} emissive={gilt} emissiveIntensity={0.7 + glow} toneMapped={false} />
-          </mesh>
-          <mesh position={[-0.4, 0.08, z]} rotation={[0, -Math.PI / 2, 0]}>
-            <planeGeometry args={[0.16, 0.32]} />
-            <meshStandardMaterial color="#1c1612" metalness={0.7} roughness={0.45} />
-          </mesh>
-          <mesh position={[-0.405, 0.08, z]} rotation={[0, -Math.PI / 2, 0]}>
-            <planeGeometry args={[0.14, 0.3]} />
-            <meshStandardMaterial
-              map={rose}
-              color={i % 2 ? bloodC : gilt}
-              emissive={i % 2 ? bloodC : gilt}
-              emissiveIntensity={0.7 + glow * 0.8}
-              toneMapped={false}
-            />
-          </mesh>
-        </group>
-      ))}
-
-      <mesh position={[0, 0.12, -1.98]}>
-        <circleGeometry args={[0.24, 16]} />
-        <meshStandardMaterial color="#1c1612" metalness={0.7} roughness={0.45} />
-      </mesh>
-      <mesh position={[0, 0.12, -2.05]}>
-        <circleGeometry args={[0.22, 16]} />
-        <meshStandardMaterial map={rose} color={GILT} emissive={gilt} emissiveIntensity={1.1 + glow} toneMapped={false} />
-      </mesh>
-      {[0, 1, 2, 3].map((i) => (
-        <mesh key={`spoke-${i}`} position={[0, 0.12, -2.07]} rotation={[0, 0, (i * Math.PI) / 4]}>
-          <boxGeometry args={[0.012, 0.38, 0.012]} />
-          <meshStandardMaterial color="#3a342e" metalness={0.86} roughness={0.28} />
-        </mesh>
-      ))}
-      <mesh position={[0, 0.12, -2.06]} rotation={[0, 0, Math.PI / 4]}>
-        <ringGeometry args={[0.07, 0.2, 8]} />
-        <meshStandardMaterial color="#2a221c" metalness={0.8} roughness={0.3} />
-      </mesh>
-
-      <Decal position={[0.4, 0.08, 0.1]} rotation={[0, Math.PI / 2, 0]} size={[1.4, 0.42]} map={giltMap} opacity={0.5} emissive={gilt} eInt={0.14} />
-      <Decal position={[-0.4, 0.08, 0.25]} rotation={[0, -Math.PI / 2, 0]} size={[1.2, 0.38]} map={blood} color="#c45a4a" opacity={0.48} emissive={bloodC} eInt={0.1} />
-      <Decal position={[0, -0.14, 0.1]} rotation={[-Math.PI / 2, 0, 0]} size={[0.7, 1.6]} map={hazard} opacity={0.35} />
-      </group>
-
-      {molt > 0 && (
-        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.08, 0.1]}>
-          <torusGeometry args={[0.42 + molt * 0.04, 0.016, 6, 28]} />
-          <meshStandardMaterial color={GILT} emissive={gilt} emissiveIntensity={0.5 + molt * 0.22} metalness={0.82} roughness={0.26} toneMapped={false} />
-        </mesh>
-      )}
       <mesh position={[0, 0, 2.42]} rotation={[Math.PI / 2, 0, 0]}>
-        <coneGeometry args={[0.09, 0.28, 8, 1, true]} />
+        <coneGeometry args={[0.1, 0.32, 12, 1, true]} />
         <meshBasicMaterial ref={engineHeat} color="#ff8a55" transparent opacity={0.4} depthWrite={false} blending={AdditiveBlending} side={DoubleSide} toneMapped={false} />
       </mesh>
-      <mesh position={[0.86, 0.14, 0.12]}>
-        <sphereGeometry args={[0.028, 8, 8]} />
+      <group ref={microRef}>
+      <instancedMesh ref={windows} args={[undefined, undefined, 16]} visible={false}>
+        <boxGeometry args={[0.04, 0.055, 0.02]} />
+        <meshStandardMaterial ref={winMat} color={GILT} emissive={gilt} emissiveIntensity={0.7} toneMapped={false} />
+      </instancedMesh>
+      <mesh position={[0.52, 0.04, 0.15]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[1.6, 0.08]} />
+        <meshStandardMaterial ref={glassMat} map={glass} color={GILT} emissive={gilt} emissiveIntensity={0.35} metalness={0.2} roughness={0.22} toneMapped={false} />
+      </mesh>
+      <mesh position={[-0.52, 0.04, 0.15]} rotation={[0, -Math.PI / 2, 0]}>
+        <planeGeometry args={[1.6, 0.08]} />
+        <meshStandardMaterial map={glass} color={BLOOD} emissive={bloodC} emissiveIntensity={0.28} metalness={0.2} roughness={0.22} toneMapped={false} />
+      </mesh>
+      <mesh position={[0.54, 0.06, 0.85]}>
+        <sphereGeometry args={[0.03, 8, 8]} />
         <meshBasicMaterial ref={navA} color="#c45a4a" transparent opacity={0.7} toneMapped={false} />
       </mesh>
-      <mesh position={[-0.86, 0.14, 0.12]}>
-        <sphereGeometry args={[0.028, 8, 8]} />
+      <mesh position={[-0.54, 0.06, 0.85]}>
+        <sphereGeometry args={[0.03, 8, 8]} />
         <meshBasicMaterial ref={navB} color="#c4a574" transparent opacity={0.7} toneMapped={false} />
       </mesh>
-      <mesh position={[0, 0.52, 0.85]}>
-        <boxGeometry args={[0.03, 0.22, 0.03]} />
-        <meshStandardMaterial color={GILT} metalness={0.92} roughness={0.22} emissive={gilt} emissiveIntensity={0.55} />
-      </mesh>
-      <mesh position={[0, 0.46, 0.85]} rotation={[0, 0, Math.PI / 2]}>
-        <boxGeometry args={[0.03, 0.12, 0.03]} />
-        <meshStandardMaterial color={GILT} metalness={0.92} roughness={0.22} emissive={gilt} emissiveIntensity={0.55} />
-      </mesh>
-      <pointLight ref={furnace} position={[0, -0.1, 2.05]} color={BLOOD} distance={8} decay={2} intensity={3.2} />
+      </group>
+
+      <pointLight ref={furnace} position={[0, 0, 2.05]} color={BLOOD} distance={7} decay={2} intensity={1.6} />
       <pointLight ref={printLite} position={[0, 0.2, 0.1]} color={GILT} distance={6} decay={2} intensity={0} />
-      <pointLight ref={leakLite} position={[0.55, 0.18, 0.3]} color="#ff8a55" distance={5} decay={2} intensity={0.8} />
+      <pointLight ref={leakLite} position={[0.4, 0.1, 0.3]} color="#c4a090" distance={5} decay={2} intensity={0.4} />
 
       <group ref={midRef} visible={false} />
       <group ref={ringRef} visible={false} />
@@ -1286,7 +1078,7 @@ function Hull() {
         <meshStandardMaterial color="#e8dcc8" metalness={0.7} roughness={0.28} emissive={bloodC} emissiveIntensity={0.45} />
       </instancedMesh>
       {raiding && (
-        <group position={[0.15, -0.35, -6.4]} rotation={[0.15, 0.4, -0.08]}>
+        <group position={[7.2, 0.4, -4.8]} rotation={[0.1, 0.55, -0.05]}>
           <mesh>
             <boxGeometry args={[1.6, 0.32, 0.48]} />
             <meshStandardMaterial map={plate} color="#6a5a4c" metalness={0.62} roughness={0.48} />
@@ -1312,37 +1104,37 @@ function Hull() {
 
 function BlackWell() {
   const disk = useRef<Group>(null);
-  const glow = useRef<MeshBasicMaterial>(null);
   const fill = useRef<PointLight>(null);
+  const hot = useRef<MeshBasicMaterial>(null);
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-    const pulse = REDUCE ? 1 : 0.92 + Math.sin(t * 0.35) * 0.08;
-    if (disk.current) disk.current.rotation.z = t * 0.12;
-    if (glow.current) glow.current.opacity = 0.22 + pulse * 0.1;
-    if (fill.current) fill.current.intensity = 2.1 + pulse * 0.7;
+    const pulse = REDUCE ? 1 : 0.96 + Math.sin(t * 0.22) * 0.04;
+    if (disk.current) disk.current.rotation.z = t * 0.05;
+    if (fill.current) fill.current.intensity = 1.35 + pulse * 0.35;
+    if (hot.current) hot.current.opacity = 0.28 + pulse * 0.1;
   });
   return (
-    <group position={[0.2, -5.4, -4.2]}>
-      <mesh>
-        <sphereGeometry args={[1.15, 24, 18]} />
-        <meshBasicMaterial color="#050308" />
-      </mesh>
-      <mesh scale={1.08}>
-        <sphereGeometry args={[1.15, 16, 12]} />
-        <meshBasicMaterial ref={glow} color="#ff6a3a" transparent opacity={0.28} depthWrite={false} blending={AdditiveBlending} />
-      </mesh>
-      <group ref={disk} rotation={[1.18, 0.15, 0]}>
+    <group>
+      <group position={[1.4, -5.2, -6.8]}>
         <mesh>
-          <torusGeometry args={[1.85, 0.09, 8, 48]} />
-          <meshBasicMaterial color="#ff7a40" transparent opacity={0.7} depthWrite={false} blending={AdditiveBlending} />
+          <sphereGeometry args={[1.45, 32, 24]} />
+          <meshBasicMaterial color="#000000" />
         </mesh>
-        <mesh>
-          <torusGeometry args={[2.35, 0.045, 6, 40]} />
-          <meshBasicMaterial color="#c45a4a" transparent opacity={0.35} depthWrite={false} blending={AdditiveBlending} />
-        </mesh>
+        <group rotation={[1.42, 0.18, 0.08]}>
+          <group ref={disk}>
+            <mesh>
+              <torusGeometry args={[1.52, 0.02, 8, 80]} />
+              <meshBasicMaterial color="#d8c4b8" transparent opacity={0.55} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
+            </mesh>
+            <mesh>
+              <torusGeometry args={[1.82, 0.055, 8, 64]} />
+              <meshBasicMaterial ref={hot} color="#5a181c" transparent opacity={0.42} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
+            </mesh>
+          </group>
+        </group>
+        <pointLight ref={fill} color="#4a181c" intensity={2.1} distance={24} decay={2} />
       </group>
-      <pointLight ref={fill} color="#ff8a55" intensity={2.4} distance={22} decay={2} />
-      <directionalLight position={[0.4, 4.6, 3.4]} intensity={0.72} color="#ffb08a" />
+      <directionalLight position={[1.4, -5.2, -6.8]} intensity={0.4} color="#5a3034" />
     </group>
   );
 }
@@ -1567,17 +1359,19 @@ export function StationScene() {
       style={{ touchAction: "none", position: "absolute", inset: 0 }}
       onDoubleClick={() => applyCamPreset("nave")}
       onCreated={({ gl, camera }) => {
-        gl.setClearColor("#0c0a0e");
+        gl.setClearColor("#0e0a0c");
         gl.toneMapping = ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.12;
+        gl.toneMappingExposure = 1.22;
         const [x, y, z] = camPosition();
         camera.position.set(x, y, z);
       }}
     >
-      <fog attach="fog" args={["#12080c", 42, 160]} />
-      <hemisphereLight args={["#c4b09a", "#1a080c", 0.62]} />
-      <ambientLight intensity={0.16} />
-      <pointLight position={[0, 0.2, 2.4]} intensity={1.8} color="#ff8a55" distance={10} decay={2} />
+      <fog attach="fog" args={["#120c10", 48, 155]} />
+      <hemisphereLight args={["#d2c4b4", "#1a0c10", 0.78]} />
+      <ambientLight intensity={0.22} />
+      <directionalLight position={[9, 11, 5]} intensity={1.25} color="#f0e0cc" />
+      <directionalLight position={[-7, 3, -5]} intensity={0.35} color="#6a3038" />
+      <pointLight position={[0, 0.4, 1.2]} intensity={0.7} color="#c4a090" distance={10} decay={2} />
       <Stars radius={110} depth={60} count={mobile ? 140 : 260} factor={3.2} saturation={0.12} fade speed={REDUCE ? 0 : 0.18} />
       <FlightDust />
       <Mood />
@@ -1609,8 +1403,8 @@ function FlightDust() {
     if (!m) return;
     const speed = REDUCE ? 0.35 : 5.4;
     for (let i = 0; i < n; i++) {
-      pts[i * 3 + 2] -= speed * dt;
-      if (pts[i * 3 + 2] < -16) pts[i * 3 + 2] = 16;
+      pts[i * 3 + 2] += speed * dt;
+      if (pts[i * 3 + 2] > 16) pts[i * 3 + 2] = -16;
       dummy.position.set(pts[i * 3], pts[i * 3 + 1], pts[i * 3 + 2]);
       dummy.scale.set(0.018, 0.018, REDUCE ? 0.22 : 0.62);
       dummy.rotation.set(0, 0, 0);
@@ -1639,7 +1433,7 @@ function Mood() {
       fog.color.set("#0a0812");
       fog.near = 36;
       fog.far = 150;
-      gl.toneMappingExposure = 0.92;
+      gl.toneMappingExposure = 1.22;
     } else if (kind === "PULSAR") {
       fog.color.set("#241818");
       fog.near = 52;
@@ -1661,10 +1455,10 @@ function Mood() {
       fog.far = 175;
       gl.toneMappingExposure = 1.36;
     } else {
-      fog.color.set("#12080c");
-      fog.near = 42;
-      fog.far = 160;
-      gl.toneMappingExposure = 1.02;
+      fog.color.set("#120c10");
+      fog.near = 48;
+      fog.far = 155;
+      gl.toneMappingExposure = 1.22;
     }
   });
   return null;

@@ -28,7 +28,7 @@ export type ViewPrefs = {
   prefsGen: number;
 };
 
-export const CAM_DIR = { x: 0.594, y: 0.259, z: 0.761 };
+export const CAM_DIR = { x: 0.86, y: 0.3, z: 0.41 };
 export const CAM_MIN = 8;
 export const CAM_MAX = 48;
 export const CAM_DEFAULT = 18;
@@ -61,9 +61,9 @@ let prefs: ViewPrefs = {
   lookUntil: 0,
   seenHelp: {},
   density: "compact" as Density,
-  uiScale: 0.68,
+  uiScale: 0.92,
   musicBed: "anthem" as MusicBed,
-  prefsGen: 3,
+  prefsGen: 4,
 };
 
 function clamp(n: number, a: number, b: number) {
@@ -101,9 +101,9 @@ function read() {
           ? parsed.density
           : "compact",
       uiScale:
-        (parsed.prefsGen ?? 0) >= 3 && typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.55, 1.22) : 0.68,
+        (parsed.prefsGen ?? 0) >= 4 && typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.7, 1.22) : 0.92,
       musicBed: parsed.musicBed === "void" ? "void" : "anthem",
-      prefsGen: 3,
+      prefsGen: 4,
     };
   } catch {
     /* keep */

@@ -65,7 +65,7 @@ export function RailBtn({
       )}
     >
       {children}
-      <span className="mt-px max-w-full truncate px-0.5 font-display text-[0.38rem] leading-none tracking-[0.08em]">{label}</span>
+      <span className="mt-px max-w-full px-0.5 text-center font-display text-[0.48rem] leading-none tracking-[0.06em]">{label}</span>
     </button>
   );
 }
