@@ -532,18 +532,18 @@ export function nextGoal(s: GameState): string {
   if (s.raid) return s.raid.watching ? "COMMAND THE WELL" : "WATCH OR LEAVE — FLEET FIGHTS";
   if (totalSwarm(s) >= berthCap(s) - 1) return "OPEN BERTHS — SWARM IS PACKED";
   if (s.minds.filter((m) => m.alive).length === 0) {
-    if (!s.rooms.solar.built) return "SPINE FIRST — SPARK BANKS";
+    if (!s.rooms.solar?.built) return "SPINE FIRST — SPARK BANKS";
     return "CALL AN OFFICER";
   }
-  if (!s.rooms.lab.built) return "RAISE THE LAB";
+  if (!s.rooms.lab?.built) return "RAISE THE LAB";
   if (!s.autoPrint) return "FLIP AUTO PRINT";
-  if (!s.rooms.hangar.built) return "RAISE THE HANGAR";
+  if (!s.rooms.hangar?.built) return "RAISE THE HANGAR";
   if (!s.rooms.railgun?.built) return "MOUNT THE RAILGUN";
   if (!s.rooms.cannon?.built) return "MOUNT THE AUTOCANNON";
   if (s.swarm.striker >= 2 && !s.raid && !s.raidCleared.includes("ice")) return "DUEL THE CUTTER";
-  if (!s.rooms.nerve.built) return "RAISE THE NERVE";
-  if (s.rooms.lab.built && !s.tech.cheapprint.done && !s.activeTech) return "START CHEAP PRINT";
-  if (s.rooms.reliquary.built && s.tech.moltlock.done && s.moltLayer < 1) return "MOLT THE NAVE";
+  if (!s.rooms.nerve?.built) return "RAISE THE NERVE";
+  if (s.rooms.lab?.built && !s.tech.cheapprint?.done && !s.activeTech) return "START CHEAP PRINT";
+  if (s.rooms.reliquary?.built && s.tech.moltlock?.done && s.moltLayer < 1) return "MOLT THE NAVE";
   return "GROW THE SWARM";
 }
 

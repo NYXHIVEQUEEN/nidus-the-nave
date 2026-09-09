@@ -243,7 +243,13 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   const { collapsed, bump, showChrome, toggleHide } = useIdleChrome(locked || riteOpen || Boolean(guide));
   const whispered = useState(() => new Set<string>())[0];
   const s = useNidus();
-  const goal = nextGoal(s);
+  const goal = (() => {
+    try {
+      return nextGoal(s);
+    } catch {
+      return "GROW THE SWARM";
+    }
+  })();
   const stage = hiveStage(s);
   const tip = (() => {
     try {
@@ -480,7 +486,13 @@ function RaidRail() {
   const strikers = useNidus((s) => s.swarm.striker);
   const s = useNidus();
   const boosted = Date.now() < boostUntil;
-  const unlocked = RAIDS.filter((n) => raidUnlocked(s, n.id));
+  const unlocked = (() => {
+    try {
+      return RAIDS.filter((n) => raidUnlocked(s, n.id));
+    } catch {
+      return [];
+    }
+  })();
   return (
     <aside data-chrome className="pointer-events-auto absolute bottom-12 right-2 top-[max(5.6rem,calc(env(safe-area-inset-top)+4.8rem))] z-30 flex w-[6.6rem] flex-col gap-1 overflow-y-auto">
       {raidNode && (
@@ -495,6 +507,9 @@ function RaidRail() {
             {boosted ? "FIRE" : "BOOST"}
           </button>
         </div>
+      )}
+      {unlocked.length === 0 && !raidNode && (
+        <p className="nidus-card p-1.5 text-center font-display text-[0.45rem] leading-tight tracking-[0.08em] text-muted">HANGAR + BOTH GUNS TO DUEL</p>
       )}
       {unlocked.map((node) => {
         const need = raidNeed(s, node.id);

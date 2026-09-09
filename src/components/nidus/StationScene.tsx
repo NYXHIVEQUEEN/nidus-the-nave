@@ -1299,8 +1299,12 @@ function BattleField() {
     if (flash.current) flash.current.opacity = dead ? 0 : 0.35 + pulse * 0.4;
     if (!dead && t - lastHit.current > (boosted ? 0.85 : 1.35)) {
       lastHit.current = t;
-      chime(t % 2 > 1 ? "rail" : "cannon");
-      if (Math.random() > 0.55) chime("ping");
+      try {
+        chime(t % 2 > 1 ? "rail" : "cannon");
+        if (Math.random() > 0.55) chime("ping");
+      } catch {
+        /* audio optional */
+      }
     }
   });
   if (!raid) return null;

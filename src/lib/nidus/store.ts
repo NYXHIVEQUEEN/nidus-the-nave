@@ -171,9 +171,13 @@ export const useNidus = create<Store>((set, get) => ({
     lastWrite = Date.now();
   },
   launchRaid: (id) => {
-    set(sendRaid(get(), id, Date.now()));
-    writeSave(pickGame(get()));
-    lastWrite = Date.now();
+    try {
+      set(sendRaid(pickGame(get()), id, Date.now()));
+      writeSave(pickGame(get()));
+      lastWrite = Date.now();
+    } catch {
+      writeSave(pickGame(get()));
+    }
   },
   surge: () => {
     set(startSurge(get(), Date.now()));

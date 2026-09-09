@@ -57,26 +57,37 @@ const INTERIOR: Record<string, string> = {
   minds: "/nidus/interior-minds.jpg",
 };
 
+/** 3D canvas stays mounted so RAID never cold-starts WebGL. Interiors overlay it. */
 export function StationMount() {
   const [on, setOn] = useState(false);
   const tab = useNidus((s) => s.tab);
+  const live = tab === "raid";
   useEffect(() => setOn(true), []);
   if (!on) return <div className="absolute inset-0 bg-void" />;
-  if (tab !== "raid") {
-    return (
-      <img
-        src={INTERIOR[tab] ?? INTERIOR.hull}
-        alt=""
-        className="absolute inset-0 h-full w-full object-cover"
-        crossOrigin="anonymous"
-      />
-    );
-  }
   return (
-    <HullBound>
-      <Suspense fallback={<div className="absolute inset-0 bg-void" />}>
-        <Scene />
-      </Suspense>
-    </HullBound>
+    <>
+      <div
+        className="absolute inset-0"
+        style={{
+          visibility: live ? "visible" : "hidden",
+          pointerEvents: live ? "auto" : "none",
+        }}
+        aria-hidden={!live}
+      >
+        <HullBound>
+          <Suspense fallback={<div className="absolute inset-0 bg-void" />}>
+            <Scene />
+          </Suspense>
+        </HullBound>
+      </div>
+      {!live && (
+        <img
+          src={INTERIOR[tab] ?? INTERIOR.hull}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          crossOrigin="anonymous"
+        />
+      )}
+    </>
   );
 }

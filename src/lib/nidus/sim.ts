@@ -611,10 +611,11 @@ export function unmake(s: GameState, mindId: string): GameState {
 export function sendRaid(s: GameState, node: RaidId, now: number): GameState {
   const next = cloneState(s);
   if (next.raid) return next;
-  const spec = RAIDS.find((r) => r.id === node);
-  if (!spec || !raidUnlocked(next, node)) return next;
-  const need = raidNeed(next, node);
-  if (next.swarm.striker < need) return next;
+  try {
+    const spec = RAIDS.find((r) => r.id === node);
+    if (!spec || !raidUnlocked(next, node)) return next;
+    const need = raidNeed(next, node);
+    if (next.swarm.striker < need) return next;
   const captain = next.minds.find((m) => m.alive && m.job === "raid") ?? null;
   const bars = freshRaidBars(next, node, need);
   const firstIce = node === "ice" && !next.raidCleared.includes("ice");
@@ -630,7 +631,10 @@ export function sendRaid(s: GameState, node: RaidId, now: number): GameState {
     boostUntil: 0,
     beat: "ORBIT",
   };
-  return next;
+    return next;
+  } catch {
+    return s;
+  }
 }
 
 export function watchRaid(s: GameState, on: boolean): GameState {
