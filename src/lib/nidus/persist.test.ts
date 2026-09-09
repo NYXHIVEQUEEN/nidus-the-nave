@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { importSave } from "./save.ts";
 import { autoHoldBerths, canWakeMinds, cookUnlocked, hiveTitle, postBoostPct, roomUnlocked, techUnlocked, wakeNeed } from "./progress.ts";
-import { berthCap, defaultState, rollCandidates, sparkCap, totalSwarm } from "./content.ts";
+import { berthCap, defaultState, rankCost, rates, rollCandidates, sparkCap, totalSwarm } from "./content.ts";
 import { applyTick, chooseWake, claimGift, queueRoom, sendRaid, startCall, startSurge, tryPrint } from "./sim.ts";
 import { advise, nextBuild } from "./advisor.ts";
 
@@ -385,6 +385,42 @@ test("applyTick keeps the player's tab and survives a hollow tech map", () => {
   assert.ok(Number.isFinite(next.ore));
   assert.ok(Number.isFinite(next.parts));
   assert.ok(next.rooms.orebay);
+});
+
+test("kiln cannot spend more ore than the hold has", () => {
+  let s = defaultState();
+  s.ore = 2;
+  s.parts = 4;
+  s.swarm = { miner: 2, fab: 20, builder: 0, lab: 0, striker: 0 };
+  s.autoPrint = false;
+  s.lastTick = 1_000_000;
+  s = applyTick(s, 1_000_000 + 5000);
+  assert.ok(s.ore >= -0.01);
+  assert.ok(s.parts >= 4);
+});
+
+test("rank spends the listed CUT not a bleed per second", () => {
+  let s = defaultState();
+  s.credits = 80;
+  s.rooms.solar = { built: true, progress: 28, rank: 0, rankWork: 0 };
+  s.rankingRoom = "solar";
+  s.swarm.builder = 3;
+  s.lastTick = 1_000_000;
+  const listed = rankCost(s, "solar")?.credits ?? 18;
+  s = applyTick(s, 1_000_000 + 2000);
+  const spent = 80 - (s.credits ?? 0);
+  assert.ok(spent >= 0);
+  assert.ok(spent <= listed + 0.5);
+});
+
+test("foundry drips CUT and SPARK nets up once the spine is lit", () => {
+  const s = defaultState();
+  s.rooms.solar = { built: true, progress: 28, rank: 0, rankWork: 0 };
+  const r = rates(s, Date.now());
+  assert.ok(r.creditsPerSec > 0);
+  assert.ok(r.sparkPerSec - (r.sparkDrain ?? 0) > 0);
+  assert.ok(r.oreSpendPerSec > 0);
+  assert.ok(r.orePerSec + 0.002 >= r.oreSpendPerSec * 0.35);
 });
 
 

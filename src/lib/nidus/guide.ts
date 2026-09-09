@@ -125,8 +125,8 @@ export function mindPostLine(mind: Pick<Mind, "job" | "seated" | "wounded" | "le
 }
 
 const GLOSS: Record<string, string> = {
-  ORE: "Mined ice. Fabs eat it. Sell extra for CUT.",
-  PARTS: "Forged bits. Rooms and rites spend these.",
+  ORE: "Mined, then the kiln drinks it into PARTS. Number is net after the forge.",
+  PARTS: "Forged robotics. PRINT spends them. Surplus sells for CUT.",
   CHARGE: "Gone. SPARK is the spend. Solar feeds it.",
   SPARK: "Hive will. SURGE, BOOST, HEAL, CALL, PRINT sip it. Empty = swarm crawls.",
   ECHO: "Fallen minds. Spend to molt.",
@@ -138,7 +138,7 @@ const GLOSS: Record<string, string> = {
   CORE: "Crack a core for Echo.",
   SIZE: "TIGHT packs chrome. ROOMY breathes. WATCH hides it.",
   LOCAL: "Three local snapshots. Oldest burns. No cloud.",
-  CUT: "Credits. Sell ore and parts. Ranks and expand spend CUT.",
+  CUT: "Universal credit. Ranks, marks, berths. Foundry drips. Mill and Refinery raise it.",
   SONG: "One bed. ANTHEM is Nyx. VOID is space.",
 };
 

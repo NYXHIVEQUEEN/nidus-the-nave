@@ -11,12 +11,14 @@ import {
   offlineCapSec,
   oreCap,
   partsCap,
+  ORE_PER_PART,
   printCost,
   raidNeed,
   raidUnlocked,
   rates,
   rollCandidates,
   rollOrders,
+  rankCost,
   sellYield,
   throneCap,
   totalSwarm,
@@ -178,8 +180,10 @@ function tickInner(s: GameState, now: number): GameState {
   const away = dt > 30;
   const r = rates(next, now);
   const oreGain = r.orePerSec * dt;
-  const partsGain = r.partsPerSec * dt;
-  const oreSpentOnParts = partsGain * 2;
+  const wantParts = r.partsPerSec * dt;
+  const orePool = Math.max(0, next.ore + oreGain);
+  const partsGain = Math.min(wantParts, orePool / ORE_PER_PART);
+  const oreSpentOnParts = partsGain * ORE_PER_PART;
   next.ore += oreGain - oreSpentOnParts;
   next.parts += partsGain;
   next.credits = (next.credits ?? 0) + (r.creditsPerSec ?? 0) * dt;
@@ -220,11 +224,11 @@ function tickInner(s: GameState, now: number): GameState {
         room = { built: false, progress: 0, rank: 0, rankWork: 0 };
         next.rooms[next.queuedRoom] = room;
       }
-      const needParts = Math.max(0, spec.parts - room.progress * (spec.parts / spec.work));
-      const partDrain = Math.min(next.parts, (spec.parts / spec.work) * r.buildPerSec * dt);
+      const needParts = Math.max(0, spec.parts - room.progress * (spec.parts / Math.max(1, spec.work)));
+      const partDrain = Math.min(next.parts, (spec.parts / Math.max(1, spec.work)) * r.buildPerSec * dt);
       if (needParts <= 0.2 || next.parts > 0) {
         room.progress += r.buildPerSec * dt;
-        next.parts -= partDrain * 0.35;
+        next.parts -= partDrain;
         if (room.progress >= spec.work) {
           room.progress = spec.work;
           room.built = true;
@@ -246,12 +250,16 @@ function tickInner(s: GameState, now: number): GameState {
     const spec = ROOMS.find((x) => x.id === next.rankingRoom);
     const room = next.rankingRoom ? next.rooms[next.rankingRoom] : null;
     if (spec && room && room.built && (room.rank ?? 0) < RANK_MAX) {
-      const workNeed = Math.max(12, Math.ceil(spec.work * 0.42 * ((room.rank ?? 0) + 1)));
-      const credNeed = Math.max(0.4, 1.6 * ((room.rank ?? 0) + 1) * dt);
+      const cost = rankCost(next, next.rankingRoom);
+      const workNeed = Math.max(12, cost?.work ?? Math.ceil(spec.work * 0.42 * ((room.rank ?? 0) + 1)));
+      const credTotal = cost?.credits ?? Math.ceil(18 * ((room.rank ?? 0) + 1));
       room.rankWork = room.rankWork ?? 0;
-      if ((next.credits ?? 0) >= credNeed) {
-        room.rankWork += r.buildPerSec * dt;
-        next.credits = Math.max(0, (next.credits ?? 0) - credNeed);
+      const prog = r.buildPerSec * dt;
+      const share = workNeed > 0 ? Math.min(1, prog / workNeed) : 1;
+      const pay = credTotal * share;
+      if ((next.credits ?? 0) >= pay) {
+        room.rankWork += prog;
+        next.credits = Math.max(0, (next.credits ?? 0) - pay);
       }
       if (room.rankWork >= workNeed) {
         room.rank = (room.rank ?? 0) + 1;
@@ -351,13 +359,13 @@ function tickInner(s: GameState, now: number): GameState {
   if (next.autoSell !== false) {
     const oc = oreCap(next);
     const pc = partsCap(next);
-    if (next.ore > oc * 0.9) {
-      const dump = next.ore - oc * 0.78;
+    if (next.ore > oc * 0.75) {
+      const dump = next.ore - oc * 0.62;
       next.ore -= dump;
       next.credits = (next.credits ?? 0) + sellYield("ore", dump, next);
     }
-    if (next.parts > pc * 0.9) {
-      const dump = next.parts - pc * 0.78;
+    if (next.parts > pc * 0.75) {
+      const dump = next.parts - pc * 0.62;
       next.parts -= dump;
       next.credits = (next.credits ?? 0) + sellYield("parts", dump, next);
     }

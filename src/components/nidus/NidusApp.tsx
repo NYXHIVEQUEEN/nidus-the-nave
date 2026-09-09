@@ -427,7 +427,7 @@ function ResourceBar({ compact }: { compact: boolean }) {
           <p className="font-display text-xs tabular-nums text-gilt">{hiveTitle(hiveRank)}</p>
         </button>
         <Chip label="CUT" value={fmt(credits ?? 0)} sub={`${fmt((r.creditsPerSec ?? 0) * 60)}/m`} cap={Math.max(80, (credits ?? 0) + 40)} cur={credits ?? 0} venom onTap={setOpen} />
-        <Chip label="ORE" value={fmt(ore)} sub={`${fmt(r.orePerSec * 60)}/m`} cap={oreCap(s)} cur={ore} onTap={setOpen} />
+        <Chip label="ORE" value={fmt(ore)} sub={`${fmt((r.orePerSec - (r.oreSpendPerSec ?? 0)) * 60)}/m`} cap={oreCap(s)} cur={ore} onTap={setOpen} />
         <Chip label="PARTS" value={fmt(parts)} sub={`${fmt(r.partsPerSec * 60)}/m`} cap={partsCap(s)} cur={parts} onTap={setOpen} />
         <Chip label="SPARK" value={waking ? "CALL" : sparkBanked(s) ? "BANK" : `${Math.floor(spark)}`} sub={`${(r.sparkPerSec - (r.sparkDrain ?? 0)) >= 0 ? "+" : ""}${fmt((r.sparkPerSec - (r.sparkDrain ?? 0)) * 60)}/m`} cap={sparkCap(s)} cur={spark} venom starve={starve} onTap={setOpen} />
         {echo > 0 && (

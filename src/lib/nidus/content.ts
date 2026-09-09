@@ -321,6 +321,8 @@ export function expandCost(s: GameState): { credits: number; add: number } {
 
 export const ORE_CUT = 0.42;
 export const PARTS_CUT = 1.12;
+/** Ore the kiln drinks per part stamped. */
+export const ORE_PER_PART = 1.65;
 
 export function sellYield(kind: "ore" | "parts", n: number, s: GameState): number {
   const mill = s.rooms.mill?.built ? 1.18 : 1;
@@ -439,7 +441,7 @@ export function rates(s: GameState, now: number) {
   const rr = (id: RoomId, per = 0.08) => 1 + (s.rooms[id]?.rank ?? 0) * per;
   const orePerSec =
     s.swarm.miner *
-    (3.8 / 60) *
+    (2.55 / 60) *
     lvl("miner") *
     mark("miner") *
     molt *
@@ -449,11 +451,11 @@ export function rates(s: GameState, now: number) {
     idle *
     jobBonus(s, "mine") *
     rr("orebay", 0.07) *
-    (s.tech.teeth?.done ? 1.25 : 1) *
-    (s.tech.orevein?.done ? 1.22 : 1);
+    (s.tech.teeth?.done ? 1.22 : 1) *
+    (s.tech.orevein?.done ? 1.18 : 1);
   const partsPerSec =
     Math.min(s.ore > 0.5 ? s.swarm.fab : 0, s.swarm.fab) *
-    (2.2 / 60) *
+    (3.4 / 60) *
     lvl("fab") *
     mark("fab") *
     molt *
@@ -462,10 +464,10 @@ export function rates(s: GameState, now: number) {
     hum *
     idle *
     jobBonus(s, "forge") *
-    rr("foundry", 0.07) *
-    (s.rooms.crucible?.built ? 1.18 : 1) *
-    (s.tech.heat?.done ? 1.25 : 1) *
-    (s.tech.partmill?.done ? 1.22 : 1);
+    rr("foundry", 0.08) *
+    (s.rooms.crucible?.built ? 1.16 : 1) *
+    (s.tech.heat?.done ? 1.22 : 1) *
+    (s.tech.partmill?.done ? 1.18 : 1);
   const buildPerSec =
     s.swarm.builder *
     (2.55 / 60) *
@@ -508,7 +510,9 @@ export function rates(s: GameState, now: number) {
     mark("lab") *
     jobBonus(s, "lab") *
     (1 + s.minds.filter((m) => m.alive && m.seated && m.job === "lab").length * 0.08);
-  const sparkDrain = 0.004 * Math.max(1, totalSwarm(s)) + (now < s.surgeUntil ? 0.03 : 0);
+  const slow = 0.5;
+  const sparkDrain =
+    (0.0018 * Math.max(1, totalSwarm(s)) + (now < s.surgeUntil ? 0.02 : 0)) * slow;
   const chargeGen =
     0.026 +
     (s.rooms.solar?.built ? 0.048 : 0) +
@@ -525,12 +529,20 @@ export function rates(s: GameState, now: number) {
   const zSpine = 1 + (s.zoneRank?.spine ?? 0) * 0.04;
   const zNave = 1 + (s.zoneRank?.nave ?? 0) * 0.04;
   const creditsPerSec =
-    ((s.rooms.refinery?.built ? 0.08 : 0) + (s.tech.creditfeed?.done ? 0.05 : 0) + (s.rooms.refinery?.rank ?? 0) * 0.02) *
-    zHold;
-  const slow = 0.5;
+    (0.04 +
+      (s.rooms.mill?.built ? 0.12 : 0) +
+      (s.rooms.refinery?.built ? 0.18 : 0) +
+      (s.tech.creditfeed?.done ? 0.05 : 0) +
+      (s.rooms.refinery?.rank ?? 0) * 0.03 +
+      (s.rooms.foundry?.rank ?? 0) * 0.012) *
+    zHold *
+    slow;
+  const oreOut = orePerSec * zHold * slow;
+  const partsOut = partsPerSec * zSpine * slow;
   return {
-    orePerSec: orePerSec * zHold * slow,
-    partsPerSec: partsPerSec * zSpine * slow,
+    orePerSec: oreOut,
+    partsPerSec: partsOut,
+    oreSpendPerSec: partsOut * ORE_PER_PART,
     buildPerSec: buildPerSec * zNave * slow,
     labPerSec: labPerSec * zNave * slow,
     sparkPerSec: sparkPerSec * slow,
