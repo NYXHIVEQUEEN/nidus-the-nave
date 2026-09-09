@@ -100,7 +100,12 @@ export const useNidus = create<Store>((set, get) => ({
   },
   tick: (now) => {
     try {
-      const next = applyTick(pickGame(get()), now);
+      const live = get();
+      const tab = live.tab;
+      const selectedMind = live.selectedMind;
+      const next = applyTick(pickGame(live), now);
+      next.tab = tab;
+      next.selectedMind = selectedMind;
       if (now - (next.lastSnapAt || 0) > 120_000) {
         const i = (next.snapIndex ?? 0) % 3;
         writeSlot(i, next);
@@ -113,7 +118,9 @@ export const useNidus = create<Store>((set, get) => ({
         writeSave(next);
       }
     } catch {
-      writeSave(pickGame(get()));
+      const s = pickGame(get());
+      s.lastTick = now;
+      writeSave(s);
     }
   },
   start: () => {

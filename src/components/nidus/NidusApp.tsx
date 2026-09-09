@@ -850,13 +850,12 @@ function LabTab({ compact }: { compact: boolean }) {
   const tech = useNidus((s) => s.tech);
   const active = useNidus((s) => s.activeTech);
   const research = useNidus((s) => s.research);
-  const hive = useNidus();
   const rows = TECH.filter((t) => {
     const st = tech[t.id] ?? { done: false, progress: 0 };
     if (st.done) return false;
     if (t.id === active) return true;
     try {
-      return techUnlocked(hive, t.id).ok;
+      return techUnlocked(useNidus.getState(), t.id).ok;
     } catch {
       return false;
     }

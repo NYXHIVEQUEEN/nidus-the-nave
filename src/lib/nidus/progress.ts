@@ -92,15 +92,15 @@ export type Stage = { n: number; of: number; name: string; hint: string };
 
 /** Twelve nested beats. A pip, not a campaign tree. */
 export function hiveStage(s: GameState): Stage {
-  if (!s.rooms.solar.built) return { n: 1, of: 12, name: "SPINE", hint: "Raise Solar on the hull." };
+  if (!s.rooms.solar?.built) return { n: 1, of: 12, name: "SPINE", hint: "Raise Solar on the hull." };
   if (totalSwarm(s) < 16) return { n: 2, of: 12, name: "SWARM", hint: "PRINT on FORGE." };
   if (!s.autoPrint) return { n: 3, of: 12, name: "IDLE", hint: "Flip AUTO so it stamps while gone." };
   if (s.minds.some((m) => m.alive) && !s.minds.some((m) => m.alive && m.seated))
     return { n: 4, of: 12, name: "SEAT", hint: "SEAT her. Pacing is half the post." };
-  if (!s.rooms.lab.built) return { n: 5, of: 12, name: "GLASS", hint: "Raise the Lab." };
+  if (!s.rooms.lab?.built) return { n: 5, of: 12, name: "GLASS", hint: "Raise the Lab." };
   if (s.minds.filter((m) => m.alive).length === 0) return { n: 6, of: 12, name: "MIND", hint: "CALL on MINDS. SPARK buys one body." };
-  if (!s.rooms.nerve.built) return { n: 7, of: 12, name: "NERVE", hint: "Raise Nerve. Seat a commander." };
-  if (!s.rooms.hangar.built) return { n: 8, of: 12, name: "FLEET", hint: "Raise Hangar. Then the teeth." };
+  if (!s.rooms.nerve?.built) return { n: 7, of: 12, name: "NERVE", hint: "Raise Nerve. Seat a commander." };
+  if (!s.rooms.hangar?.built) return { n: 8, of: 12, name: "FLEET", hint: "Raise Hangar. Then the teeth." };
   if (!s.rooms.railgun?.built || !s.rooms.cannon?.built)
     return { n: 8, of: 12, name: "TEETH", hint: "Mount RAILGUN and AUTOCANNON. Then duel." };
   if (!s.raidCleared.includes("ice")) return { n: 8, of: 12, name: "WELL", hint: "DUEL the cutter. Ship vs ship." };

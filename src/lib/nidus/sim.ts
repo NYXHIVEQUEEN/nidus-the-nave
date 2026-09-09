@@ -27,7 +27,11 @@ import { freshRaidBars, markUp, raidCutPayout, tickBattle } from "./fleet";
 import { rand } from "./rng";
 
 function cloneState<T>(s: T): T {
-  return JSON.parse(JSON.stringify(s, (_k, v) => (typeof v === "function" ? undefined : v))) as T;
+  try {
+    return JSON.parse(JSON.stringify(s, (_k, v) => (typeof v === "function" ? undefined : v))) as T;
+  } catch {
+    return { ...(s as object) } as T;
+  }
 }
 
 /** Fill rooms/tech/CUT fields so a live hive never throws after a content expand. */
@@ -73,7 +77,17 @@ export function ensureHive(s: GameState): GameState {
   if (s.activeTech && !s.tech[s.activeTech]) s.activeTech = null;
   if (s.tab !== "hull" && s.tab !== "forge" && s.tab !== "lab" && s.tab !== "raid" && s.tab !== "minds") s.tab = "hull";
   if (!s.casteLevel) s.casteLevel = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
+  else {
+    for (const c of ["miner", "fab", "builder", "lab", "striker"] as const) {
+      if (typeof s.casteLevel[c] !== "number" || Number.isNaN(s.casteLevel[c])) s.casteLevel[c] = 0;
+    }
+  }
   if (!s.hullMark) s.hullMark = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
+  else {
+    for (const c of ["miner", "fab", "builder", "lab", "striker"] as const) {
+      if (typeof s.hullMark[c] !== "number" || Number.isNaN(s.hullMark[c])) s.hullMark[c] = 0;
+    }
+  }
   if (typeof s.callPaid !== "number" || Number.isNaN(s.callPaid)) s.callPaid = 0;
   return s;
 }
@@ -131,14 +145,28 @@ function noteFocus(s: GameState, caste: Caste) {
 }
 
 function clampRes(s: GameState) {
-  s.ore = Math.max(0, Math.min(s.ore, oreCap(s)));
-  s.parts = Math.max(0, Math.min(s.parts, partsCap(s)));
-  s.charge = Math.max(0, Math.min(s.charge, chargeCap(s)));
-  s.credits = Math.max(0, s.credits ?? 0);
+  const ore = Number.isFinite(s.ore) ? s.ore : 0;
+  const parts = Number.isFinite(s.parts) ? s.parts : 0;
+  const charge = Number.isFinite(s.charge) ? s.charge : 0;
+  s.ore = Math.max(0, Math.min(ore, oreCap(s)));
+  s.parts = Math.max(0, Math.min(parts, partsCap(s)));
+  s.charge = Math.max(0, Math.min(charge, chargeCap(s)));
+  s.credits = Math.max(0, Number.isFinite(s.credits) ? s.credits ?? 0 : 0);
+  s.spark = Math.max(0, Number.isFinite(s.spark) ? s.spark : 0);
 }
 
 /** Sim pipeline (architecture): res → rooms → rites → spark → print → scripts → battle → clamp. View never writes this. */
 export function applyTick(s: GameState, now: number): GameState {
+  try {
+    return tickInner(s, now);
+  } catch {
+    const next = ensureHive(cloneState(s));
+    next.lastTick = now;
+    return next;
+  }
+}
+
+function tickInner(s: GameState, now: number): GameState {
   const next: GameState = ensureHive(cloneState(s));
   const raw = (now - next.lastTick) / 1000;
   const dt = Math.min(Math.max(0, raw), offlineCapSec(next));
@@ -257,7 +285,7 @@ export function applyTick(s: GameState, now: number): GameState {
         if (spec.id === "glassmind") next.casteLevel.lab += 1;
         if (spec.id === "stingplus") next.casteLevel.striker += 1;
         pushBrief(next, { kind: "build", headline: spec.label, line: "Inlaid in gold.", stamp: "KNOWN" });
-        next.activeTech = TECH.find((t) => !next.tech[t.id].done && techUnlocked(next, t.id).ok)?.id ?? null;
+        next.activeTech = TECH.find((t) => !next.tech[t.id]?.done && techUnlocked(next, t.id).ok)?.id ?? null;
       }
     }
   }
@@ -294,7 +322,7 @@ export function applyTick(s: GameState, now: number): GameState {
     const id = nextBuild(next);
     if (id) next.queuedRoom = id;
   }
-  if ((next.scripts || next.autoRite) && next.rooms.lab.built && !next.activeTech) {
+  if ((next.scripts || next.autoRite) && next.rooms.lab?.built && !next.activeTech) {
     const id = nextRite(next);
     if (id) next.activeTech = id;
   }
@@ -398,8 +426,8 @@ function resolveRaid(s: GameState, now: number) {
   const hpFrac = run.hpMax > 0 ? run.hp / run.hpMax : 1;
   const hullFrac = run.hullMax > 0 ? run.hull / run.hullMax : 1;
   const power =
-    run.strikers * (s.tech.claws.done ? 1.4 : 1) * (1 + s.moltLayer * 0.2) +
-    (s.rooms.gundeck.built ? 4 : 0) +
+    run.strikers * (s.tech.claws?.done ? 1.4 : 1) * (1 + s.moltLayer * 0.2) +
+    (s.rooms.gundeck?.built ? 4 : 0) +
     (s.rooms.railgun?.built ? 3 : 0) +
     (s.rooms.cannon?.built ? 2 : 0);
   const need = node.need;
@@ -473,7 +501,6 @@ function resolveRaid(s: GameState, now: number) {
   }
   s.swarm.striker = Math.max(0, s.swarm.striker - dead);
   s.raid = null;
-  s.showBrief = true;
   s.lastTick = now;
 }
 
@@ -536,7 +563,6 @@ export function chooseWake(s: GameState, index: number): GameState {
   next.selectedMind = made.mind.id;
   next.waking = null;
   next.callPaid = 0;
-  next.tab = "minds";
   credit(next, "wake", made.mind.frame);
   pushBrief(next, {
     kind: "wake",
@@ -560,7 +586,6 @@ export function startCall(s: GameState): GameState {
   const rolled = rollCandidates(next);
   next.waking = [rolled.waking[0]];
   next.rng = rolled.rng;
-  next.tab = "minds";
   pushBrief(next, { kind: "wake", headline: "A BODY ANSWERS", line: "TAKE or PASS. PASS returns a third of the SPARK." });
   return next;
 }
@@ -677,7 +702,7 @@ export function startSurge(s: GameState, now: number): GameState {
 
 export function molt(s: GameState): GameState {
   const next = cloneState(s);
-  if (!next.rooms.reliquary.built || !next.tech.moltlock.done) return next;
+  if (!next.rooms.reliquary?.built || !next.tech.moltlock?.done) return next;
   const cost = moltCost(next);
   if (next.echo < cost) return next;
   next.echo -= cost;

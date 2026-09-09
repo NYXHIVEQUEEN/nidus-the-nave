@@ -26,7 +26,7 @@ export function advise(s: GameState): Advice {
     return { chip: "OPEN BERTHS", why: "Swarm is packed. Expand pop or raise barracks.", verb: "EXPAND" };
   if (totalSwarm(s) < berthCap(s) - 1 && s.ore > printCost(s).ore * 2)
     return { chip: `PRINT ${s.printCaste.toUpperCase()}`, why: "Berths empty. Stamp them.", verb: "PRINT" };
-  if (!s.rooms.lab.built) return { chip: "RAISE THE LAB", why: "Rites lock behind glass.", verb: "BUILD" };
+  if (!s.rooms.lab?.built) return { chip: "RAISE THE LAB", why: "Rites lock behind glass.", verb: "BUILD" };
   if (s.rooms.lab?.built && !s.activeTech && !s.tech.cheapprint?.done)
     return { chip: "START CHEAP PRINT", why: "First rite. Cheaper stamps.", verb: "RITE" };
   if (!s.autoPrint) return { chip: "FLIP AUTO PRINT", why: "The hive should stamp while you sleep.", verb: "AUTO" };
@@ -43,12 +43,12 @@ export function advise(s: GameState): Advice {
 }
 
 export function pickPrintCaste(s: GameState): Caste {
-  if (s.charge < 12 || !s.rooms.solar.built) return "miner";
+  if (s.charge < 12 || !s.rooms.solar?.built) return "miner";
   if (s.parts < 8 && s.ore > 20) return "fab";
   if (s.queuedRoom && s.swarm.builder < 4) return "builder";
   const next = RAIDS.find((r) => raidUnlocked(s, r.id) && !s.raidCleared.includes(r.id));
   if (next && s.swarm.striker < next.need) return "striker";
-  if (s.minds.filter((m) => m.alive).length < 2 && s.rooms.lab.built) return "lab";
+  if (s.minds.filter((m) => m.alive).length < 2 && s.rooms.lab?.built) return "lab";
   if (s.ore < 15) return "miner";
   return s.printCaste;
 }

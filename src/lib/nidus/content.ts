@@ -301,10 +301,10 @@ export function defaultState(now = Date.now()): GameState {
 }
 
 export function berthCap(s: GameState): number {
-  const barracks = s.rooms.barracks.built ? 18 + (s.rooms.barracks.rank ?? 0) * 5 : 0;
-  const nerve = s.rooms.nerve.built ? 8 + (s.rooms.nerve.rank ?? 0) * 4 : 0;
-  const hangar = s.rooms.hangar.built ? 6 + (s.rooms.hangar.rank ?? 0) * 2 : 0;
-  const rel = s.rooms.reliquary.built ? 8 : 0;
+  const barracks = s.rooms.barracks?.built ? 18 + (s.rooms.barracks.rank ?? 0) * 5 : 0;
+  const nerve = s.rooms.nerve?.built ? 8 + (s.rooms.nerve.rank ?? 0) * 4 : 0;
+  const hangar = s.rooms.hangar?.built ? 6 + (s.rooms.hangar.rank ?? 0) * 2 : 0;
+  const rel = s.rooms.reliquary?.built ? 8 : 0;
   const choir = s.rooms.choir?.built ? 6 : 0;
   const rites =
     (s.tech.berthplus?.done ? 16 : 0) +
@@ -337,25 +337,25 @@ export function zoneCost(s: GameState, id: ZoneId): number {
 }
 
 export function oreCap(s: GameState): number {
-  const bay = s.rooms.orebay.built ? 1800 + (s.rooms.orebay.rank ?? 0) * 280 : 0;
+  const bay = s.rooms.orebay?.built ? 1800 + (s.rooms.orebay.rank ?? 0) * 280 : 0;
   const vault = s.rooms.vault?.built ? 2200 : 0;
-  const rites = (s.tech.caps.done ? 1400 : 0) + (s.tech.vaultcaps?.done ? 1800 : 0);
+  const rites = (s.tech.caps?.done ? 1400 : 0) + (s.tech.vaultcaps?.done ? 1800 : 0);
   return (520 + bay + vault + rites) * (1 + s.moltLayer * 0.45);
 }
 
 export function partsCap(s: GameState): number {
-  const foundry = s.rooms.foundry.built ? 220 + (s.rooms.foundry.rank ?? 0) * 80 : 0;
+  const foundry = s.rooms.foundry?.built ? 220 + (s.rooms.foundry.rank ?? 0) * 80 : 0;
   const cruc = s.rooms.crucible?.built ? 260 : 0;
   const vault = s.rooms.vault?.built ? 400 : 0;
-  const rites = (s.tech.caps.done ? 480 : 0) + (s.tech.vaultcaps?.done ? 700 : 0);
+  const rites = (s.tech.caps?.done ? 480 : 0) + (s.tech.vaultcaps?.done ? 700 : 0);
   return (280 + foundry + cruc + vault + rites) * (1 + s.moltLayer * 0.45);
 }
 
 export function chargeCap(s: GameState): number {
   return (
     90 +
-    (s.rooms.solar.built ? 160 : 0) +
-    (s.rooms.silo.built ? 90 : 0) +
+    (s.rooms.solar?.built ? 160 : 0) +
+    (s.rooms.silo?.built ? 90 : 0) +
     (s.rooms.spire?.built ? 70 : 0) +
     (s.rooms.solar.rank ?? 0) * 24 +
     (s.tech.solar2?.done ? 80 : 0)
@@ -363,7 +363,7 @@ export function chargeCap(s: GameState): number {
 }
 
 export function offlineCapSec(s: GameState): number {
-  const h = s.tech.daysilo?.done ? 24 : s.rooms.silo.built || s.tech.longsilo.done ? 14 : 10;
+  const h = s.tech.daysilo?.done ? 24 : s.rooms.silo?.built || s.tech.longsilo?.done ? 14 : 10;
   const rank = s.rooms.silo?.rank ?? 0;
   return (h + rank) * 3600;
 }
@@ -382,7 +382,7 @@ export function printCost(s: GameState): { ore: number; parts: number } {
 export function throneCap(s: GameState): number {
   return (
     1 +
-    (s.rooms.nerve.built ? 2 : 0) +
+    (s.rooms.nerve?.built ? 2 : 0) +
     (s.rooms.choir?.built ? 1 : 0) +
     s.moltLayer +
     (s.tech.nervegrow?.done ? 2 : 0) +
@@ -423,7 +423,7 @@ export function rates(s: GameState, now: number) {
   const chargeFactor = s.charge <= 1 ? (s.rooms.solar?.built ? 0.28 : 0.44) : Math.min(1, s.charge / 12);
   const hum = 1.12 + Math.min(0.5, s.hiveAge / 720);
   const idle = 1.28;
-  const lvl = (c: Caste) => Math.pow(1.12, s.casteLevel[c]);
+  const lvl = (c: Caste) => Math.pow(1.12, s.casteLevel?.[c] ?? 0);
   const mark = (c: Caste) => 1 + (s.hullMark[c] ?? 0) * 0.09;
   const rr = (id: RoomId, per = 0.08) => 1 + (s.rooms[id]?.rank ?? 0) * per;
   const orePerSec =
@@ -469,7 +469,7 @@ export function rates(s: GameState, now: number) {
     rr("barracks", 0.06) *
     (s.tech.hands?.done ? 1.25 : 1) *
     (s.tech.ribcage?.done ? 1.2 : 1) *
-    (s.tech.queue.done ? 1.15 : 1) *
+    (s.tech.queue?.done ? 1.15 : 1) *
     (s.tech.thirdqueue?.done ? 1.18 : 1);
   const labPerSec =
     s.swarm.lab *
@@ -498,7 +498,7 @@ export function rates(s: GameState, now: number) {
     (1 + s.minds.filter((m) => m.alive && m.seated).length * 0.08);
   const chargeGen =
     0.12 +
-    (s.rooms.solar.built ? 0.42 : 0) +
+    (s.rooms.solar?.built ? 0.42 : 0) +
     (s.rooms.solar.rank ?? 0) * 0.1 +
     (s.rooms.spire?.built ? 0.12 : 0) +
     (s.tech.solarfeed?.done ? 0.18 : 0) +
@@ -524,7 +524,7 @@ export function rates(s: GameState, now: number) {
 }
 
 export function nextGoal(s: GameState): string {
-  if (!s.rooms.solar.built) return "RAISE SOLAR";
+  if (!s.rooms.solar?.built) return "RAISE SOLAR";
   if (s.waking) return "PICK A MIND";
   if (s.pendingGift) return "CLAIM THE CUT";
   if (s.minds.some((m) => m.alive) && !s.minds.some((m) => m.alive && m.seated)) return "SEAT YOUR COMMANDER";

@@ -44,7 +44,7 @@ export function weaponMods(s: GameState) {
 export function fleetPower(s: GameState) {
   const mark = 1 + (s.hullMark?.striker ?? 0) * (s.tech.stingplus?.done ? 0.36 : 0.28);
   const lvl = Math.pow(1.14, s.casteLevel.striker);
-  const claws = s.tech.claws.done ? 1.4 : 1;
+  const claws = s.tech.claws?.done ? 1.4 : 1;
   const guns = 1 + weaponMods(s).power;
   const spire = s.rooms.spire?.built ? 1.12 : 1;
   const sensor = s.rooms.sensor?.built && s.raid?.watching ? (s.tech.sensorwatch?.done ? 1.22 : 1.1) : 1;
