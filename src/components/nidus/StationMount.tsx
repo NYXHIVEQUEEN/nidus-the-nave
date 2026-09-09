@@ -54,6 +54,7 @@ export class ChromeBound extends Component<{ children: ReactNode }, { failed: bo
 const INTERIOR: Record<string, string> = {
   hull: "/nidus/interior-hull.jpg",
   forge: "/nidus/interior-forge.jpg",
+  lab: "/nidus/interior-lab.jpg",
   minds: "/nidus/interior-minds.jpg",
 };
 

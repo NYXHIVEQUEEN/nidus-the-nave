@@ -79,9 +79,9 @@ const SOCKETS: Record<string, [number, number, number]> = {
   silo: [0.7, 0.46, -0.14],
   barracks: [-0.76, 0.08, 0.3],
   hangar: [0, -0.5, -1.12],
-  railgun: [0.7, 0.16, -0.9],
-  cannon: [-0.7, 0.14, -0.55],
-  gundeck: [0, 0.06, -1.68],
+  railgun: [0.62, 0.14, -0.28],
+  cannon: [-0.62, 0.14, 0.32],
+  gundeck: [0, -0.2, -1.72],
   lab: [0.64, 0.4, 0.64],
   nerve: [0, 0.76, 0.16],
   reliquary: [0, 1.02, 0],
@@ -381,55 +381,47 @@ function ShipDress({
         </mesh>
       )}
       {gundeck && (
-        <group>
-          <mesh position={[0, 0.02, -2.15]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.045, 0.07, 0.45 + gunRank * 0.06, 6]} />
+        <group position={[0, -0.2, -1.72]}>
+          <mesh>
+            <boxGeometry args={[0.16, 0.08, 0.18]} />
             <meshStandardMaterial map={bone} color="#4a4440" metalness={0.8} roughness={0.3} />
           </mesh>
-          {gunRank >= 2 && (
-            <mesh position={[0.18, 0.08, -1.95]} rotation={[Math.PI / 2.2, 0.2, 0]}>
-              <cylinderGeometry args={[0.03, 0.045, 0.32, 6]} />
-              <meshStandardMaterial color="#3a3834" metalness={0.8} roughness={0.3} />
-            </mesh>
-          )}
+          <mesh position={[0, 0, -0.22]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.028, 0.04, 0.28 + gunRank * 0.04, 6]} />
+            <meshStandardMaterial color="#3a3834" metalness={0.82} roughness={0.3} />
+          </mesh>
         </group>
       )}
       {railgun && (
-        <group position={[0.66, 0.14, -0.88]} rotation={[0.08, 0.12, 0]} scale={[1, 1, 1 + railRank * 0.12]}>
+        <group position={[0.62, 0.14, -0.28]}>
           <mesh>
-            <boxGeometry args={[0.1, 0.07, 0.18]} />
+            <boxGeometry args={[0.12, 0.08, 0.18]} />
             <meshStandardMaterial map={bone} color="#3a3834" metalness={0.78} roughness={0.34} />
           </mesh>
-          <mesh position={[0, 0.01, -0.22 - railRank * 0.04]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.014, 0.02, 0.32 + railRank * 0.08, 8]} />
+          <mesh position={[0, 0.01, -0.28]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.012, 0.016, 0.38 + railRank * 0.04, 8]} />
             <meshStandardMaterial color="#2a2824" metalness={0.86} roughness={0.28} />
           </mesh>
           {railRank >= 3 && (
-            <mesh position={[0.05, 0.0, -0.2]} rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.012, 0.016, 0.28, 8]} />
+            <mesh position={[0.04, 0.01, -0.22]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.01, 0.013, 0.3, 8]} />
               <meshStandardMaterial color="#2a2824" metalness={0.86} roughness={0.28} />
             </mesh>
           )}
         </group>
       )}
       {cannon && (
-        <group position={[-0.66, 0.12, -0.5]} rotation={[0.1, -0.08, 0]}>
+        <group position={[-0.62, 0.14, 0.32]}>
           <mesh>
-            <boxGeometry args={[0.12 + (canRank >= 2 ? 0.04 : 0), 0.08, 0.16]} />
+            <boxGeometry args={[0.14 + (canRank >= 2 ? 0.04 : 0), 0.08, 0.16]} />
             <meshStandardMaterial map={bone} color="#3a3834" metalness={0.76} roughness={0.36} />
           </mesh>
           {(canRank >= 2 ? [-0.03, 0.03] : [0]).map((x) => (
-            <mesh key={`can-${x}`} position={[x, 0.02, -0.16]} rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.024, 0.03, 0.2 + canRank * 0.03, 8]} />
+            <mesh key={`can-${x}`} position={[x, 0.02, -0.18]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.02, 0.026, 0.22 + canRank * 0.02, 8]} />
               <meshStandardMaterial color="#2c2a26" metalness={0.82} roughness={0.3} />
             </mesh>
           ))}
-          {canRank >= 4 && (
-            <mesh position={[0, 0.05, -0.14]} rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.02, 0.026, 0.18, 8]} />
-              <meshStandardMaterial color="#2c2a26" metalness={0.82} roughness={0.3} />
-            </mesh>
-          )}
         </group>
       )}
       {hiveRank >= 2 && solar && (

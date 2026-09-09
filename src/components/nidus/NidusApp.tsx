@@ -18,6 +18,7 @@ import {
   JOBS,
   RAIDS,
   ROOMS,
+  TECH,
   ZONES,
   berthCap,
   chargeCap,
@@ -55,12 +56,12 @@ import {
   sparkHot,
   type GuideId,
 } from "@/lib/nidus/guide";
-import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALVAGE_COOK, casteXpNeed, postBoostPct, wakeNeed, autoHoldBerths, callNeed, OFFICER_CAP } from "@/lib/nidus/progress";
+import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALVAGE_COOK, casteXpNeed, postBoostPct, wakeNeed, autoHoldBerths, callNeed, OFFICER_CAP, techUnlocked } from "@/lib/nidus/progress";
 import { ChromeBound, StationMount } from "./StationMount";
 import { SettingsPanel } from "./SettingsPanel";
 import { GoalDock, GuideSheet, LeftRail, StatusChip, Whisper, muteToggle, useDensity, useIdleChrome, useSyncPrefs, useViewport } from "./HiveChrome";
 import { cycleDensity, getPrefs, getSpinPaused, helpSeen, lookAtRoom, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
-import type { Caste, Rarity } from "@/lib/nidus/types";
+import type { Caste, Rarity, Tab } from "@/lib/nidus/types";
 
 const rarityColor: Record<Rarity, string> = {
   iron: "text-muted",
@@ -289,8 +290,9 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
       if (e.code === "Digit1") setTab("hull");
       if (e.code === "Digit2") setTab("forge");
-      if (e.code === "Digit3") setTab("raid");
-      if (e.code === "Digit4") setTab("minds");
+      if (e.code === "Digit3") setTab("lab");
+      if (e.code === "Digit4") setTab("raid");
+      if (e.code === "Digit5") setTab("minds");
       if (e.code === "KeyS") {
         useNidus.getState().surge();
         chime("surge");
@@ -534,38 +536,45 @@ function RaidRail() {
   );
 }
 
-function TabBar({ tab, setTab }: { tab: "hull" | "forge" | "raid" | "minds"; setTab: (id: "hull" | "forge" | "raid" | "minds") => void }) {
+function TabBar({ tab, setTab }: { tab: Tab; setTab: (id: Tab) => void }) {
   const waking = useNidus((s) => s.waking);
   const raiding = useNidus((s) => Boolean(s.raid));
   const verb = useNidus((s) => advise(s).verb);
-  const spark = useNidus((s) => s.spark);
-  const sparkNeed = useNidus((s) => s.sparkNeed);
   const gift = useNidus((s) => Boolean(s.pendingGift));
-  const tabs = [
-    { id: "hull" as const, label: "HULL" },
-    { id: "forge" as const, label: "FORGE" },
-    { id: "raid" as const, label: "RAID" },
-    { id: "minds" as const, label: "MINDS" },
+  const researching = useNidus((s) => Boolean(s.activeTech));
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "hull", label: "HULL" },
+    { id: "forge", label: "FORGE" },
+    { id: "lab", label: "LAB" },
+    { id: "raid", label: "RAID" },
+    { id: "minds", label: "MINDS" },
   ];
   return (
-    <nav data-chrome className="pointer-events-auto relative z-30 flex gap-2 bg-transparent px-4 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1">
+    <nav data-chrome className="pointer-events-auto relative z-30 flex gap-1 bg-transparent px-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1">
       {tabs.map((t) => (
         <button
           key={t.id}
           type="button"
           onClick={() => setTab(t.id)}
           className={cn(
-            "nidus-cut relative flex h-9 min-h-9 flex-1 items-center justify-center font-display text-[0.58rem] tracking-[0.2em]",
+            "nidus-cut relative flex h-9 min-h-9 min-w-0 flex-1 items-center justify-center font-display text-[0.52rem] tracking-[0.12em]",
             tab === t.id ? "nidus-cut-on" : "text-muted",
-            pulse((t.id === "forge" && verb === "PRINT") || (t.id === "raid" && (verb === "RAID" || verb === "BOOST")) || (t.id === "minds" && (verb === "WAKE" || verb === "SEAT")) || (t.id === "hull" && (verb === "BUILD" || verb === "SURGE" || verb === "CLAIM"))),
+            pulse(
+              (t.id === "forge" && verb === "PRINT") ||
+                (t.id === "raid" && (verb === "RAID" || verb === "BOOST")) ||
+                (t.id === "minds" && (verb === "WAKE" || verb === "SEAT")) ||
+                (t.id === "lab" && (verb === "RITE" || researching)) ||
+                (t.id === "hull" && (verb === "BUILD" || verb === "SURGE" || verb === "CLAIM")),
+            ),
           )}
           aria-current={tab === t.id ? "page" : undefined}
         >
           {t.label}
-          {t.id === "minds" && (waking || verb === "WAKE" || verb === "SEAT") && <span className="absolute right-2 top-1 h-1.5 w-1.5 rounded-full bg-venom" />}
-          {t.id === "raid" && raiding && <span className="absolute right-2 top-1 h-1.5 w-1.5 rounded-full bg-gilt" />}
-          {t.id === "forge" && verb === "PRINT" && <span className="absolute right-2 top-1 h-1.5 w-1.5 rounded-full bg-gilt" />}
-          {t.id === "hull" && (gift || verb === "BUILD") && <span className="absolute right-2 top-1 h-1.5 w-1.5 rounded-full bg-gilt" />}
+          {t.id === "minds" && (waking || verb === "WAKE" || verb === "SEAT") && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-venom" />}
+          {t.id === "raid" && raiding && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-gilt" />}
+          {t.id === "forge" && verb === "PRINT" && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-gilt" />}
+          {t.id === "lab" && researching && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-venom" />}
+          {t.id === "hull" && (gift || verb === "BUILD") && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-gilt" />}
         </button>
       ))}
     </nav>
@@ -575,6 +584,7 @@ function TabBar({ tab, setTab }: { tab: "hull" | "forge" | "raid" | "minds"; set
 function ActiveTab({ verb, compact }: { verb: string; compact: boolean }) {
   const tab = useNidus((s) => s.tab);
   if (tab === "forge") return <ForgeTab verb={verb} compact={compact} />;
+  if (tab === "lab") return <LabTab compact={compact} />;
   if (tab === "raid") return <RaidTab verb={verb} compact={compact} />;
   if (tab === "minds") return <MindsTab compact={compact} />;
   return <HullTab verb={verb} compact={compact} />;
@@ -831,6 +841,75 @@ function ForgeTab({ verb, compact }: { verb: string; compact: boolean }) {
           <span className="font-display text-[0.42rem] tracking-[0.12em]">AUTO</span>
         </button>
       </div>
+    </div>
+  );
+}
+
+function LabTab({ compact }: { compact: boolean }) {
+  const lab = useNidus((s) => Boolean(s.rooms.lab?.built));
+  const tech = useNidus((s) => s.tech);
+  const active = useNidus((s) => s.activeTech);
+  const research = useNidus((s) => s.research);
+  const hive = useNidus();
+  const rows = TECH.filter((t) => {
+    const st = tech[t.id] ?? { done: false, progress: 0 };
+    if (st.done) return false;
+    if (t.id === active) return true;
+    try {
+      return techUnlocked(hive, t.id).ok;
+    } catch {
+      return false;
+    }
+  }).slice(0, 8);
+  const locked = TECH.filter((t) => {
+    const st = tech[t.id] ?? { done: false, progress: 0 };
+    if (st.done) return false;
+    if (rows.some((r) => r.id === t.id)) return false;
+    return true;
+  }).slice(0, 4);
+  const doneN = TECH.filter((t) => tech[t.id]?.done).length;
+  return (
+    <div className={cn("pointer-events-auto overflow-y-auto p-2", compact ? "max-h-[32dvh]" : "max-h-[40dvh]")} data-chrome>
+      <p className="mb-1 text-center font-display text-[0.58rem] tracking-[0.18em] text-gilt">
+        {lab ? (active ? `COOKING ${TECH.find((t) => t.id === active)?.label ?? "RITE"}` : "PICK A RITE") : "RAISE THE LAB MODULE ON HULL"}
+      </p>
+      <div className="grid grid-cols-2 gap-1.5">
+        {rows.map((t) => {
+          const st = tech[t.id] ?? { done: false, progress: 0 };
+          const work = Math.max(1, t.work || 1);
+          const pct = Math.min(100, Math.floor((st.progress / work) * 100));
+          return (
+            <button
+              key={t.id}
+              type="button"
+              disabled={!lab}
+              title={t.blurb}
+              onClick={() => {
+                try {
+                  research(t.id);
+                  chime("snap");
+                } catch {
+                  /* rite optional */
+                }
+              }}
+              className={cn("nidus-cut px-2 py-1.5 text-left", active === t.id ? "nidus-cut-venom" : "text-bone")}
+            >
+              <p className="font-display text-[0.52rem] tracking-[0.12em]">{t.label}</p>
+              <p className="truncate text-[0.55rem] text-muted">{t.blurb}</p>
+              <p className="text-[0.55rem] tabular-nums text-gilt-dim">{pct}% · T{t.tier}</p>
+            </button>
+          );
+        })}
+        {locked.map((t) => (
+          <div key={t.id} className="nidus-cut px-2 py-1.5 text-left opacity-40">
+            <p className="font-display text-[0.52rem] tracking-[0.12em]">{t.label}</p>
+            <p className="truncate text-[0.55rem] text-muted">NESTED</p>
+          </div>
+        ))}
+      </div>
+      {doneN > 0 && (
+        <p className="mt-1 text-center font-display text-[0.48rem] tracking-[0.14em] text-muted">{doneN} RITES INLAID</p>
+      )}
     </div>
   );
 }

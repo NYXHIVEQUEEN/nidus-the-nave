@@ -71,6 +71,7 @@ export function ensureHive(s: GameState): GameState {
   if (s.queuedRoom && !s.rooms[s.queuedRoom]) s.queuedRoom = null;
   if (s.rankingRoom && !s.rooms[s.rankingRoom]) s.rankingRoom = null;
   if (s.activeTech && !s.tech[s.activeTech]) s.activeTech = null;
+  if (s.tab !== "hull" && s.tab !== "forge" && s.tab !== "lab" && s.tab !== "raid" && s.tab !== "minds") s.tab = "hull";
   if (!s.casteLevel) s.casteLevel = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
   if (!s.hullMark) s.hullMark = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
   if (typeof s.callPaid !== "number" || Number.isNaN(s.callPaid)) s.callPaid = 0;
@@ -695,9 +696,14 @@ export function molt(s: GameState): GameState {
 
 export function setTech(s: GameState, id: (typeof TECH)[number]["id"]): GameState {
   const next = cloneState(s);
-  if (!next.rooms.lab.built) return next;
+  if (!next.rooms.lab?.built) return next;
+  if (!next.tech[id]) next.tech[id] = { done: false, progress: 0 };
   if (next.tech[id].done) return next;
-  if (!techUnlocked(next, id).ok) return next;
+  try {
+    if (!techUnlocked(next, id).ok) return next;
+  } catch {
+    return next;
+  }
   next.activeTech = id;
   return next;
 }

@@ -190,9 +190,13 @@ export const useNidus = create<Store>((set, get) => ({
     lastWrite = Date.now();
   },
   research: (id) => {
-    set(setTech(get(), id));
-    writeSave(pickGame(get()));
-    lastWrite = Date.now();
+    try {
+      set(setTech(pickGame(get()), id));
+      writeSave(pickGame(get()));
+      lastWrite = Date.now();
+    } catch {
+      writeSave(pickGame(get()));
+    }
   },
   dismissBrief: () => set({ showBrief: false }),
   saveNow: () => {

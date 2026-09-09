@@ -5,7 +5,6 @@ import {
   ChevronUp,
   Eye,
   EyeOff,
-  FlaskConical,
   HelpCircle,
   Pause,
   RotateCw,
@@ -153,7 +152,7 @@ export function LeftRail({
         </RailBtn>
         <RailBtn
           label="SETTINGS"
-          title="Settings — size, sound, lab, save."
+          title="Settings — size, sound, save."
           on={fly === "rite"}
           onClick={() => openFly("rite")}
         >
@@ -216,13 +215,6 @@ export function LeftRail({
             {muted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
           </RailBtn>
           <RailBtn
-            label="LAB"
-            title="Rites and hive mind."
-            onClick={() => onRitePane("opt")}
-          >
-            <FlaskConical className="size-3" />
-          </RailBtn>
-          <RailBtn
             label="CODEX"
             title="Dictionary. Not a lecture."
             onClick={() => onRitePane("codex")}
@@ -243,7 +235,7 @@ export function LeftRail({
 }
 
 export function GuideSheet({ screen, onClose, className }: { screen: GuideId; onClose: () => void; className?: string }) {
-  const g = GUIDES[screen];
+  const g = GUIDES[screen] ?? GUIDES.hull;
   useEffect(() => {
     markHelp(screen as HelpId);
   }, [screen]);

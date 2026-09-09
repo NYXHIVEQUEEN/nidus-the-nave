@@ -4,6 +4,7 @@ export const BOOT_ASSETS: string[] = [
   ...new Set([
     "/nidus/interior-hull.jpg",
     "/nidus/interior-forge.jpg",
+    "/nidus/interior-lab.jpg",
     "/nidus/interior-minds.jpg",
     "/nidus/keyart.jpg",
     "/nidus/nave.jpg",
