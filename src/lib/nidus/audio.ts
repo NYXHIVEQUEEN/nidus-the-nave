@@ -439,11 +439,6 @@ export function setAmbiance(kind: AmbKind) {
   if (m.bed !== wanted) void fadeTo(wanted);
 }
 
-export function setMuted(muted: boolean) {
-  patchPrefs({ muted });
-  applyGains();
-}
-
 export function setMusicBed(bed: MusicBed) {
   patchPrefs({ musicBed: bed });
   syncAudioGains();

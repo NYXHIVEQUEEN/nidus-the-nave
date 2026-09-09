@@ -1,6 +1,6 @@
 import type { FrameId, GameState, Job, Mind, RoomId, Tab } from "./types";
 import { FRAMES, RAIDS, berthCap, raidNeed, raidUnlocked, totalSwarm } from "./content";
-import { hiveStage, postBoostPct, roomUnlocked, wakeNeed } from "./progress";
+import { hiveStage, postBoostPct, roomUnlocked } from "./progress";
 
 export type { Stage } from "./progress";
 export { hiveStage };
@@ -127,7 +127,6 @@ export function mindPostLine(mind: Pick<Mind, "job" | "seated" | "wounded" | "le
 const GLOSS: Record<string, string> = {
   ORE: "Mined ice. Fabs eat it. Sell extra for CUT.",
   PARTS: "Forged bits. Rooms and rites spend these.",
-  SPIRIT: "Old name. SPARK is the spend now.",
   CHARGE: "Gone. SPARK is the spend. Solar feeds it.",
   SPARK: "Hive will. SURGE, BOOST, HEAL, CALL, PRINT sip it. Empty = swarm crawls.",
   ECHO: "Fallen minds. Spend to molt.",
@@ -168,10 +167,6 @@ export function raidLockWhy(s: GameState, id: (typeof RAIDS)[number]["id"]): str
 
 export function packed(s: GameState): boolean {
   return totalSwarm(s) >= berthCap(s) - 1;
-}
-
-export function sparkHot(s: GameState): boolean {
-  return s.spark / Math.max(1, wakeNeed(s)) >= 0.8;
 }
 
 export function sparkBanked(s: GameState): boolean {

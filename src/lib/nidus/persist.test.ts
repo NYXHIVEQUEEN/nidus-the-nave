@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { importSave } from "./save.ts";
 import { autoHoldBerths, canWakeMinds, cookUnlocked, hiveTitle, postBoostPct, roomUnlocked, techUnlocked, wakeNeed } from "./progress.ts";
-import { berthCap, chargeCap, defaultState, rollCandidates, sparkCap, totalSwarm } from "./content.ts";
+import { berthCap, defaultState, rollCandidates, sparkCap, totalSwarm } from "./content.ts";
 import { applyTick, chooseWake, claimGift, queueRoom, sendRaid, startCall, startSurge, tryPrint } from "./sim.ts";
 import { advise, nextBuild } from "./advisor.ts";
 
@@ -157,17 +157,17 @@ test("surge spends spark and a dry hive cannot scream", () => {
   assert.equal(next.surgeUntil - now, 32_000);
 });
 
-test("claim gift banks charge and mercy", () => {
+test("claim gift banks spark and mercy", () => {
   const s = defaultState();
   s.pendingGift = { ore: 10, parts: 4, spark: 3, seconds: 90 };
-  s.charge = 10;
-  const cap = chargeCap(s);
+  s.spark = 4;
+  const cap = sparkCap(s);
   const next = claimGift(s);
   assert.equal(next.pendingGift, null);
   assert.equal(next.mercySurge, true);
   assert.ok(next.ore >= 10);
-  assert.ok(next.charge > 10);
-  assert.ok(next.charge <= cap);
+  assert.ok(next.spark > 4);
+  assert.ok(next.spark <= cap);
 });
 
 test("first wake waits for the solar spine and banks spark", () => {

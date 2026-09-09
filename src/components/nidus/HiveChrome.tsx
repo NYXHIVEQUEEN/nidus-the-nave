@@ -10,7 +10,6 @@ import {
   RotateCw,
   Save,
   Settings2,
-  SlidersHorizontal,
   Volume2,
   VolumeX,
   Scaling,
@@ -388,11 +387,6 @@ export function useDensity(): DensityResolved {
   const prefs = useSyncPrefs();
   const vp = useViewport();
   return resolveDensity(prefs, vp.w, vp.h, vp.landscape);
-}
-
-export function firstLook(id: GuideId, hints: boolean): string | null {
-  if (!hints || helpSeen(id as HelpId)) return null;
-  return firstWhisper(id);
 }
 
 export function muteToggle(muted: boolean, setMutedUi: (v: boolean) => void) {

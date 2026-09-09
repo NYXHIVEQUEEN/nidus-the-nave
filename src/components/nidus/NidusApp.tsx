@@ -53,14 +53,13 @@ import {
   raidLockWhy,
   roomLockWhy,
   sparkBanked,
-  sparkHot,
   type GuideId,
 } from "@/lib/nidus/guide";
 import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALVAGE_COOK, casteXpNeed, postBoostPct, autoHoldBerths, callNeed, OFFICER_CAP, techUnlocked } from "@/lib/nidus/progress";
 import { ChromeBound, StationMount } from "./StationMount";
 import { SettingsPanel } from "./SettingsPanel";
 import { GoalDock, GuideSheet, LeftRail, StatusChip, Whisper, muteToggle, useDensity, useIdleChrome, useSyncPrefs, useViewport } from "./HiveChrome";
-import { cycleDensity, getPrefs, getSpinPaused, helpSeen, lookAtRoom, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
+import { cycleDensity, getPrefs, getSpinPaused, helpSeen, lookAtRoom, subscribeSpin } from "@/lib/nidus/view";
 import type { Caste, Rarity, Tab } from "@/lib/nidus/types";
 
 const rarityColor: Record<Rarity, string> = {
@@ -412,7 +411,6 @@ function ResourceBar({ compact }: { compact: boolean }) {
   const fresh = Date.now() - lastSaveAt < 6000;
   const [open, setOpen] = useState<string | null>(null);
   const starve = chargeStarve(s);
-  const hot = sparkHot(s);
   return (
     <header className="pointer-events-auto px-3 pt-[max(0.45rem,env(safe-area-inset-top))]" data-chrome>
       <div className={cn("flex items-center justify-between gap-1.5 border border-border bg-nave/80 px-2 backdrop-blur-sm", compact ? "py-1" : "py-1.5")}>
@@ -1053,7 +1051,6 @@ function MindsTab({ compact }: { compact: boolean }) {
   const melt = useNidus((s) => s.melt);
   const waking = useNidus((s) => s.waking);
   const spark = useNidus((s) => s.spark);
-  const sparkNeed = useNidus((s) => s.sparkNeed);
   const s = useNidus();
   const live = minds.filter((m) => m.alive);
   const mind = live.find((m) => m.id === selected) ?? live[0];

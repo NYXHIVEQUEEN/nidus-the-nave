@@ -183,7 +183,6 @@ function tickInner(s: GameState, now: number): GameState {
   next.ore += oreGain - oreSpentOnParts;
   next.parts += partsGain;
   next.credits = (next.credits ?? 0) + (r.creditsPerSec ?? 0) * dt;
-  next.charge += (r.chargeGen - r.chargeDrain) * dt;
   next.hiveAge += dt;
   if (next.surgeUntil > 0 && now >= next.surgeUntil) next.surgeUntil = 0;
   if (away) {
@@ -745,7 +744,6 @@ export function claimGift(s: GameState): GameState {
   next.parts += next.pendingGift.parts;
   next.spark += next.pendingGift.spark;
   next.credits = (next.credits ?? 0) + (next.pendingGift.credits ?? 0);
-  next.charge += chargeCap(next) * 0.18;
   next.mercySurge = true;
   next.pendingGift = null;
   clampRes(next);

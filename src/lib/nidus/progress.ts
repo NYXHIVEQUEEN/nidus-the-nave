@@ -1,4 +1,4 @@
-import type { Caste, GameState, Mind, RoomId, SalvageId, TechId } from "./types";
+import type { GameState, Mind, RoomId, SalvageId, TechId } from "./types";
 import { ROOMS, TECH, totalSwarm } from "./content";
 
 /** Room rank ceiling. Old hives at R3 can still climb. */
@@ -131,29 +131,11 @@ export function cookUnlocked(s: GameState, id: SalvageId): boolean {
   return false;
 }
 
-export function markBonus(s: GameState, caste: Caste): number {
-  return 1 + (s.hullMark[caste] ?? 0) * 0.09;
-}
-
-export function rankBonus(s: GameState, id: RoomId, per = 0.08): number {
-  return 1 + (s.rooms[id]?.rank ?? 0) * per;
-}
-
 export function moltCost(s: GameState): number {
   const cheap = s.tech.moltcheap?.done ? 0.72 : 1;
   const apse = s.rooms.apse?.built ? 0.85 : 1;
   const r = s.rooms.reliquary?.rank ?? 0;
   return Math.max(4, Math.round((6 + s.moltLayer * 4) * cheap * apse * (1 - r * 0.04)));
-}
-
-export function nextOpenRoom(s: GameState): RoomId | null {
-  const row = ROOMS.find((r) => r.id !== "foundry" && !s.rooms[r.id]?.built && roomUnlocked(s, r.id).ok);
-  return row?.id ?? null;
-}
-
-export function nextOpenTech(s: GameState): TechId | null {
-  const row = TECH.find((t) => !s.tech[t.id]?.done && techUnlocked(s, t.id).ok);
-  return row?.id ?? null;
 }
 
 /** First commander waits for the spine so WAKE is a beat, not a dump. */

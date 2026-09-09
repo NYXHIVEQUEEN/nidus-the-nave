@@ -542,10 +542,10 @@ function Hull() {
   const watching = useNidus((s) => Boolean(s.raid?.watching));
   const queued = useNidus((s) => s.queuedRoom);
   const swarm = useNidus((s) => s.swarm.miner + s.swarm.fab + s.swarm.builder + s.swarm.lab + s.swarm.striker);
-  const glow = useNidus((s) => Math.min(1, Math.round(s.charge) / 40));
+  const glow = useNidus((s) => Math.min(1, s.spark / 18));
   const surging = useNidus((s) => s.surgeUntil > Date.now());
   const raiding = useNidus((s) => Boolean(s.raid));
-  const sparkFill = useNidus((s) => Math.min(1, s.spark / Math.max(1, s.sparkNeed)));
+  const sparkFill = useNidus((s) => Math.min(1, s.spark / 18));
   const printed = useNidus((s) => s.printed);
   const eventKind = useNidus((s) => s.eventKind);
   const hiveRank = useNidus((s) => s.hiveRank ?? 0);

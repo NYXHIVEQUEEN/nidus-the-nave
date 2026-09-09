@@ -1,6 +1,6 @@
 export type Caste = "miner" | "fab" | "builder" | "lab" | "striker";
 export type Job = "mine" | "forge" | "build" | "lab" | "raid";
-export type Tab = "hull" | "forge" | "raid" | "minds";
+export type Tab = "hull" | "forge" | "lab" | "raid" | "minds";
 export type FrameId = "warden" | "rook" | "kiln" | "oracle" | "lancer" | "wretch" | "herald";
 export type Rarity = "iron" | "bone" | "gold" | "relic";
 export type RoomId =
