@@ -63,7 +63,7 @@ let prefs: ViewPrefs = {
   density: "compact" as Density,
   uiScale: 0.92,
   musicBed: "anthem" as MusicBed,
-  prefsGen: 4,
+  prefsGen: 5,
 };
 
 function clamp(n: number, a: number, b: number) {
@@ -96,14 +96,14 @@ function read() {
       lookUntil: typeof parsed.lookUntil === "number" ? parsed.lookUntil : 0,
       seenHelp: parsed.seenHelp && typeof parsed.seenHelp === "object" ? parsed.seenHelp : {},
       density:
-        (parsed.prefsGen ?? 0) >= 3 &&
+        (parsed.prefsGen ?? 0) >= 5 &&
         (parsed.density === "compact" || parsed.density === "comfort" || parsed.density === "watch" || parsed.density === "auto")
           ? parsed.density
           : "compact",
       uiScale:
         (parsed.prefsGen ?? 0) >= 4 && typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.7, 1.22) : 0.92,
       musicBed: parsed.musicBed === "void" ? "void" : "anthem",
-      prefsGen: 4,
+      prefsGen: 5,
     };
   } catch {
     /* keep */

@@ -249,7 +249,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   })();
   const density = useDensity();
   const vp = useViewport();
-  const watchChrome = density === "watch" || collapsed;
+  const watchChrome = collapsed;
   const buildPct = (() => {
     const id = s.queuedRoom;
     if (!id) return undefined;
