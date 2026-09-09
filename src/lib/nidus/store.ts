@@ -6,6 +6,8 @@ import {
   assignJob,
   boostRaid,
   chooseWake,
+  startCall,
+  passCall,
   claimGift,
   molt,
   promoteMind,
@@ -38,6 +40,8 @@ type Store = GameState & {
   print: () => void;
   queue: (id: RoomId) => void;
   pickWake: (i: number) => void;
+  callOfficer: () => void;
+  passOfficer: () => void;
   selectMind: (id: string) => void;
   setJob: (id: string, job: Job) => void;
   seat: (id: string) => void;
@@ -139,6 +143,16 @@ export const useNidus = create<Store>((set, get) => ({
   },
   pickWake: (i) => {
     set(chooseWake(get(), i));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  callOfficer: () => {
+    set(startCall(pickGame(get())));
+    writeSave(pickGame(get()));
+    lastWrite = Date.now();
+  },
+  passOfficer: () => {
+    set(passCall(pickGame(get())));
     writeSave(pickGame(get()));
     lastWrite = Date.now();
   },

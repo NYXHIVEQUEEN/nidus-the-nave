@@ -22,8 +22,8 @@ import {
   zoneCost,
 } from "./content";
 import { nextBuild, nextRaid, nextRite, pickPrintCaste } from "./advisor";
-import { casteXpNeed, computeHiveRank, cookUnlocked, moltCost, RANK_MAX, roomUnlocked, SALVAGE_COOK, techUnlocked, autoHoldBerths, canWakeMinds, wakeNeed } from "./progress";
-import { freshRaidBars, markUp, tickBattle } from "./fleet";
+import { casteXpNeed, computeHiveRank, cookUnlocked, moltCost, RANK_MAX, roomUnlocked, SALVAGE_COOK, techUnlocked, autoHoldBerths, canWakeMinds, callNeed, OFFICER_CAP } from "./progress";
+import { freshRaidBars, markUp, raidCutPayout, tickBattle } from "./fleet";
 import { rand } from "./rng";
 
 function cloneState<T>(s: T): T {
@@ -73,6 +73,7 @@ export function ensureHive(s: GameState): GameState {
   if (s.activeTech && !s.tech[s.activeTech]) s.activeTech = null;
   if (!s.casteLevel) s.casteLevel = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
   if (!s.hullMark) s.hullMark = { miner: 0, fab: 0, builder: 0, lab: 0, striker: 0 };
+  if (typeof s.callPaid !== "number" || Number.isNaN(s.callPaid)) s.callPaid = 0;
   return s;
 }
 
@@ -262,15 +263,6 @@ export function applyTick(s: GameState, now: number): GameState {
 
   if (!next.waking) {
     next.spark += r.sparkPerSec * dt;
-    const need = wakeNeed(next);
-    if (canWakeMinds(next) && next.spark >= need && next.minds.filter((m) => m.alive).length < 6) {
-      next.spark = 0;
-      next.sparkNeed = Math.round(next.sparkNeed * 1.55 + 12);
-      const rolled = rollCandidates(next);
-      next.waking = rolled.waking;
-      next.rng = rolled.rng;
-      pushBrief(next, { kind: "wake", headline: "SOMEONE WOKE", line: "Three bodies. Pick one. She waits for a SEAT." });
-    }
   }
 
   if (next.autoPrint) {
@@ -405,7 +397,10 @@ function resolveRaid(s: GameState, now: number) {
   const hpFrac = run.hpMax > 0 ? run.hp / run.hpMax : 1;
   const hullFrac = run.hullMax > 0 ? run.hull / run.hullMax : 1;
   const power =
-    run.strikers * (s.tech.claws.done ? 1.4 : 1) * (1 + s.moltLayer * 0.2) + (s.rooms.gundeck.built ? 4 : 0);
+    run.strikers * (s.tech.claws.done ? 1.4 : 1) * (1 + s.moltLayer * 0.2) +
+    (s.rooms.gundeck.built ? 4 : 0) +
+    (s.rooms.railgun?.built ? 3 : 0) +
+    (s.rooms.cannon?.built ? 2 : 0);
   const need = node.need;
   const ratio = power / Math.max(1, need);
   const roll = rand(s.rng);
@@ -425,11 +420,13 @@ function resolveRaid(s: GameState, now: number) {
     const extra = (s.tech.salvage?.done ? 2 : 1) + (s.tech.salvage2?.done ? 1 : 0);
     if (!s.salvage) s.salvage = { ice: 0, plate: 0, rose: 0, bone: 0, core: 0 };
     s.salvage[node.salvage] = (s.salvage[node.salvage] ?? 0) + extra;
+    const cut = raidCutPayout(s, node.id);
+    s.credits = (s.credits ?? 0) + cut;
     if (!s.raidCount) s.raidCount = {};
     s.raidCount[node.id] = (s.raidCount[node.id] ?? 0) + 1;
     if (!s.raidCleared.includes(node.id)) s.raidCleared.push(node.id);
     credit(s, "raid", node.id);
-    pushLog(s, `${node.label} taken. +${node.salvage}.`);
+    pushLog(s, `${node.label} taken. +${cut} CUT · ${node.salvage}.`);
     pushBrief(s, {
       kind: "raid",
       headline: node.label,
@@ -537,6 +534,7 @@ export function chooseWake(s: GameState, index: number): GameState {
   next.minds.push(made.mind);
   next.selectedMind = made.mind.id;
   next.waking = null;
+  next.callPaid = 0;
   next.tab = "minds";
   credit(next, "wake", made.mind.frame);
   pushBrief(next, {
@@ -546,6 +544,33 @@ export function chooseWake(s: GameState, index: number): GameState {
     portrait: made.mind.portrait,
     stamp: made.mind.frame.toUpperCase(),
   });
+  return next;
+}
+
+export function startCall(s: GameState): GameState {
+  const next = cloneState(s);
+  if (next.waking) return next;
+  if (next.minds.filter((m) => m.alive).length >= OFFICER_CAP) return next;
+  if (!canWakeMinds(next)) return next;
+  const need = callNeed(next);
+  if (next.spark < need) return next;
+  next.spark -= need;
+  next.callPaid = need;
+  const rolled = rollCandidates(next);
+  next.waking = [rolled.waking[0]];
+  next.rng = rolled.rng;
+  next.tab = "minds";
+  pushBrief(next, { kind: "wake", headline: "A BODY ANSWERS", line: "TAKE or PASS. PASS returns a third of the SPARK." });
+  return next;
+}
+
+export function passCall(s: GameState): GameState {
+  const next = cloneState(s);
+  if (!next.waking) return next;
+  next.spark += Math.floor((next.callPaid || 0) * 0.3);
+  next.callPaid = 0;
+  next.waking = null;
+  pushLog(next, "Passed. SPARK drips back.");
   return next;
 }
 

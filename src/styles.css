@@ -155,9 +155,16 @@
 }
 
 .nidus-sheet-hide {
-  transform: translateY(110%);
+  transform: none;
+  max-height: 0 !important;
+  min-height: 0;
+  height: 0;
+  overflow: hidden;
   opacity: 0;
   pointer-events: none;
+  padding: 0;
+  margin: 0;
+  border: 0;
 }
 
 .nidus-vbar {
@@ -465,7 +472,7 @@
 }
 
 .nidus-root[data-density="watch"] .nidus-sheet {
-  max-height: 0;
+  max-height: 36dvh;
 }
 
 .nidus-root[data-density="compact"] .nidus-rail {

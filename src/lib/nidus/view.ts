@@ -28,15 +28,15 @@ export type ViewPrefs = {
   prefsGen: number;
 };
 
-export const CAM_DIR = { x: 0.86, y: 0.3, z: 0.41 };
+export const CAM_DIR = { x: 0.62, y: 0.32, z: 0.72 };
 export const CAM_MIN = 8;
 export const CAM_MAX = 48;
-export const CAM_DEFAULT = 18;
+export const CAM_DEFAULT = 15;
 
 export const CAM_PRESETS = {
-  close: { camDist: 12, camFov: 42, label: "CLOSE", why: "inspect a node" },
-  nave: { camDist: 18, camFov: 46, label: "NAVE", why: "working shot" },
-  wide: { camDist: 24, camFov: 48, label: "WIDE", why: "station in the glass" },
+  close: { camDist: 10, camFov: 42, label: "CLOSE", why: "inspect a node" },
+  nave: { camDist: 15, camFov: 46, label: "NAVE", why: "working shot" },
+  wide: { camDist: 22, camFov: 48, label: "WIDE", why: "station in the glass" },
   void: { camDist: 36, camFov: 52, label: "VOID", why: "cathedral in the sky" },
 } as const;
 
@@ -63,7 +63,7 @@ let prefs: ViewPrefs = {
   density: "compact" as Density,
   uiScale: 0.92,
   musicBed: "anthem" as MusicBed,
-  prefsGen: 5,
+  prefsGen: 7,
 };
 
 function clamp(n: number, a: number, b: number) {
@@ -84,26 +84,26 @@ function read() {
       muted: Boolean(parsed.muted),
       hints: parsed.hints !== false,
       camGen: typeof parsed.camGen === "number" ? parsed.camGen : 0,
-      camDist: typeof parsed.camDist === "number"
-        ? clamp(parsed.camDist === 24 && (parsed.camFov === 48 || parsed.camFov == null) ? CAM_DEFAULT : parsed.camDist, CAM_MIN, CAM_MAX)
+      camDist: typeof parsed.camDist === "number" && (parsed.prefsGen ?? 0) >= 6
+        ? clamp(parsed.camDist, CAM_MIN, CAM_MAX)
         : CAM_DEFAULT,
-      camFov: typeof parsed.camFov === "number" ? clamp(parsed.camDist === 24 && parsed.camFov === 48 ? 46 : parsed.camFov, 28, 70) : 46,
+      camFov: typeof parsed.camFov === "number" && (parsed.prefsGen ?? 0) >= 6 ? clamp(parsed.camFov, 28, 70) : 46,
       camZoom: typeof parsed.camZoom === "number" ? clamp(parsed.camZoom, 0.35, 1.8) : 1,
       camPull: Boolean(parsed.camPull),
-      autoHide: (parsed.prefsGen ?? 0) >= 2 ? Boolean(parsed.autoHide) : false,
-      watchNave: Boolean(parsed.watchNave) && Boolean((parsed.prefsGen ?? 0) >= 2 && parsed.autoHide),
+      autoHide: (parsed.prefsGen ?? 0) >= 7 ? Boolean(parsed.autoHide) : false,
+      watchNave: false,
       lookId: typeof parsed.lookId === "string" ? parsed.lookId : "",
       lookUntil: typeof parsed.lookUntil === "number" ? parsed.lookUntil : 0,
       seenHelp: parsed.seenHelp && typeof parsed.seenHelp === "object" ? parsed.seenHelp : {},
       density:
-        (parsed.prefsGen ?? 0) >= 5 &&
-        (parsed.density === "compact" || parsed.density === "comfort" || parsed.density === "watch" || parsed.density === "auto")
+        (parsed.prefsGen ?? 0) >= 7 &&
+        (parsed.density === "compact" || parsed.density === "comfort" || parsed.density === "auto")
           ? parsed.density
           : "compact",
       uiScale:
         (parsed.prefsGen ?? 0) >= 4 && typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.7, 1.22) : 0.92,
       musicBed: parsed.musicBed === "void" ? "void" : "anthem",
-      prefsGen: 5,
+      prefsGen: 7,
     };
   } catch {
     /* keep */
@@ -183,14 +183,15 @@ export function subscribeSpin(fn: () => void) {
 }
 
 export function resolveDensity(p = prefs, w = 390, h = 844, landscape = false): DensityResolved {
-  if (p.density === "compact" || p.density === "comfort" || p.density === "watch") return p.density;
+  if (p.density === "watch") return "compact";
+  if (p.density === "compact" || p.density === "comfort") return p.density;
   if (landscape && h < 480) return "compact";
   if (h < 620) return "compact";
   return "comfort";
 }
 
 export function cycleDensity() {
-  const order: Density[] = ["auto", "compact", "comfort", "watch"];
+  const order: Density[] = ["auto", "compact", "comfort"];
   const i = order.indexOf(prefs.density);
   patchPrefs({ density: order[(i + 1) % order.length] ?? "auto" });
 }

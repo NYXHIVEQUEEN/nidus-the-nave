@@ -97,11 +97,13 @@ export function hiveStage(s: GameState): Stage {
   if (!s.autoPrint) return { n: 3, of: 12, name: "IDLE", hint: "Flip AUTO so it stamps while gone." };
   if (s.minds.some((m) => m.alive) && !s.minds.some((m) => m.alive && m.seated))
     return { n: 4, of: 12, name: "SEAT", hint: "SEAT her. Pacing is half the post." };
-  if (!s.raidCleared.includes("ice")) return { n: 4, of: 12, name: "WELL", hint: "RAID the Ice Ring." };
   if (!s.rooms.lab.built) return { n: 5, of: 12, name: "GLASS", hint: "Raise the Lab." };
-  if (s.minds.filter((m) => m.alive).length === 0) return { n: 6, of: 12, name: "MIND", hint: "Let SPARK fill, then pick." };
+  if (s.minds.filter((m) => m.alive).length === 0) return { n: 6, of: 12, name: "MIND", hint: "CALL on MINDS. SPARK buys one body." };
   if (!s.rooms.nerve.built) return { n: 7, of: 12, name: "NERVE", hint: "Raise Nerve. Seat a commander." };
-  if (!s.rooms.hangar.built) return { n: 8, of: 12, name: "FLEET", hint: "Raise Hangar. Open the well." };
+  if (!s.rooms.hangar.built) return { n: 8, of: 12, name: "FLEET", hint: "Raise Hangar. Then the teeth." };
+  if (!s.rooms.railgun?.built || !s.rooms.cannon?.built)
+    return { n: 8, of: 12, name: "TEETH", hint: "Mount RAILGUN and AUTOCANNON. Then duel." };
+  if (!s.raidCleared.includes("ice")) return { n: 8, of: 12, name: "WELL", hint: "DUEL the cutter. Ship vs ship." };
   if (s.moltLayer < 1) return { n: 9, of: 12, name: "MOLT", hint: "Rite MOLT LOCK, then molt." };
   if (!s.raidCleared.includes("sister") && !s.raidCleared.includes("gate"))
     return { n: 10, of: 12, name: "ROSE", hint: "Take the sister-wreck or the Gate." };
@@ -156,6 +158,13 @@ export function nextOpenTech(s: GameState): TechId | null {
 
 /** First commander waits for the spine so WAKE is a beat, not a dump. */
 export const FIRST_WAKE_SPARK = 32;
+export const OFFICER_CAP = 5;
+
+export function callNeed(s: GameState): number {
+  const n = s.minds.filter((m) => m.alive).length;
+  if (n === 0) return Math.max(24, FIRST_WAKE_SPARK);
+  return Math.round(40 * Math.pow(1.8, n));
+}
 
 export function canWakeMinds(s: GameState): boolean {
   if (s.minds.some((m) => m.alive)) return true;

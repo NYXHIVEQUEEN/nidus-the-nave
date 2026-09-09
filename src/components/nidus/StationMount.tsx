@@ -1,4 +1,5 @@
 import { Component, lazy, Suspense, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
+import { useNidus } from "@/lib/nidus/store";
 
 const Scene = lazy(() => import("./StationScene").then((m) => ({ default: m.StationScene })));
 
@@ -50,10 +51,27 @@ export class ChromeBound extends Component<{ children: ReactNode }, { failed: bo
   }
 }
 
+const INTERIOR: Record<string, string> = {
+  hull: "/nidus/interior-hull.jpg",
+  forge: "/nidus/interior-forge.jpg",
+  minds: "/nidus/interior-minds.jpg",
+};
+
 export function StationMount() {
   const [on, setOn] = useState(false);
+  const tab = useNidus((s) => s.tab);
   useEffect(() => setOn(true), []);
   if (!on) return <div className="absolute inset-0 bg-void" />;
+  if (tab !== "raid") {
+    return (
+      <img
+        src={INTERIOR[tab] ?? INTERIOR.hull}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+        crossOrigin="anonymous"
+      />
+    );
+  }
   return (
     <HullBound>
       <Suspense fallback={<div className="absolute inset-0 bg-void" />}>

@@ -134,7 +134,9 @@ export const ROOMS: RoomSpec[] = [
   { id: "nerve", label: "NERVE", parts: 48, work: 86, requires: "barracks", blurb: "Pews for minds.", bonus: "+thrones +pop", tier: 2, zone: "nave" },
   { id: "lab", label: "LAB", parts: 40, work: 72, requires: "solar", blurb: "Glass rites.", bonus: "unlocks rites", tier: 1, zone: "nave" },
   { id: "hangar", label: "HANGAR", parts: 54, work: 100, requires: "barracks", blurb: "Fleet mouth.", bonus: "+raid +pop", tier: 2, zone: "fleet" },
-  { id: "gundeck", label: "GUN DECK", parts: 62, work: 118, requires: "hangar", blurb: "Tracers.", bonus: "+fleet power", tier: 3, zone: "fleet" },
+  { id: "railgun", label: "RAILGUN", parts: 28, work: 52, requires: "hangar", blurb: "Long tooth. Rank = pierce.", bonus: "pierce HP", tier: 2, zone: "fleet" },
+  { id: "cannon", label: "AUTOCANNON", parts: 24, work: 46, requires: "hangar", blurb: "Close tooth. Rank = volume.", bonus: "volume fire", tier: 2, zone: "fleet" },
+  { id: "gundeck", label: "GUN DECK", parts: 62, work: 118, requires: "railgun", also: "cannon", blurb: "Fire control for both teeth.", bonus: "both roles", tier: 3, zone: "fleet" },
   { id: "reliquary", label: "RELIQUARY", parts: 88, work: 155, requires: "nerve", blurb: "Molt cradle.", bonus: "molt +pop", tier: 3, zone: "crypt" },
   { id: "crucible", label: "CRUCIBLE", parts: 36, work: 64, requires: "orebay", needRank: { id: "solar", rank: 2 }, blurb: "Blood kiln.", bonus: "+parts rate", tier: 2, zone: "spine" },
   { id: "cloister", label: "CLOISTER", parts: 44, work: 80, requires: "lab", blurb: "Quiet glass.", bonus: "+spark /s", tier: 2, zone: "nave" },
@@ -161,12 +163,12 @@ export const RAIDS: {
   blurb: string;
   requires?: RoomId | "herald" | "molt" | RaidId;
 }[] = [
-  { id: "ice", label: "ICE RING", image: "/nidus/raid-ice.jpg", seconds: 28, need: 2, salvage: "ice", blurb: "First wreck. Chip the ring." },
-  { id: "belt", label: "ICE BELT", image: "/nidus/raid-ice.jpg", seconds: 70, need: 3, salvage: "ice", blurb: "Patrol the ring again.", requires: "ice" },
-  { id: "shard", label: "SHARD FIELD", image: "/nidus/raid-ice.jpg", seconds: 110, need: 4, salvage: "ice", blurb: "Broken ring. More ice.", requires: "belt" },
-  { id: "freighter", label: "DEAD FREIGHTER", image: "/nidus/raid-freighter.jpg", seconds: 180, need: 4, salvage: "plate", blurb: "A quiet hull full of parts.", requires: "hangar" },
-  { id: "yard", label: "WRECK YARD", image: "/nidus/raid-freighter.jpg", seconds: 240, need: 5, salvage: "plate", blurb: "Strip the graveyard.", requires: "freighter" },
-  { id: "gun", label: "GUN-SHRINE", image: "/nidus/raid-gun.jpg", seconds: 360, need: 6, salvage: "bone", blurb: "Blessed barrels. Take them.", requires: "gundeck" },
+  { id: "ice", label: "CUTTER", image: "/nidus/raid-ice.jpg", seconds: 36, need: 2, salvage: "ice", blurb: "Pirate cutter. First duel." },
+  { id: "belt", label: "CORSAIR", image: "/nidus/raid-ice.jpg", seconds: 80, need: 3, salvage: "ice", blurb: "A corsair slides into the glass.", requires: "ice" },
+  { id: "shard", label: "RAIDER PAIR", image: "/nidus/raid-ice.jpg", seconds: 120, need: 4, salvage: "ice", blurb: "Two hulls. One stays.", requires: "belt" },
+  { id: "freighter", label: "ARMED HAULER", image: "/nidus/raid-freighter.jpg", seconds: 180, need: 4, salvage: "plate", blurb: "Guns on a fat hull. Take it.", requires: "hangar" },
+  { id: "yard", label: "ESCORT WING", image: "/nidus/raid-freighter.jpg", seconds: 240, need: 5, salvage: "plate", blurb: "Hauler plus teeth.", requires: "freighter" },
+  { id: "gun", label: "GUN-KETCH", image: "/nidus/raid-gun.jpg", seconds: 360, need: 6, salvage: "bone", blurb: "A ketch that shoots back.", requires: "gundeck" },
   { id: "ossuary", label: "OSSUARY", image: "/nidus/raid-gun.jpg", seconds: 420, need: 7, salvage: "bone", blurb: "Bones stacked as ammo.", requires: "gun" },
   { id: "thorn", label: "THORN NEST", image: "/nidus/raid-gun.jpg", seconds: 480, need: 8, salvage: "bone", blurb: "Lancer wrecks stacked.", requires: "ossuary" },
   { id: "sister", label: "SISTER-WRECK", image: "/nidus/raid-sister.jpg", seconds: 680, need: 8, salvage: "rose", blurb: "The twin hull. Herald wants it.", requires: "herald" },
@@ -294,6 +296,7 @@ export function defaultState(now = Date.now()): GameState {
     lastReturnAt: 0,
     printFocus: { caste: "miner", n: 0 },
     zoneRank: { spine: 0, hold: 0, nave: 0, fleet: 0, crypt: 0 },
+    callPaid: 0,
   };
 }
 
@@ -521,7 +524,7 @@ export function rates(s: GameState, now: number) {
 }
 
 export function nextGoal(s: GameState): string {
-  if (!s.rooms.solar.built) return "RAISE THE SOLAR SPINE";
+  if (!s.rooms.solar.built) return "RAISE SOLAR";
   if (s.waking) return "PICK A MIND";
   if (s.pendingGift) return "CLAIM THE CUT";
   if (s.minds.some((m) => m.alive) && !s.minds.some((m) => m.alive && m.seated)) return "SEAT YOUR COMMANDER";
@@ -530,12 +533,14 @@ export function nextGoal(s: GameState): string {
   if (totalSwarm(s) >= berthCap(s) - 1) return "OPEN BERTHS — SWARM IS PACKED";
   if (s.minds.filter((m) => m.alive).length === 0) {
     if (!s.rooms.solar.built) return "SPINE FIRST — SPARK BANKS";
-    return "FILL SPARK — SOMEONE WAKES";
+    return "CALL AN OFFICER";
   }
-  if (s.swarm.striker >= 2 && !s.raid && !s.raidCleared.includes("ice")) return "RAID THE ICE RING";
   if (!s.rooms.lab.built) return "RAISE THE LAB";
   if (!s.autoPrint) return "FLIP AUTO PRINT";
   if (!s.rooms.hangar.built) return "RAISE THE HANGAR";
+  if (!s.rooms.railgun?.built) return "MOUNT THE RAILGUN";
+  if (!s.rooms.cannon?.built) return "MOUNT THE AUTOCANNON";
+  if (s.swarm.striker >= 2 && !s.raid && !s.raidCleared.includes("ice")) return "DUEL THE CUTTER";
   if (!s.rooms.nerve.built) return "RAISE THE NERVE";
   if (s.rooms.lab.built && !s.tech.cheapprint.done && !s.activeTech) return "START CHEAP PRINT";
   if (s.rooms.reliquary.built && s.tech.moltlock.done && s.moltLayer < 1) return "MOLT THE NAVE";
@@ -545,6 +550,7 @@ export function nextGoal(s: GameState): string {
 export function raidUnlocked(s: GameState, id: RaidId): boolean {
   const node = RAIDS.find((r) => r.id === id);
   if (!node) return false;
+  if (!s.rooms.hangar?.built || !s.rooms.railgun?.built || !s.rooms.cannon?.built) return false;
   if (!node.requires) return true;
   if (node.requires === "herald")
     return (

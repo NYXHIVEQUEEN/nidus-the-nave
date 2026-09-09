@@ -12,13 +12,41 @@ export function markCost(n: number) {
   return { credits: 22 + n * 26 };
 }
 
+export function raidCutPayout(s: GameState, id: RaidId): number {
+  const node = RAIDS.find((r) => r.id === id);
+  if (!node) return 0;
+  const times = s.raidCount?.[id] ?? 0;
+  const base = 14 + node.need * 7;
+  const farm = Math.max(0.4, 1 - times * 0.15);
+  return Math.max(4, Math.round(base * farm));
+}
+
+export function weaponMods(s: GameState) {
+  const railOn = Boolean(s.rooms.railgun?.built);
+  const canOn = Boolean(s.rooms.cannon?.built);
+  const deckOn = Boolean(s.rooms.gundeck?.built);
+  const armOn = Boolean(s.rooms.armory?.built);
+  const railR = railOn ? 1 + (s.rooms.railgun?.rank ?? 0) : 0;
+  const canR = canOn ? 1 + (s.rooms.cannon?.rank ?? 0) : 0;
+  const deckR = deckOn ? 1 + (s.rooms.gundeck?.rank ?? 0) : 0;
+  const armR = armOn ? 1 + (s.rooms.armory?.rank ?? 0) : 0;
+  return {
+    railR,
+    canR,
+    deckR,
+    armR,
+    pierce: railOn ? 0.2 + (railR - 1) * 0.12 + (deckOn ? 0.06 + (deckR - 1) * 0.03 : 0) : deckOn ? 0.05 : 0,
+    volume: canOn ? 0.16 + (canR - 1) * 0.1 + (deckOn ? 0.05 + (deckR - 1) * 0.02 : 0) : deckOn ? 0.04 : 0,
+    power: railR * 0.08 + canR * 0.06 + deckR * 0.1 + armR * 0.07,
+  };
+}
+
 export function fleetPower(s: GameState) {
   const mark = 1 + (s.hullMark?.striker ?? 0) * (s.tech.stingplus?.done ? 0.36 : 0.28);
   const lvl = Math.pow(1.14, s.casteLevel.striker);
   const claws = s.tech.claws.done ? 1.4 : 1;
-  const gun = s.rooms.gundeck.built ? 1.18 + (s.rooms.gundeck.rank ?? 0) * 0.06 : 1;
+  const guns = 1 + weaponMods(s).power;
   const spire = s.rooms.spire?.built ? 1.12 : 1;
-  const armory = s.rooms.armory?.built ? 1.14 + (s.rooms.armory.rank ?? 0) * 0.04 : 1;
   const sensor = s.rooms.sensor?.built && s.raid?.watching ? (s.tech.sensorwatch?.done ? 1.22 : 1.1) : 1;
   const armorRite = s.tech.armorteeth?.done ? 1.16 : 1;
   const molt = 1 + s.moltLayer * 0.22;
@@ -30,7 +58,7 @@ export function fleetPower(s: GameState) {
     mind += (m.seated ? 0.3 : 0.15) * m.stats.raid * wound * talent;
   }
   const n = s.raid?.strikers ?? s.swarm.striker;
-  return n * mark * lvl * claws * gun * spire * armory * sensor * armorRite * molt * mind;
+  return n * mark * lvl * claws * guns * spire * sensor * armorRite * molt * mind;
 }
 
 export function nodeArmor(id: RaidId) {
@@ -61,8 +89,9 @@ export function tickBattle(s: GameState, dt: number, now: number) {
   s.rng = roll.seed;
   const sway = 0.82 + roll.n * 0.36;
   const firstIce = run.node === "ice" && !s.raidCleared.includes("ice");
-  const atk = fleetPower(s) * 0.085 * watch * boost * sway * (firstIce ? 1.12 : 1);
-  const def = nodeArmor(run.node) * (firstIce ? 0.018 : 0.034) * (boosted ? 0.88 : 1);
+  const w = weaponMods(s);
+  const atk = fleetPower(s) * 0.085 * watch * boost * sway * (1 + w.pierce) * (firstIce ? 1.12 : 1);
+  const def = nodeArmor(run.node) * (firstIce ? 0.018 : 0.034) * (boosted ? 0.88 : 1) / (1 + w.volume);
   run.hp = Math.max(0, run.hp - atk * dt);
   run.hull = Math.max(0, run.hull - def * dt);
   if (run.hp <= 0) run.beat = boosted ? "BREAK" : "CUT";

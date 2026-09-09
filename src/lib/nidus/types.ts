@@ -12,6 +12,8 @@ export type RoomId =
   | "nerve"
   | "lab"
   | "hangar"
+  | "railgun"
+  | "cannon"
   | "gundeck"
   | "reliquary"
   | "cloister"
@@ -240,4 +242,5 @@ export type GameState = {
   lastReturnAt: number;
   printFocus: { caste: Caste; n: number };
   zoneRank: Record<ZoneId, number>;
+  callPaid: number;
 };

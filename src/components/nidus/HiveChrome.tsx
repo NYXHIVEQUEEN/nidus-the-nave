@@ -129,7 +129,7 @@ export function LeftRail({
   return (
     <nav
       data-chrome
-      className="nidus-rail pointer-events-auto absolute left-2 top-[max(3.2rem,calc(env(safe-area-inset-top)+2.4rem))] z-40 flex flex-row items-start gap-1 overflow-visible"
+      className="nidus-rail pointer-events-auto absolute left-2 top-[max(5.6rem,calc(env(safe-area-inset-top)+4.8rem))] z-40 flex flex-row items-start gap-1 overflow-visible"
     >
       <div className="flex flex-col gap-1">
         <RailBtn
@@ -252,7 +252,7 @@ export function GuideSheet({ screen, onClose, className }: { screen: GuideId; on
       className={cn(
         "nidus-panel pointer-events-auto max-h-[38dvh] overflow-y-auto p-3",
         className ??
-          "absolute left-14 top-[max(3.2rem,calc(env(safe-area-inset-top)+2.4rem))] z-40 w-[min(19rem,calc(100vw-4.2rem))]",
+          "absolute left-14 top-[max(5.6rem,calc(env(safe-area-inset-top)+4.8rem))] z-40 w-[min(19rem,calc(100vw-4.2rem))]",
       )}
       data-chrome
     >
@@ -320,7 +320,7 @@ export function GoalDock({
       <span className="font-display text-[0.62rem] tabular-nums tracking-[0.16em] text-gilt">
         {stage.n}/{stage.of} {stage.name}
       </span>
-      <span className="min-w-0 flex-1 truncate text-center font-display text-[0.7rem] tracking-[0.16em] text-gilt">{goal}</span>
+      <span className="min-w-0 flex-1 text-center font-display text-[0.7rem] tracking-[0.14em] text-gilt">{goal}</span>
       {typeof pct === "number" && pct > 0 && pct < 100 && (
         <span className="font-display text-[0.62rem] tabular-nums text-venom">{pct}%</span>
       )}

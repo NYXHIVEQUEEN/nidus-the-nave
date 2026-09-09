@@ -1,9 +1,10 @@
 import { defaultState } from "./content";
 import type { GameState } from "./types";
 
-const KEY = "nidus.save.v1";
-const BAK = "nidus.save.v1.bak";
-const SAVE_VERSION = 1;
+export const SAVE_KEY = "nidus.save.v2";
+const KEY = SAVE_KEY;
+const BAK = "nidus.save.v2.bak";
+const SAVE_VERSION = 2;
 
 function migrate(raw: GameState): GameState {
   const base = defaultState();
@@ -74,6 +75,7 @@ function migrate(raw: GameState): GameState {
   if (merged.queuedRoom && !merged.rooms[merged.queuedRoom]) merged.queuedRoom = null;
   if (merged.rankingRoom && !merged.rooms[merged.rankingRoom]) merged.rankingRoom = null;
   if (merged.activeTech && !merged.tech[merged.activeTech]) merged.activeTech = null;
+  if (typeof merged.callPaid !== "number" || Number.isNaN(merged.callPaid)) merged.callPaid = 0;
   for (const id of Object.keys(merged.rooms) as (keyof typeof merged.rooms)[]) {
     const room = merged.rooms[id];
     if (typeof room.rank !== "number") room.rank = room.built ? 1 : 0;
@@ -156,7 +158,7 @@ export function wipeSave() {
   localStorage.removeItem(BAK);
 }
 
-const SLOT = (i: number) => `nidus.slot.${i}`;
+const SLOT = (i: number) => `nidus.slot.v2.${i}`;
 
 export function writeSlot(i: number, state: GameState) {
   if (typeof window === "undefined") return false;
@@ -190,4 +192,3 @@ export function slotStamp(i: number): string | null {
     return null;
   }
 }
-
