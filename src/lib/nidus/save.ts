@@ -1,10 +1,10 @@
 import { defaultState } from "./content";
 import type { GameState } from "./types";
 
-export const SAVE_KEY = "nidus.save.v2";
+export const SAVE_KEY = "nidus.save.v3";
 const KEY = SAVE_KEY;
-const BAK = "nidus.save.v2.bak";
-const SAVE_VERSION = 2;
+const BAK = "nidus.save.v3.bak";
+const SAVE_VERSION = 3;
 
 function migrate(raw: GameState): GameState {
   const base = defaultState();
@@ -156,9 +156,16 @@ export function wipeSave() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(KEY);
   localStorage.removeItem(BAK);
+  localStorage.removeItem("nidus.save.v2");
+  localStorage.removeItem("nidus.save.v2.bak");
+  localStorage.removeItem("nidus.save.v1");
+  for (let i = 0; i < 3; i++) {
+    localStorage.removeItem(`nidus.slot.v2.${i}`);
+    localStorage.removeItem(`nidus.slot.v3.${i}`);
+  }
 }
 
-const SLOT = (i: number) => `nidus.slot.v2.${i}`;
+const SLOT = (i: number) => `nidus.slot.v3.${i}`;
 
 export function writeSlot(i: number, state: GameState) {
   if (typeof window === "undefined") return false;

@@ -85,7 +85,7 @@ export function StationMount() {
         <img
           src={INTERIOR[tab] ?? INTERIOR.hull}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover pointer-events-none"
           crossOrigin="anonymous"
         />
       )}

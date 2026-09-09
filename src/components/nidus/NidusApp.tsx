@@ -121,6 +121,13 @@ export function NidusApp() {
     };
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("pagehide", saveNow);
+    const lockMove = (e: TouchEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el) return;
+      if (el.closest("[data-scroll], .nidus-sheet, textarea, input")) return;
+      e.preventDefault();
+    };
+    document.addEventListener("touchmove", lockMove, { passive: false });
     let acc = 0;
     let last = performance.now();
     let raf = 0;
@@ -142,6 +149,7 @@ export function NidusApp() {
       cancelAnimationFrame(raf);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("pagehide", saveNow);
+      document.removeEventListener("touchmove", lockMove);
     };
   }, [hydrate, tick, saveNow]);
 
@@ -361,7 +369,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
         )}
         <div className="min-h-0 flex-1" />
         {tab !== "raid" && (
-          <div data-chrome className={cn("nidus-sheet", watchChrome && "nidus-sheet-hide")}>
+          <div data-chrome data-scroll className={cn("nidus-sheet", watchChrome && "nidus-sheet-hide")}>
             <p className="px-2 pt-1 text-center text-[0.62rem] tracking-[0.06em] text-muted">{tip.why}</p>
             <main className="min-h-0">
               <ActiveTab verb={tip.verb} compact />

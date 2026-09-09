@@ -1380,6 +1380,7 @@ function Rig() {
   const printed = useNidus((s) => s.printed);
   const raiding = useNidus((s) => Boolean(s.raid));
   const watching = useNidus((s) => Boolean(s.raid?.watching));
+  const live = useNidus((s) => s.tab === "raid");
   const extent = 1 + roomsLit * 0.55 + molt * 0.85;
   const touched = useRef(0);
   useFrame((state, delta) => {
@@ -1446,9 +1447,10 @@ function Rig() {
   return (
     <OrbitControls
       ref={ctl as never}
+      enabled={live}
       enablePan={false}
-      enableRotate
-      enableZoom
+      enableRotate={live}
+      enableZoom={live}
       zoomSpeed={0.55 + prefs.camZoom * 0.7}
       rotateSpeed={0.85}
       minDistance={CAM_MIN}
@@ -1472,6 +1474,7 @@ export function StationScene() {
   const mobile = typeof window !== "undefined" && window.innerWidth < 500;
   const start = camPosition(CAM_DEFAULT);
   const [paused, setPaused] = useState(false);
+  const live = useNidus((s) => s.tab === "raid");
   useEffect(() => {
     const on = () => setPaused(typeof document !== "undefined" && document.hidden);
     on();
@@ -1484,7 +1487,7 @@ export function StationScene() {
       camera={{ position: start, fov: 46, near: 0.8, far: 260 }}
       dpr={mobile ? [1, 1.15] : [1, 1.5]}
       gl={{ antialias: !mobile, alpha: false, powerPreference: "high-performance" }}
-      style={{ touchAction: "none", position: "absolute", inset: 0 }}
+      style={{ touchAction: "none", pointerEvents: live ? "auto" : "none", position: "absolute", inset: 0 }}
       onDoubleClick={() => applyCamPreset("nave")}
       onCreated={({ gl, camera }) => {
         gl.setClearColor("#0e0a0c");
