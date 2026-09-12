@@ -61,6 +61,7 @@ type Store = GameState & {
   toggleAutoBuild: () => void;
   toggleAutoRaid: () => void;
   toggleAutoRite: () => void;
+  toggleKiln: () => void;
   watchWell: (on: boolean) => void;
   boostWell: () => void;
   markHull: (c: Caste) => void;
@@ -234,7 +235,7 @@ export const useNidus = create<Store>((set, get) => ({
   },
   toggleScripts: () => {
     const on = !get().scripts;
-    set({ scripts: on, autoPrint: on || get().autoPrint, autoBuild: on, autoRaid: on, autoRite: on });
+    set({ scripts: on, autoPrint: on || get().autoPrint, autoRaid: on, autoRite: on });
     writeSave(pickGame(get()));
   },
   toggleAutoBuild: () => {
@@ -247,6 +248,10 @@ export const useNidus = create<Store>((set, get) => ({
   },
   toggleAutoRite: () => {
     set({ autoRite: !get().autoRite });
+    writeSave(pickGame(get()));
+  },
+  toggleKiln: () => {
+    set({ kilnOn: get().kilnOn === false });
     writeSave(pickGame(get()));
   },
   watchWell: (on) => {

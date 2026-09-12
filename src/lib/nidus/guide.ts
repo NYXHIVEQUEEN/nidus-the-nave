@@ -5,7 +5,7 @@ import { hiveStage, postBoostPct, roomUnlocked } from "./progress";
 export type { Stage } from "./progress";
 export { hiveStage };
 
-export type GuideId = Tab | "wake" | "view";
+export type GuideId = Tab | "wake" | "view" | "flow";
 
 export type GuideVerb = { id: string; label: string; line: string };
 
@@ -26,6 +26,7 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
       { id: "wake", label: "WAKE", line: "Opens the live hive." },
       { id: "boot", label: "BAR", line: "Loads faces and hull plates." },
       { id: "save", label: "LOCAL", line: "This device only. No cloud. EXPORT before you switch glass." },
+      { id: "flow", label: "FLOW", line: "ORE → kiln → PARTS. Spare sells for CUT. SPARK is the spend." },
       { id: "song", label: "SONG", line: "Rules of Engagement — Nytheria Nyx." },
     ],
   },
@@ -35,10 +36,10 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
     blurb: "The cathedral. Rooms grow as nodes on the nave.",
     verbs: [
       { id: "goal", label: "GOLD CHIP", line: "The one next verb." },
-      { id: "rooms", label: "NODES", line: "Tap a dark room to raise it. Tap a lit room to RANK it." },
+      { id: "rooms", label: "NODES", line: "Tap a dark room to raise it. It will not auto-queue the next." },
       { id: "surge", label: "SURGE", line: "Spends 8 SPARK. Swarm sprints ~30s." },
       { id: "slag", label: "SLAG", line: "Tap ore + spark. Overflow cooks to parts." },
-      { id: "hive", label: "HIVE", line: "Mind stamps, builds, raids for you." },
+      { id: "hive", label: "HIVE", line: "Mind stamps, rites, and raids. BUILD stays a separate toggle." },
       { id: "set", label: "SETTINGS", line: "Opens nested rails. SIZE, SOUND, SAVE." },
       { id: "size", label: "SIZE", line: "In SETTINGS. TIGHT / ROOMY / WATCH." },
       { id: "hide", label: "EYE", line: "Folds chrome. Station stays." },
@@ -52,6 +53,7 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
       { id: "caste", label: "CASTE", line: "Pick who the next stamp is. Same caste stacks FOCUS." },
       { id: "print", label: "PRINT", line: "Packed stamp still feeds SPARK." },
       { id: "auto", label: "AUTO", line: "Stamps while gone. Holds two berths until EXPAND." },
+      { id: "kiln", label: "KILN", line: "ON drinks ore into parts. OFF banks ore." },
       { id: "expand", label: "EXPAND", line: "Buys pop cap. Packed swarm idles." },
       { id: "mark", label: "MARK", line: "Ranks that caste. Strikers hit harder." },
     ],
@@ -102,6 +104,19 @@ export const GUIDES: Record<GuideId, ScreenGuide> = {
       { id: "spin", label: "SPIN", line: "Idle orbit. HOLD freezes it." },
     ],
   },
+  flow: {
+    id: "flow",
+    title: "FLOW",
+    blurb: "Four pools. What fills them. What drinks them.",
+    verbs: [
+      { id: "ore", label: "ORE", line: "Miners and MINE posts raise it. Kiln drinks it into PARTS. PRINT spends it. SELL turns spare into CUT." },
+      { id: "parts", label: "PARTS", line: "Kiln ON forges them from ore. MAKE posts help. PRINT, rooms, and rites spend them. SELL BOTS → CUT." },
+      { id: "cut", label: "CUT", line: "Foundry drips. Mill and Refinery raise it. Raids and sells add more. RANK, MARK, EXPAND spend it." },
+      { id: "spark", label: "SPARK", line: "Solar spine and the swarm raise it. SURGE, BOOST, HEAL, CALL, PRINT sip it." },
+      { id: "kiln", label: "KILN", line: "FORGE toggle. ON = ore feeds parts. OFF = ore banks, you sell and print by hand." },
+      { id: "build", label: "BUILD", line: "Tap a node. It does not raise the next one unless BUILD is on in SETTINGS." },
+    ],
+  },
 };
 
 export const POSTS: Record<Job, { label: string; does: string }> = {
@@ -138,7 +153,9 @@ const GLOSS: Record<string, string> = {
   CORE: "Crack a core for Echo.",
   SIZE: "TIGHT packs chrome. ROOMY breathes. WATCH hides it.",
   LOCAL: "Three local snapshots. Oldest burns. No cloud.",
-  CUT: "Universal credit. Ranks, marks, berths. Foundry drips. Mill and Refinery raise it.",
+  CUT: "Foundry drips. Mill/Refinery raise it. RANK, MARK, EXPAND spend it.",
+  KILN: "ON: ore becomes parts. OFF: ore banks. Toggle on FORGE.",
+  FLOW: "ORE → kiln → PARTS. Spare → CUT. SPARK is the spend. Tap ?.",
   SONG: "One bed. ANTHEM is Nyx. VOID is space.",
 };
 
@@ -180,7 +197,8 @@ export function chargeStarve(s: GameState): boolean {
 /** Quiet first-look line. One shot. Not a tutorial tree. */
 export function firstWhisper(id: GuideId): string {
   if (id === "wake") return "WAKE opens the nave.";
-  if (id === "hull") return "Gold chip is the next verb. SIZE packs chrome.";
+  if (id === "flow") return "ORE feeds the kiln. CUT buys ranks. SPARK is the spend.";
+  if (id === "hull") return "Tap a dark node to raise it. ? for FLOW.";
   if (id === "forge") return "PRINT stamps. Same caste stacks FOCUS.";
   if (id === "lab") return "Rites live here. Not in SETTINGS.";
   if (id === "raid") return "First ice is a short cut. WATCH pays.";

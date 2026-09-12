@@ -68,6 +68,8 @@ export function ensureHive(s: GameState): GameState {
   }
   if (typeof s.credits !== "number" || Number.isNaN(s.credits)) s.credits = 0;
   if (typeof s.autoSell !== "boolean") s.autoSell = true;
+  if (typeof s.autoBuild !== "boolean") s.autoBuild = false;
+  if (typeof s.kilnOn !== "boolean") s.kilnOn = true;
   if (!s.zoneRank) s.zoneRank = { spine: 0, hold: 0, nave: 0, fleet: 0, crypt: 0 };
   else {
     for (const id of ["spine", "hold", "nave", "fleet", "crypt"] as const) {
@@ -179,8 +181,9 @@ function tickInner(s: GameState, now: number): GameState {
   }
   const away = dt > 30;
   const r = rates(next, now);
+  const kiln = next.kilnOn !== false;
   const oreGain = r.orePerSec * dt;
-  const wantParts = r.partsPerSec * dt;
+  const wantParts = kiln ? r.partsPerSec * dt : 0;
   const orePool = Math.max(0, next.ore + oreGain);
   const partsGain = Math.min(wantParts, orePool / ORE_PER_PART);
   const oreSpentOnParts = partsGain * ORE_PER_PART;
@@ -217,7 +220,7 @@ function tickInner(s: GameState, now: number): GameState {
   if (next.queuedRoom) {
     const spec = ROOMS.find((x) => x.id === next.queuedRoom);
     if (!spec || spec.work <= 0) {
-      next.queuedRoom = nextBuild(next);
+      next.queuedRoom = next.autoBuild || next.scripts ? nextBuild(next) : null;
     } else {
       let room = next.rooms[next.queuedRoom];
       if (!room) {
@@ -238,7 +241,7 @@ function tickInner(s: GameState, now: number): GameState {
             line: "Node snapped to the nave.",
             stamp: "RAISED",
           });
-          next.queuedRoom = nextBuild(next);
+          next.queuedRoom = next.autoBuild || next.scripts ? nextBuild(next) : null;
           credit(next, "build", spec.id);
           pushLog(next, `${spec.label} lit.`);
         }
@@ -293,7 +296,9 @@ function tickInner(s: GameState, now: number): GameState {
         if (spec.id === "glassmind") next.casteLevel.lab += 1;
         if (spec.id === "stingplus") next.casteLevel.striker += 1;
         pushBrief(next, { kind: "build", headline: spec.label, line: "Inlaid in gold.", stamp: "KNOWN" });
-        next.activeTech = TECH.find((t) => !next.tech[t.id]?.done && techUnlocked(next, t.id).ok)?.id ?? null;
+        next.activeTech = next.autoRite || next.scripts
+          ? TECH.find((t) => !next.tech[t.id]?.done && techUnlocked(next, t.id).ok)?.id ?? null
+          : null;
       }
     }
   }
@@ -350,7 +355,7 @@ function tickInner(s: GameState, now: number): GameState {
     }
   }
 
-  if (next.ore < 2 && next.parts > 6) {
+  if (next.ore < 2 && next.parts > 6 && next.kilnOn !== false) {
     const n = Math.min(next.parts - 4, dt * 0.55);
     next.parts -= n;
     next.ore += n * 0.58;

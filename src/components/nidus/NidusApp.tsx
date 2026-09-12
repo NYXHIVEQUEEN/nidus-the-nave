@@ -280,6 +280,10 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
 
   useEffect(() => {
     if (!prefs.hints) return;
+    if (!helpSeen("flow")) {
+      setGuide("flow");
+      return;
+    }
     if (whispered.has(tab)) return;
     whispered.add(tab);
     if (!helpSeen(tab)) setWhisper(firstWhisper(tab));
@@ -348,7 +352,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
         helpPulse={!helpSeen(tab)}
         density={density}
         onHelp={() => {
-          setGuide((g) => (g ? null : tab));
+          setGuide((g) => (g ? null : helpSeen("flow") ? tab : "flow"));
         }}
         onRitePane={openRitePane}
         onStay={bump}
@@ -419,6 +423,8 @@ function ResourceBar({ compact }: { compact: boolean }) {
   const fresh = Date.now() - lastSaveAt < 6000;
   const [open, setOpen] = useState<string | null>(null);
   const starve = chargeStarve(s);
+  const kiln = s.kilnOn !== false;
+  const oreNet = kiln ? r.orePerSec - (r.oreSpendPerSec ?? 0) : r.orePerSec;
   return (
     <header className="pointer-events-auto px-3 pt-[max(0.45rem,env(safe-area-inset-top))]" data-chrome>
       <div className={cn("flex items-center justify-between gap-1.5 border border-border bg-nave/80 px-2 backdrop-blur-sm", compact ? "py-1" : "py-1.5")}>
@@ -427,8 +433,8 @@ function ResourceBar({ compact }: { compact: boolean }) {
           <p className="font-display text-xs tabular-nums text-gilt">{hiveTitle(hiveRank)}</p>
         </button>
         <Chip label="CUT" value={fmt(credits ?? 0)} sub={`${fmt((r.creditsPerSec ?? 0) * 60)}/m`} cap={Math.max(80, (credits ?? 0) + 40)} cur={credits ?? 0} venom onTap={setOpen} />
-        <Chip label="ORE" value={fmt(ore)} sub={`${fmt((r.orePerSec - (r.oreSpendPerSec ?? 0)) * 60)}/m`} cap={oreCap(s)} cur={ore} onTap={setOpen} />
-        <Chip label="PARTS" value={fmt(parts)} sub={`${fmt(r.partsPerSec * 60)}/m`} cap={partsCap(s)} cur={parts} onTap={setOpen} />
+        <Chip label="ORE" value={fmt(ore)} sub={`${fmt(oreNet * 60)}/m`} cap={oreCap(s)} cur={ore} onTap={setOpen} />
+        <Chip label="PARTS" value={fmt(parts)} sub={kiln ? `${fmt(r.partsPerSec * 60)}/m` : "KILN OFF"} cap={partsCap(s)} cur={parts} onTap={setOpen} />
         <Chip label="SPARK" value={waking ? "CALL" : sparkBanked(s) ? "BANK" : `${Math.floor(spark)}`} sub={`${(r.sparkPerSec - (r.sparkDrain ?? 0)) >= 0 ? "+" : ""}${fmt((r.sparkPerSec - (r.sparkDrain ?? 0)) * 60)}/m`} cap={sparkCap(s)} cur={spark} venom starve={starve} onTap={setOpen} />
         {echo > 0 && (
           <button type="button" className="text-left" onClick={() => setOpen(open === "ECHO" ? null : "ECHO")}>
@@ -763,6 +769,8 @@ function ForgeTab({ verb, compact }: { verb: string; compact: boolean }) {
   const sell = useNidus((s) => s.sell);
   const autoSell = useNidus((s) => s.autoSell);
   const toggleAutoSell = useNidus((s) => s.toggleAutoSell);
+  const kilnOn = useNidus((s) => s.kilnOn !== false);
+  const toggleKiln = useNidus((s) => s.toggleKiln);
   const s = useNidus();
   const cost = printCost(s);
   const cap = berthCap(s);
@@ -822,15 +830,18 @@ function ForgeTab({ verb, compact }: { verb: string; compact: boolean }) {
             MARK {mk.credits}c
           </button>
         </div>
-        <div className="mt-1 flex gap-1">
-          <button type="button" className="nidus-cut min-h-9 flex-1 font-display text-[0.5rem] tracking-[0.12em]" onClick={() => { sell("ore", Math.max(8, s.ore * 0.2)); chime("cook"); }}>
+        <div className="mt-1 grid grid-cols-2 gap-1">
+          <button type="button" className="nidus-cut min-h-9 font-display text-[0.5rem] tracking-[0.12em]" onClick={() => { sell("ore", Math.max(8, s.ore * 0.2)); chime("cook"); }}>
             SELL ORE
           </button>
-          <button type="button" className="nidus-cut min-h-9 flex-1 font-display text-[0.5rem] tracking-[0.12em]" onClick={() => { sell("parts", Math.max(6, s.parts * 0.2)); chime("cook"); }}>
+          <button type="button" className="nidus-cut min-h-9 font-display text-[0.5rem] tracking-[0.12em]" onClick={() => { sell("parts", Math.max(6, s.parts * 0.2)); chime("cook"); }}>
             SELL BOTS
           </button>
-          <button type="button" className={cn("nidus-cut min-h-9 px-2 font-display text-[0.5rem] tracking-[0.1em]", autoSell !== false ? "nidus-cut-venom" : "text-muted")} onClick={toggleAutoSell}>
-            AUTO {autoSell !== false ? "ON" : "OFF"}
+          <button type="button" className={cn("nidus-cut min-h-9 font-display text-[0.5rem] tracking-[0.1em]", autoSell !== false ? "nidus-cut-venom" : "text-muted")} onClick={toggleAutoSell}>
+            SELL {autoSell !== false ? "ON" : "OFF"}
+          </button>
+          <button type="button" title="ON drinks ore into parts. OFF banks ore." className={cn("nidus-cut min-h-9 font-display text-[0.5rem] tracking-[0.1em]", kilnOn ? "nidus-cut-gilt" : "text-muted")} onClick={toggleKiln}>
+            KILN {kilnOn ? "ON" : "OFF"}
           </button>
         </div>
       </div>

@@ -62,6 +62,7 @@ function migrate(raw: GameState): GameState {
   if (typeof merged.autoBuild !== "boolean") merged.autoBuild = false;
   if (typeof merged.autoRaid !== "boolean") merged.autoRaid = false;
   if (typeof merged.autoRite !== "boolean") merged.autoRite = false;
+  if (typeof merged.kilnOn !== "boolean") merged.kilnOn = true;
   if (typeof merged.scripts !== "boolean") merged.scripts = false;
   if (!merged.hiveName) merged.hiveName = "NAVE-1";
   if (!merged.orders) merged.orders = [];

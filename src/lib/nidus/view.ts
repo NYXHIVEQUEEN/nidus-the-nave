@@ -1,6 +1,6 @@
 const KEY = "nidus.prefs.v1";
 
-export type HelpId = "hull" | "forge" | "lab" | "raid" | "minds" | "view" | "wake" | "idle";
+export type HelpId = "hull" | "forge" | "lab" | "raid" | "minds" | "view" | "wake" | "idle" | "flow";
 export type Density = "auto" | "compact" | "comfort" | "watch";
 export type DensityResolved = "compact" | "comfort" | "watch";
 export type MusicBed = "anthem" | "void";

@@ -21,11 +21,11 @@ import { openNyxSpotify, setMusicBed, syncAudioGains } from "@/lib/nidus/audio";
 
 const CODEX: { id: string; title: string; body: string }[] = [
   { id: "hive", title: "HIVE", body: "You are the lone brain. Drones are meat. Minds are rare sparks that wake and take a body." },
-  { id: "scripts", title: "HIVE MIND", body: "Flip HIVE on the hull. The nave prints, builds, rites, and raids without a guide. You can still steer." },
+  { id: "scripts", title: "HIVE MIND", body: "Flip HIVE on the hull. The nave prints, rites, and raids. BUILD is its own toggle — rooms do not auto-raise." },
   { id: "watch", title: "WATCH", body: "A raid orbits. WATCH to see it. BOOST spends SPARK. Leave — it still fights." },
   { id: "mark", title: "MARK", body: "Striker hulls rank DART → RELIQUARY. Spend ore and parts. Bigger mark, harder well." },
   { id: "slot", title: "SLOTS", body: "Three local pews besides the live hive. STASH copies. LOAD swaps. Live save is never wiped by a slot." },
-  { id: "ore", title: "ORE", body: "Mined ice and wreck-slag. Caps if you skip the Ore Bay." },
+  { id: "flow", title: "FLOW", body: "ORE miners raise, kiln drinks, PRINT spends. PARTS from the kiln, rooms and stamps spend. CUT from mill, sells, raids — RANK MARK EXPAND spend it. SPARK from Solar — SURGE CALL HEAL spend it." },
   { id: "parts", title: "PARTS", body: "Fabs chew ore into parts. Rooms and prints eat parts." },
   { id: "spark", title: "SPARK", body: "Hive will. SURGE, BOOST, HEAL, CALL, PRINT sip it. Empty swarm crawls. Raise Solar." },
   { id: "song", title: "SONG", body: "One bed. ANTHEM is Rules of Engagement — Nytheria Nyx. VOID is a space pad until more of her cuts. The hive never stacks the anthem on itself. NYX ON SPOTIFY opens her catalog. Spotify cannot play inside the nave." },
@@ -86,6 +86,8 @@ export function SettingsPanel({
   const autoRaid = useNidus((s) => s.autoRaid);
   const autoRite = useNidus((s) => s.autoRite);
   const autoPrint = useNidus((s) => s.autoPrint);
+  const kilnOn = useNidus((s) => s.kilnOn !== false);
+  const toggleKiln = useNidus((s) => s.toggleKiln);
   const toggleScripts = useNidus((s) => s.toggleScripts);
   const toggleAutoBuild = useNidus((s) => s.toggleAutoBuild);
   const toggleAutoRaid = useNidus((s) => s.toggleAutoRaid);
@@ -174,9 +176,10 @@ export function SettingsPanel({
             <Toggle on={autoBuild} label="BUILD" onClick={() => toggleAutoBuild()} />
             <Toggle on={autoRaid} label="RAID" onClick={() => toggleAutoRaid()} />
             <Toggle on={autoRite} label="RITE" onClick={() => toggleAutoRite()} />
+            <Toggle on={kilnOn} label="KILN" onClick={() => toggleKiln()} />
             <Toggle on={prefs.hints} label="HINTS" onClick={() => patchPrefs({ hints: !prefs.hints })} />
           </div>
-          <p className="text-[0.7rem] text-muted">HIVE stamps, raises, rites, and raids so you do not need a guide. Rites live on the LAB tab.</p>
+          <p className="text-[0.7rem] text-muted">HIVE stamps, rites, and raids. BUILD is separate — tap a node to raise it. KILN ON drinks ore into parts.</p>
         </div>
       )}
 

@@ -205,6 +205,7 @@ export type GameState = {
   autoBuild: boolean;
   autoRaid: boolean;
   autoRite: boolean;
+  kilnOn: boolean;
   scripts: boolean;
   hullMark: Record<Caste, number>;
   hiveName: string;

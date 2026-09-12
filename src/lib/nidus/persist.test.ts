@@ -387,6 +387,32 @@ test("applyTick keeps the player's tab and survives a hollow tech map", () => {
   assert.ok(next.rooms.orebay);
 });
 
+test("a finished room does not auto-queue the next", () => {
+  let s = defaultState();
+  s.autoBuild = false;
+  s.scripts = false;
+  s.queuedRoom = "solar";
+  s.parts = 80;
+  s.ore = 40;
+  s.swarm.builder = 12;
+  s.lastTick = 1_000_000;
+  s = applyTick(s, 1_000_000 + 800_000);
+  assert.equal(s.rooms.solar.built, true);
+  assert.equal(s.queuedRoom, null);
+});
+
+test("kiln off banks ore and does not forge", () => {
+  let s = defaultState();
+  s.kilnOn = false;
+  s.autoPrint = false;
+  s.ore = 40;
+  s.parts = 10;
+  s.lastTick = 1_000_000;
+  s = applyTick(s, 1_000_000 + 8000);
+  assert.ok(s.ore >= 40);
+  assert.ok(s.parts <= 10.05);
+});
+
 test("kiln cannot spend more ore than the hold has", () => {
   let s = defaultState();
   s.ore = 2;
