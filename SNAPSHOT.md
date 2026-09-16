@@ -1,19 +1,19 @@
-# NIDUS snapshot — GDL flight-scene pass
+# NIDUS snapshot — GDL flight scene, pass 2
 
 GitHub: `NYXHIVEQUEEN/nidus-the-nave` `main`.
-**No hive wipe.** Rollback SHA before this pass: `3cc6b33`.
+**No hive wipe.** Rollback: `d25e11d` (pass 1) or `3cc6b33` (pre-GDL).
 
-## Three largest visible failures (found, then fixed)
+## Three largest visible failures (this pass)
 
-1. Hero hull was a **box stack**. Replaced with lathe + capsules (nose +Z, engines −Z).
-2. Ordinary play **hid the 3D ship** behind a painting. HULL and RAID now show the live flight scene. FORGE / LAB / MINDS stay interiors.
-3. Lighting was **white wash + extra points**. Now ember key, gilt rim, hemi fill, void fog, ACES exposure ~0.96.
+1. Still frames crushed the hull to black — lighting test failed.
+2. Nose-on camera hid engines; exhaust sat on the wrong end of the bell.
+3. Drones were forced off; space had no readable scale landmark.
 
-## Also in this pass
+## Fixes
 
-- Drones / raid foe / pirate wreck use capsules, not cubes.
-- Slow bank + breath on the capital. Flight streaks are cylinders.
-- Guns/solar/hangar/molt dress are capsules.
-- Full Game Design Lead directive lives in `.grok/skills/space-hull-3d/references/gdl-acceptance.md` as the review bar.
+- Aft-quarter chase camera. HOLD default. Engines fire −Z with hot cores.
+- Bone-iron hull (lower metalness), nacelles, bridge, capsule windows.
+- Keyed light around that camera. Planet limb, gate, wreck, black well as layers.
+- Drones orbit again. SPARK still drives engine heat. Economy files unchanged.
 
-Saves: `nidus.save.v3` in the browser. Git does not hold a hive.
+Saves: `nidus.save.v3` in the browser. Git is the package.

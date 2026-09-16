@@ -28,10 +28,10 @@ export type ViewPrefs = {
   prefsGen: number;
 };
 
-export const CAM_DIR = { x: 0.62, y: 0.32, z: 0.72 };
+export const CAM_DIR = { x: 0.72, y: 0.28, z: -0.64 };
 export const CAM_MIN = 8;
 export const CAM_MAX = 48;
-export const CAM_DEFAULT = 15;
+export const CAM_DEFAULT = 14;
 
 export const CAM_PRESETS = {
   close: { camDist: 10, camFov: 42, label: "CLOSE", why: "inspect a node" },
@@ -44,7 +44,7 @@ export type CamPresetId = keyof typeof CAM_PRESETS;
 
 const listeners = new Set<() => void>();
 let prefs: ViewPrefs = {
-  spinPaused: false,
+  spinPaused: true,
   spinSpeed: 0.85,
   music: 0.62,
   sfx: 0.78,
@@ -63,7 +63,7 @@ let prefs: ViewPrefs = {
   density: "compact" as Density,
   uiScale: 0.58,
   musicBed: "anthem" as MusicBed,
-  prefsGen: 8,
+  prefsGen: 9,
 };
 
 function clamp(n: number, a: number, b: number) {
@@ -77,7 +77,7 @@ function read() {
     if (!raw) return;
     const parsed = JSON.parse(raw) as Partial<ViewPrefs>;
     prefs = {
-      spinPaused: Boolean(parsed.spinPaused),
+      spinPaused: (parsed.prefsGen ?? 0) >= 9 ? Boolean(parsed.spinPaused) : true,
       spinSpeed: typeof parsed.spinSpeed === "number" ? parsed.spinSpeed : 0.85,
       music: typeof parsed.music === "number" ? parsed.music : 0.62,
       sfx: typeof parsed.sfx === "number" ? parsed.sfx : 0.78,
@@ -102,7 +102,7 @@ function read() {
           : "compact",
       uiScale: (parsed.prefsGen ?? 0) >= 8 && typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.5, 1) : 0.58,
       musicBed: parsed.musicBed === "void" ? "void" : "anthem",
-      prefsGen: 8,
+      prefsGen: 9,
     };
   } catch {
     /* keep */
