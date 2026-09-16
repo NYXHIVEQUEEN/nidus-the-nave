@@ -8,10 +8,17 @@ The game is **NIDUS**: lone hive-brain, gothic cathedral station, idle drones,
 Sentient Command minds, industrial femme deathcore. Owner is Nytheria Nyx, 31,
 self-consenting. Art is **hot, armored, not explicit**. Do not clone her face.
 
+**Acceptance (not optional polish):** the full Game Design Lead directive in
+`.grok/skills/space-hull-3d/references/gdl-acceptance.md` is the review bar.
+Visual quality, readable idle activity, and measured mobile cost must all pass.
+A failed category cannot be averaged away. Do not call the hive AAA or finished
+without evidence. Rollback: last tagged snapshot in `SNAPSHOT.md`.
+
 **3D hulls:** before changing ship / ram / gun meshes, plating, shaders,
 lights, or hull motion, open `.grok/skills/space-hull-3d/SKILL.md` and the
 matching reference (`hull-profiles`, `texture-design`, `shaders`, `lighting`,
 `animation`). Do not rebuild a hero hull from `BoxGeometry` or a generated photo.
+
 
 
 ---

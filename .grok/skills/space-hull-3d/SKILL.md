@@ -27,6 +27,7 @@ only for a rare API. Load **`game-feel-juice`** for trauma shake. This skill
 owns silhouette, materials, light, motion, and maps.
 
 **References (on demand — open the one you are actually doing):**
+- `references/gdl-acceptance.md` — **hard review bar** (full Game Design Lead directive). Visual quality is acceptance, not polish. A failed category cannot be averaged away.
 - `references/hull-profiles.md` — lathe / capsule / merge
 - `references/pbr-decals.md` — UV scale, DecalGeometry
 - `references/texture-design.md` — tileable PBR authoring, height→normal, Imagine

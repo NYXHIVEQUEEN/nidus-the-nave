@@ -62,6 +62,7 @@ const INTERIOR: Record<string, string> = {
 export function StationMount() {
   const [on, setOn] = useState(false);
   const tab = useNidus((s) => s.tab);
+  const showShip = tab === "raid" || tab === "hull";
   const live = tab === "raid";
   useEffect(() => setOn(true), []);
   if (!on) return <div className="absolute inset-0 bg-void" />;
@@ -70,10 +71,10 @@ export function StationMount() {
       <div
         className="absolute inset-0"
         style={{
-          visibility: live ? "visible" : "hidden",
+          visibility: showShip ? "visible" : "hidden",
           pointerEvents: live ? "auto" : "none",
         }}
-        aria-hidden={!live}
+        aria-hidden={!showShip}
       >
         <HullBound>
           <Suspense fallback={<div className="absolute inset-0 bg-void" />}>
@@ -81,7 +82,7 @@ export function StationMount() {
           </Suspense>
         </HullBound>
       </div>
-      {!live && (
+      {!showShip && (
         <img
           src={INTERIOR[tab] ?? INTERIOR.hull}
           alt=""
