@@ -1,18 +1,38 @@
-# NIDUS
+# NIDUS: The Nave
 
 Lone hive-brain. Gothic cathedral station. Idle drones. Sentient Command minds.
 
 Owner: **Nytheria Nyx**. Audio: *Rules of Engagement* (Nytheria Nyx). Keep the credit.
 
-## Play
+**Play the hive** once it is on a host you own. This repo is the game, the PWA, and the Play kit.
 
-Serve this folder (not `file://`):
+## What it is
+
+You are the hive-brain. Raise rooms on the nave. Stamp drones. Seat commanders. Raid wrecks. Leave — the hive still works. Come back and claim the cut.
+
+Single player. Offline honest. **Local save only** (this device). No account. No ads.
+
+## Repo
+
+Canonical: [NYXHIVEQUEEN/nidus-the-nave](https://github.com/NYXHIVEQUEEN/nidus-the-nave)
+
+Store title **NIDUS: The Nave**. In-game title **NIDUS**. Package `com.nyxhivequeen.nidus`.
+
+## Run from source
+
+Needs Node 22.
 
 ```
-python3 -m http.server 8765
+npm install
+npm run dev
 ```
 
-Open the URL. **CONTINUE** if a hive is bound. **WAKE** if not. Textures and music do not block the button.
+The app listens on port 8080. **CONTINUE** if a hive is bound. **WAKE** if not.
+
+```
+npm run build
+npm test
+```
 
 ## Save keys (do not wipe)
 
@@ -21,25 +41,17 @@ Open the URL. **CONTINUE** if a hive is bound. **WAKE** if not. Textures and mus
 - `nidus.slot.0..2` pew copies
 - `nidus.prefs.v1` local sliders
 
-NEW HIVE is the only burn. Confirm first.
+NEW HIVE is the only burn. Confirm first. Git never holds a player hive.
 
-## What this pass is
+## License
 
-Combined rebuild after the App Builder tree was not mounted in chat:
+See [LICENSE](LICENSE). Source is here so you can play and inspect. Art, music, and likenesses stay with Nytheria Nyx.
 
-- Fast boot (CONTINUE / WAKE)
-- Four tabs: HULL FORGE RAID MINDS
-- HIVE autopilot, PRINT/BUILD/RAID/RITE autos
-- Fleet marks DART to RELIQUARY, WATCH / BOOST well
-- Idle CLAIM, SURGE, SLAG, MOLT
-- 3-card wake, seats, jobs, unmake
-- Lab rites, pews, export / import / copy JSON
-- Canvas nave + pulsar (not the original R3F cathedral)
+## Play Store
 
-Add `assets/` (hum/surge/wake mp3 + sky jpgs) from the zip if the clone is source-only.
+Local save only — no cloud. Host + PWABuilder wrap + listing files:
 
-## Play Store / GitHub
-
-Local save only — no cloud. Host + PWABuilder wrap + listing files: `store/GITHUB.md`.
-Name check: `store/NAME.md`. Store title is **NIDUS: The Nave**. In-game title stays NIDUS.
-
+- [store/RELEASE.md](store/RELEASE.md) — public package checklist
+- [store/GITHUB.md](store/GITHUB.md) — host + wrap
+- [store/PLAY.md](store/PLAY.md) — Console order
+- [store/NAME.md](store/NAME.md) — why the title is NIDUS: The Nave

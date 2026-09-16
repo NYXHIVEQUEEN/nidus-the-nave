@@ -24,7 +24,7 @@ Single player. Offline honest. The hive is yours.
 Contact / developer:
 Developer name: Nytheria Nyx
 Organization: NYX HIVEQUEEN
-Website: GitHub NYXHIVEQUEEN/nidus
+Website: GitHub NYXHIVEQUEEN/nidus-the-nave
 Privacy policy URL: https://YOUR-HOST/privacy
 Terms URL: https://YOUR-HOST/terms
 Support email: (put a mail you actually read)

@@ -1,11 +1,14 @@
 # GitHub → live hive → Play
 
-Two repos:
+Canonical repo:
 
-- [NYXHIVEQUEEN/nidus](https://github.com/NYXHIVEQUEEN/nidus) — game sources, art, store kit
-- [NYXHIVEQUEEN/Nidus-AOS](https://github.com/NYXHIVEQUEEN/Nidus-AOS) — the running web app
+- [NYXHIVEQUEEN/nidus-the-nave](https://github.com/NYXHIVEQUEEN/nidus-the-nave) — game sources, art, store kit, this web app
+
+Older private snapshot (do not split work): [NYXHIVEQUEEN/nidus](https://github.com/NYXHIVEQUEEN/nidus)
 
 Saves are **never** in git. `nidus.save.v1` lives in the player’s browser.
+
+Public package checklist: `store/RELEASE.md`.
 
 ## 1. Host the hive on https
 

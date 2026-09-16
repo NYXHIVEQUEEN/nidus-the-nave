@@ -8,6 +8,10 @@ The game is **NIDUS**: lone hive-brain, gothic cathedral station, idle drones,
 Sentient Command minds, industrial femme deathcore. Owner is Nytheria Nyx, 31,
 self-consenting. Art is **hot, armored, not explicit**. Do not clone her face.
 
+**3D hulls:** before changing ship / ram / gun meshes or plating, open
+`.grok/skills/space-hull-3d/SKILL.md` (lathe/capsule, PBR maps, DecalGeometry).
+Do not rebuild a hero hull from `BoxGeometry` or a generated photo.
+
 ---
 
 ## Locked art
@@ -54,7 +58,7 @@ typed “save”. A green overhaul that never left the sandbox is a lost build.
 
 1. Update `SNAPSHOT.md`: core file bytes/lines, what changed, and the git SHA
    once you have it.
-2. Push **only changed sources + docs** to `NYXHIVEQUEEN/nidus` `main`. Additive
+2. Push **only changed sources + docs** to `NYXHIVEQUEEN/nidus-the-nave` `main`. Additive
    commits. Never delete the canvas fallback, `public/nidus` art/audio, or
    untouched blobs.
 3. Diff against HEAD first. `sim.ts` / `save.ts` / `store.ts` / `content.ts`

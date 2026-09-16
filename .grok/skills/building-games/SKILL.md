@@ -155,6 +155,9 @@ forward = (-sin(yaw), 0, -cos(yaw))
   viewmodel, or character substitute — build those in 3D geometry / glTF.
   Set `crossOrigin="anonymous"` on images drawn to canvas/textures.
   See the **`imagine`** skill (2D only — image tools cannot produce real 3D).
+- **Spaceship / station hulls (smooth, plated, decals)** → open
+  **`space-hull-3d`** (`.grok/skills/space-hull-3d/SKILL.md`). Procedural
+  lathe/capsule + PBR maps + DecalGeometry. Never a generated photo as a mesh.
 - **Engine-ready game art doctrine** → open **`game-asset-core`**
   (`../game-asset-core/`) for defaults + blind verify + retry discipline, then the
   matching specialist: **`game-animation-frames`** (loop / motion laws),
