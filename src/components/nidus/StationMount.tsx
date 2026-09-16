@@ -63,7 +63,6 @@ export function StationMount() {
   const [on, setOn] = useState(false);
   const tab = useNidus((s) => s.tab);
   const showShip = tab === "raid" || tab === "hull";
-  const live = tab === "raid";
   useEffect(() => setOn(true), []);
   if (!on) return <div className="absolute inset-0 bg-void" />;
   return (
@@ -72,7 +71,7 @@ export function StationMount() {
         className="absolute inset-0"
         style={{
           visibility: showShip ? "visible" : "hidden",
-          pointerEvents: live ? "auto" : "none",
+          pointerEvents: showShip ? "auto" : "none",
         }}
         aria-hidden={!showShip}
       >

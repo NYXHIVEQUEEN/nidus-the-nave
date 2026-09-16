@@ -32,6 +32,7 @@ export const CAM_DIR = { x: 0.72, y: 0.28, z: -0.64 };
 export const CAM_MIN = 8;
 export const CAM_MAX = 48;
 export const CAM_DEFAULT = 14;
+export const CAM_POLAR = Math.acos(CAM_DIR.y / Math.hypot(CAM_DIR.x, CAM_DIR.y, CAM_DIR.z));
 
 export const CAM_PRESETS = {
   close: { camDist: 10, camFov: 42, label: "CLOSE", why: "inspect a node" },
@@ -44,7 +45,7 @@ export type CamPresetId = keyof typeof CAM_PRESETS;
 
 const listeners = new Set<() => void>();
 let prefs: ViewPrefs = {
-  spinPaused: true,
+  spinPaused: false,
   spinSpeed: 0.85,
   music: 0.62,
   sfx: 0.78,
@@ -54,7 +55,7 @@ let prefs: ViewPrefs = {
   camDist: CAM_DEFAULT,
   camFov: 46,
   camZoom: 1,
-  camPull: false,
+  camPull: true,
   autoHide: false,
   watchNave: false,
   lookId: "",
@@ -63,7 +64,7 @@ let prefs: ViewPrefs = {
   density: "compact" as Density,
   uiScale: 0.58,
   musicBed: "anthem" as MusicBed,
-  prefsGen: 9,
+  prefsGen: 10,
 };
 
 function clamp(n: number, a: number, b: number) {
@@ -77,7 +78,7 @@ function read() {
     if (!raw) return;
     const parsed = JSON.parse(raw) as Partial<ViewPrefs>;
     prefs = {
-      spinPaused: (parsed.prefsGen ?? 0) >= 9 ? Boolean(parsed.spinPaused) : true,
+      spinPaused: (parsed.prefsGen ?? 0) >= 10 ? Boolean(parsed.spinPaused) : false,
       spinSpeed: typeof parsed.spinSpeed === "number" ? parsed.spinSpeed : 0.85,
       music: typeof parsed.music === "number" ? parsed.music : 0.62,
       sfx: typeof parsed.sfx === "number" ? parsed.sfx : 0.78,
@@ -89,7 +90,7 @@ function read() {
         : CAM_DEFAULT,
       camFov: typeof parsed.camFov === "number" && (parsed.prefsGen ?? 0) >= 6 ? clamp(parsed.camFov, 28, 70) : 46,
       camZoom: typeof parsed.camZoom === "number" ? clamp(parsed.camZoom, 0.35, 1.8) : 1,
-      camPull: Boolean(parsed.camPull),
+      camPull: (parsed.prefsGen ?? 0) >= 10 ? Boolean(parsed.camPull) : true,
       autoHide: (parsed.prefsGen ?? 0) >= 7 ? Boolean(parsed.autoHide) : false,
       watchNave: false,
       lookId: typeof parsed.lookId === "string" ? parsed.lookId : "",
@@ -102,7 +103,7 @@ function read() {
           : "compact",
       uiScale: (parsed.prefsGen ?? 0) >= 8 && typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.5, 1) : 0.58,
       musicBed: parsed.musicBed === "void" ? "void" : "anthem",
-      prefsGen: 9,
+      prefsGen: 10,
     };
   } catch {
     /* keep */
