@@ -157,7 +157,8 @@ forward = (-sin(yaw), 0, -cos(yaw))
   See the **`imagine`** skill (2D only — image tools cannot produce real 3D).
 - **Spaceship / station hulls (smooth, plated, decals)** → open
   **`space-hull-3d`** (`.grok/skills/space-hull-3d/SKILL.md`). Procedural
-  lathe/capsule + PBR maps + DecalGeometry. Never a generated photo as a mesh.
+  lathe/capsule + PBR maps + DecalGeometry, plus shader/light/motion/texture
+  refs. Never a generated photo as a mesh.
 - **Engine-ready game art doctrine** → open **`game-asset-core`**
   (`../game-asset-core/`) for defaults + blind verify + retry discipline, then the
   matching specialist: **`game-animation-frames`** (loop / motion laws),

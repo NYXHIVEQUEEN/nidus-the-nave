@@ -1,168 +1,138 @@
 ---
 name: space-hull-3d
 description: >
-  Rounded, smooth procedural spaceship / station hulls in three.js + R3F.
-  Use when building or fixing ship models, hull silhouettes, PBR plating,
-  UV sectioning, or hull decals. Triggers on "spaceship", "hull", "ship
+  Rounded, smooth procedural spaceship / station hulls in three.js + R3F,
+  plus AAA PBR shaders, cinematic lighting, idle/raid animation, and
+  tileable texture design. Use when building or fixing ship models, hull
+  silhouettes, plating, UVs, decals, engine glow, searchlights, fresnel,
+  tone mapping, or tex-*.jpg maps. Triggers on "spaceship", "hull", "ship
   model", "rounded", "smooth 3d", "decal", "texture wrap", "plating",
-  "capsule", "lathe", "NIDUS ship", "snack cake", "submarine", "see-through
-  hull". Not for 2D sprites (use game-asset-core) and not for replacing a
-  mesh with a generated photo (Imagine is 2D only).
+  "capsule", "lathe", "shader", "PBR", "lighting", "searchlight", "engine
+  glow", "tileable", "normal map", "NIDUS ship", "snack cake", "submarine",
+  "see-through hull". Not for 2D sprites (game-asset-core). Imagine never
+  produces a mesh.
 metadata:
-  short-description: "Smooth procedural hulls, PBR plating, and ship decals in three/R3F"
+  short-description: "AAA procedural hulls: lathe/PBR, shaders, light, motion, tileable maps"
 user-invocable: false
 ---
 
-# Space hulls (smooth 3D + plating + decals)
+# Space hulls (AAA, still procedural)
 
 This sandbox has **no Blender, no Substance, no glTF baker**. Ships are
-**procedural three.js meshes** plus **tileable PBR maps**. Imagine is for
-2D interiors/portraits only — a generated photo of a ship is not a hull.
+**three.js meshes** + **tileable PBR maps** + a **keyed light rig**. Imagine
+is 2D only. A generated photo of a ship is not a hull.
 
 Load **`building-games`** for loop/camera/orientation. Load **`threejs`**
-only if you need a rare API. This file owns silhouette, smoothness, UVs,
-materials, and markings.
+only for a rare API. Load **`game-feel-juice`** for trauma shake. This skill
+owns silhouette, materials, light, motion, and maps.
 
-**References (on demand):**
-- `references/hull-profiles.md` — lathe / capsule / merge recipes
-- `references/pbr-decals.md` — maps, UV scale, DecalGeometry, QC
+**References (on demand — open the one you are actually doing):**
+- `references/hull-profiles.md` — lathe / capsule / merge
+- `references/pbr-decals.md` — UV scale, DecalGeometry
+- `references/texture-design.md` — tileable PBR authoring, height→normal, Imagine
+- `references/shaders.md` — Standard/Physical, fresnel, `onBeforeCompile`, bloom fake
+- `references/lighting.md` — key/fill/rim, IBL, shadows, cheap shafts
+- `references/animation.md` — idle breath, engines, RAID tracers, reduced motion
 
 ---
 
-## Tools actually in this stack (answer: “what do you model with?”)
+## Tools in this stack
 
 | Job | Tool | Not this |
 | --- | --- | --- |
-| Hull body | `LatheGeometry` (silhouette) or `CapsuleGeometry` (tube + rounded caps) | `BoxGeometry` as the body |
-| Add-ons (nacelles, guns, engines) | Extra capsules / cylinders, `mergeGeometries` | Glued cubes |
-| Smooth look | radial ≥ 24, capSegments ≥ 8, `computeVertexNormals()` | 5-sided cones, faceted boxes |
-| Plating | `MeshStandardMaterial` + repeating `tex-plate` / rivet / grate | Flat hex, `MeshBasicMaterial` |
-| Markings | `DecalGeometry` **or** a slightly inflated shell with alpha | One photo wrapped 360° |
-| 2D plates / interiors | Imagine → `public/nidus/*.jpg` | Using that JPG as a mesh |
-| Import path (later) | glTF via drei `useGLTF` if a real `.glb` exists | Fake “3D” from a PNG plane |
+| Hull body | `LatheGeometry` or `CapsuleGeometry` | `BoxGeometry` as the body |
+| Add-ons | Capsules / cylinders, `mergeGeometries` | Glued cubes |
+| Smooth | radial ≥ 24, capSegments ≥ 8, `computeVertexNormals()` | 5-sided cones |
+| Plating | `MeshStandardMaterial` + `tex-*` maps | Flat hex, Lambert, a ship photo |
+| Markings | `DecalGeometry` or inflated alpha shell | One photo wrapped 360° |
+| Shaders | Standard/Physical + optional `onBeforeCompile` | Raw `ShaderMaterial` as the hull |
+| Light | 1 key + hemi fill + 1 rim + capped practicals | Ambient 1.0, 12 Points, yellow sun-orb |
+| Motion | `useFrame` + exp lerp, instanced tracers | Rebuild geo every tick, particle swarm raids |
+| Maps | Tileable JPG/PNG, 2×2 QC | Unique “hero” picture as wrap |
+| 2D plates | Imagine → `public/nidus/tex-*.jpg` | Using that JPG as a mesh |
 
-Forward is **+Z**. Lathe/capsule are **+Y**. Rotate `geo.rotateX(Math.PI / 2)`
-so the nose points +Z. Never ship a hull flying backwards.
-
----
-
-## Ban list (these are the “snack cake / Lego / submarine” bugs)
-
-1. **BoxGeometry as the main hull.** Instant toy.
-2. **radialSegments < 16** on a hero ship. Facets read as low-poly cake.
-3. **One mesh, one UV scale** for spine + nose + wings. Plating smears.
-4. **MeshBasic / MeshLambert** on the hero. No metal, no light response.
-5. **BackSide / transparent body** with no inner solid. See-through hull.
-6. **Generated photo of a ship as a plane or sprite.** Flat, no lighting.
-7. **ConeGeometry(…, 5)** as a nose. Pentagon snack.
-8. **Sharing one 512 albedo at repeat (1,1)** across 20 meters of hull.
+Forward is **+Z**. Lathe/capsule are **+Y**. `geo.rotateX(Math.PI / 2)`.
 
 ---
 
-## Smooth hull in four steps
+## Ban list (snack cake / Lego / submarine / piss-orb)
 
-1. **Draw the side profile** as `Vector2[]` (x = radius, y = length). Keep
-   the outline C1-ish: no 90° steps unless you **duplicate** that point to
-   force a crease (panel line). See `hull-profiles.md`.
-2. **Lathe** it: `new LatheGeometry(pts, 24)` or more. Or skip the profile
-   and use `CapsuleGeometry(r, length, 8, 24, 8)` for a sausage that already
-   has round caps.
-3. **Rotate to +Z**, merge add-ons, `computeVertexNormals()`.
-4. **Section materials.** Spine, nose, wings, engines each get their own
-   `repeat` and, if needed, their own mesh. Do not one-wrap.
-
-Hero ship on mobile: **24 radial × 8–12 along length** is enough. Going to
-64×64 buys almost nothing and tanks Mali GPUs.
-
----
-
-## Plating (what makes it look like a ship, not a balloon)
-
-`MeshStandardMaterial` with **separate maps**, not a painted photo:
-
-| Slot | Map | Color space | Typical |
-| --- | --- | --- | --- |
-| `map` | plate / bone albedo | sRGB | repeat 4–8 |
-| `roughnessMap` | grit / height | linear | roughness 0.42–0.72 |
-| `metalnessMap` | iron vs gilt | linear | metalness 0.55–0.85 |
-| `normalMap` | rivets / panels | linear | scale 0.35–0.8 |
-| `emissiveMap` | windows only | sRGB | keep dim |
-
-Wrap: `RepeatWrapping`. `anisotropy = min(8, renderer.capabilities.getMaxAnisotropy())`.
-Different **UV repeat per section** (spine 6×2, nose 2×2, wing 3×1).
-
-NIDUS palette on the maps: bone `#e8dcc8`, dried blood `#7a1f2b`, gilt
-`#c4a574`, void `#0c0a09`. Not sci-fi cyan. Not plastic gold.
+1. **BoxGeometry as the main hull.**
+2. **radialSegments < 16** on a hero ship.
+3. **One mesh, one UV scale** for spine + nose + wings.
+4. **MeshBasic / Lambert** on the hero.
+5. **BackSide / transmission** hull. See-through is a bug.
+6. **Generated photo of a ship as a plane.**
+7. **ConeGeometry(…, 5)** as a nose.
+8. **Albedo with baked lighting, windows, or engine glow.**
+9. **White-only lights** or ambient 1.0.
+10. **Particle swarm** as the raid. Two ships, tracers.
+11. **Unique ShaderMaterial per drone.**
+12. **Rebuilding geometry in `useFrame`.**
 
 ---
 
-## Decals (markings that sit on the hull)
+## Smooth hull (four steps)
 
-Use **`three/addons/geometries/DecalGeometry.js`**. Project **after** the
-hull mesh has world matrix updated (`mesh.updateWorldMatrix(true, false)`).
+1. Side profile as `Vector2[]` (x = radius, y = length). Duplicate a point to
+   crease. `hull-profiles.md`.
+2. `LatheGeometry(pts, 24)` or `CapsuleGeometry(r, len, 8, 24, 8)`.
+3. Rotate to +Z, merge add-ons, `computeVertexNormals()`.
+4. **Section materials.** Spine 6×2, nose 2×2, wing 3×1. Do not one-wrap.
 
-```ts
-import { DecalGeometry } from "three/addons/geometries/DecalGeometry.js";
-import { Euler, Vector3, Mesh, MeshStandardMaterial } from "three";
-
-const geo = new DecalGeometry(
-  hullMesh,
-  new Vector3(0, 0.12, 1.4),   // world point on the skin
-  new Euler(0, 0, 0),
-  new Vector3(0.55, 0.22, 0.35),
-);
-const mark = new Mesh(
-  geo,
-  new MeshStandardMaterial({
-    map: hazardTex,
-    transparent: true,
-    depthWrite: false,
-    polygonOffset: true,
-    polygonOffsetFactor: -4,
-    metalness: 0.3,
-    roughness: 0.55,
-  }),
-);
-```
-
-Rules:
-- **4–8 decals** on a hero. More is clutter and overdraw.
-- Hazard stripes, gilt filigree, registry codes, blood splash, nameplate.
-- Never 360-wrap a decal. Project from the surface normal.
-- Corners distort — keep decals on gently curved plates.
-- Cheap fallback: a second mesh scaled 1.008 with an alpha map (shell).
+Mobile hero: 24 radial × 8–12 along length. 64×64 is waste.
 
 ---
 
-## Lighting that sells the maps
+## AAA look without a DCC
 
-Standard material is black without light. Hero hulls need:
+**Maps** (`texture-design.md`): tileable plate + height + rough + metal.
+Value 50–180. Grooves in height, wear in roughness, unique marks as **decals**.
+2×2 tile test or it does not ship.
 
-- Key (sun / black-hole rim) with a **color**, not only white
-- Soft fill / hemisphere
-- Tiny emissive windows as **separate meshes**, not baked into albedo
-- Tone mapping already on in NIDUS (`ACESFilmicToneMapping`) — keep it
+**Shader** (`shaders.md`): Standard first. Physical clearcoat only on small
+gilt/blood. Rim via `onBeforeCompile`, not a second renderer. `dithering: true`.
+Emissive meshes for windows/engines. Fake bloom with additive sprites; full
+composer bloom is a last resort.
 
-Do not raise `metalness` to 1 and hope. Brushed iron is ~0.7 metal, 0.45–0.6
-rough. Gilt trim is a **different mesh** with higher metal, lower rough.
+**Light** (`lighting.md`): colored key (ember or dead-star, never cyan), hemi
+fill, gilt rim, PMREM env at 0.35–0.7. One shadow caster. FogExp2 = clear color.
+Black-hole key = dark core + halo light, not a yellow sphere.
+
+**Motion** (`animation.md`): slow bank/breath, fast engine flicker, 1–2
+searchlights. RAID = pooled tracers, not gnats. `prefers-reduced-motion`
+kills bob/spin/shake.
+
+NIDUS palette: bone `#e8dcc8`, dried blood `#7a1f2b`, gilt `#c4a574`,
+venom `#1faf5b`, void `#0c0a09`.
+
+---
+
+## Decals (short)
+
+`DecalGeometry` after `updateWorldMatrix`. 4–8 marks. `polygonOffsetFactor: -4`,
+`depthWrite: false`. PNG with a **transparent gutter**. Details in
+`pbr-decals.md`.
 
 ---
 
 ## NIDUS-specific
 
-- Cathedral-factory in orbit, wasp-waist, filled body (space must not punch
-  through).
-- Drones stay instanced gnats (`InstancedMesh`), not unique hulls.
-- Raid rams use the same capsule/lathe language as the capital, smaller.
-- Selectors into the 3D scene stay **primitives** or the Canvas remounts.
+- Cathedral-factory, wasp-waist, **filled** body.
+- Drones = `InstancedMesh`, not lights.
+- Raid rams = smaller capsule/lathe of the same language.
+- Scene selectors = **primitives** or the Canvas remounts.
+- Tone: `ACESFilmicToneMapping`. Keep it.
 
 ---
 
 ## Finish check
 
-- Silhouette reads at ~64px (no box, no snack, no sub).
-- Nose points **+Z**. Caps are round, not chopped.
-- Close-up shows **tiling plates + rivets**, not a smeared photo.
-- No see-through. Inner volume is solid or double-walled.
-- Decals sit on the skin (no z-fight, no floating).
-- Mobile: draw calls still sane; drones instanced; anisotropy capped.
+- Silhouette reads at ~64px (no box, snack, sub).
+- Nose **+Z**. Caps round.
+- Close-up: tiling plates, rivets, specular in the grooves — not a smeared photo.
+- Lit side readable, dark side silhouettes, metals have IBL spec.
+- No see-through. No yellow sun-orb as the aesthetic.
+- Decals sit on skin.
+- WATCH is pleasant for 30s. RAID is two ships + tracers.
+- Mobile: one shadow, instanced gnats, anisotropy capped, no composer unless asked.

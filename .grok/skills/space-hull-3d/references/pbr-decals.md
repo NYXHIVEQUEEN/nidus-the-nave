@@ -1,5 +1,9 @@
 # PBR plating + decals
 
+Authoring the maps (tile test, height→normal, Imagine prompts, ORM) lives in
+`texture-design.md`. This file is **how they bind on a mesh**.
+
+
 ## Maps on disk (NIDUS)
 
 `public/nidus/tex-plate.jpg`, `tex-rivet.jpg`, `tex-grate.jpg`,
