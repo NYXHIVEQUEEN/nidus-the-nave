@@ -1,19 +1,14 @@
-# NIDUS snapshot — GDL flight scene, pass 2
+# NIDUS snapshot — hull cleanup (no swarm)
 
 GitHub: `NYXHIVEQUEEN/nidus-the-nave` `main`.
-**No hive wipe.** Rollback: `d25e11d` (pass 1) or `3cc6b33` (pre-GDL).
+**No hive wipe.** Rollback: `f4b9ada`.
 
-## Three largest visible failures (this pass)
+## This pass
 
-1. Still frames crushed the hull to black — lighting test failed.
-2. Nose-on camera hid engines; exhaust sat on the wrong end of the bell.
-3. Drones were forced off; space had no readable scale landmark.
-
-## Fixes
-
-- Aft-quarter chase camera. HOLD default. Engines fire −Z with hot cores.
-- Bone-iron hull (lower metalness), nacelles, bridge, capsule windows.
-- Keyed light around that camera. Planet limb, gate, wreck, black well as layers.
-- Drones orbit again. SPARK still drives engine heat. Economy files unchanged.
+- Removed the floating white swarm (it was crashing phones and cluttering the ship).
+- Cut the light stack (print flash 28, spots, extra points) that was killing mobile WebGL.
+- Dropped unused instancing, 18-map load, flight-dust artifacts.
+- Hull is slate-grey steel. Viewports are painted dark glass, not lamps.
+- SPIN + zoom still yaw-only. Economy / save files unchanged.
 
 Saves: `nidus.save.v3` in the browser. Git is the package.
