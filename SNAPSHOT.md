@@ -1,6 +1,6 @@
 # NIDUS snapshot — custom hull, rooms keep underfunction
 
-GitHub: `NYXHIVEQUEEN/nidus-the-nave` `main`.
+GitHub: `NYXHIVEQUEEN/nidus-the-nave` `main` @ `5929935`.
 **No hive wipe.** Rollback: `95db376`.
 
 ## This pass
