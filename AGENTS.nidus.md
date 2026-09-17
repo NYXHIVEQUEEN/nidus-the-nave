@@ -128,8 +128,7 @@ typed “save”. A green overhaul that never left the sandbox is a lost build.
 - Packed PRINT still feeds SPARK + caste XP. Never a dead stamp. AUTO holds two berths until Barracks or EXPAND.
 - First Ice is a short tutorial wreck. RAID chrome lists open wrecks + two
   locked teases, never a 13-card dump. Cleared wrecks read **FARM**.
-- Room finish = **one visible node** on the hull. If you add a room, add a
-  socket and a node.
+- Room finish **does not glue a leftover annex blob**. Rooms keep their sim bonus (underfunction). Only designed hardpoints (RAILGUN / AUTOCANNON) change the silhouette. Molt tints the keel.
 - Chrome SIZE: AUTO / TIGHT / ROOMY / WATCH. AUTO reads height + rotation. UI SCALE in VIEW. Keyboard U cycles SIZE.
 - Compact hull shows queue + next + one tease, not the whole strip.
 - OrbitControls: drag to rotate, SPIN/HOLD, speed in LOCAL. Hull itself
@@ -158,8 +157,7 @@ typed “save”. A green overhaul that never left the sandbox is a lost build.
 
 The hull is a **cathedral-factory**, not a crate and not a poly pile.
 
-- **Body:** one wasp-waist `LatheGeometry` nave + keel + ridge. Rooms attach
-  as modules. Do not stack octahedrons/tetrahedrons as the hull.
+- **Body:** faceted oval lathe + chisel prow + armor cheeks, wings, bridge, engine block. Not a round sausage. Rooms do not attach as leftover capsules.
 - **Light:** ACES exposure ~1.34 (Mood shifts on events: PULSAR 1.42, ECLIPSE
   0.92). Gilt key, blood furnace, cool rim (cool rim skipped on mobile).
   Window leaks are **three** short additive cones on the mid LOD, not a
@@ -175,11 +173,7 @@ The hull is a **cathedral-factory**, not a crate and not a poly pile.
   Respect `prefers-reduced-motion` in the Canvas, not only CSS.
 - **Sky:** cylinder backdrop + titan spheres. Do not map 16:9 plates onto a
   full UV sphere.
-- **Growth:** each new room `Grow`s in along its socket radial. Annexes are
-  lathe/capsule/cylinder/lancet grown from a dock ring — not world-axis boxes
-  or octa piles. Iron tendons + gilt sap show the room feeding the nave.
-  Ghost next-unlock is a gilt silhouette of that annex. Queued room gets a
-  gilt beam + rib scaffold. Halo and molt waist scale with molt/rooms.
+- **Growth:** rooms raise economy, not extra sausages. The hull is a designed capital — faceted body, armor cheeks, wings, engine block — not a lathe that sprouts capsules. Ghost next-unlock stays chrome, not a gilt annex silhouette. Halo and molt waist scale with molt/rooms.
 
 ## Architecture (do not flatten)
 

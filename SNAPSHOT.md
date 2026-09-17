@@ -1,14 +1,15 @@
-# NIDUS snapshot — hull cleanup (no swarm)
+# NIDUS snapshot — custom hull, rooms keep underfunction
 
 GitHub: `NYXHIVEQUEEN/nidus-the-nave` `main`.
-**No hive wipe.** Rollback: `f4b9ada`.
+**No hive wipe.** Rollback: `95db376`.
 
 ## This pass
 
-- Removed the floating white swarm (it was crashing phones and cluttering the ship).
-- Cut the light stack (print flash 28, spots, extra points) that was killing mobile WebGL.
-- Dropped unused instancing, 18-map load, flight-dust artifacts.
-- Hull is slate-grey steel. Viewports are painted dark glass, not lamps.
-- SPIN + zoom still yaw-only. Economy / save files unchanged.
+- Pending construction stages no longer glue leftover capsules onto the hull.
+  Solar / hangar / gundeck / molt blobs are gone. Rooms still pay their sim bonus.
+  Only RAILGUN and AUTOCANNON add designed angular hardpoints. Molt tints the keel.
+- Hero hull is a faceted custom capital: oval lathe with panel breaks, chisel prow,
+  armor cheeks, wings, bridge, engine block. Not a round sausage.
+- Economy / save files unchanged (`sim.ts` / `save.ts` / `store.ts` / `content.ts` untouched).
 
 Saves: `nidus.save.v3` in the browser. Git is the package.
