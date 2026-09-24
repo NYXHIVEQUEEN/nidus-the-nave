@@ -6,6 +6,7 @@ Package: com.nyxhivequeen.nidus
 Default language: English (United States)
 Category: Games → Simulation
 Tags: idle, space, gothic, strategy, single player
+Contains: In-app purchases (one-time, $0.99–$9.99). No ads.
 
 Short description (max 80):
 Gothic idle hive. Raise a cathedral station. Commanders wake. The nave grows.
@@ -16,6 +17,8 @@ You are the hive-brain. The nave is a gothic cathedral in orbit. Drones print. R
 Raise the Solar Spine. Stamp miners, fabs, builders. Raid the ice ring. Molt when the reliquary is ready. Leave — the hive still works. Come back and claim the cut.
 
 Industrial femme deathcore. Bone, gilt, dried blood. No ads. No account. Your hive lives on the device.
+
+SOVEREIGNS: 20 armored heroes, each with her own edict. Try any of them free for ten minutes. Keep one for $0.99, or claim the full court for $9.99. One-time purchases. No loot boxes. The whole game is playable without paying.
 
 Music: Rules of Engagement — Nytheria Nyx. VOID is a space pad until more of her cuts land. NYX ON SPOTIFY opens her catalog.
 

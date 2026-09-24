@@ -18,6 +18,9 @@ function Privacy() {
         <strong className="text-gilt">Music.</strong> The anthem is <em>Rules of Engagement</em> by Nytheria Nyx, played from files that ship with the hive. The Spotify button opens Spotify in your browser. Spotify’s own privacy policy applies there. We do not receive your Spotify data.
       </p>
       <p>
+        <strong className="text-gilt">Purchases.</strong> Sovereign heroes are one-time purchases handled entirely by Google Play. We never see your card, name, or account. The app asks Play which heroes you own and keeps that list on this device so the court works offline. Refunds and receipts follow Google Play's rules.
+      </p>
+      <p>
         <strong className="text-gilt">If you wrap NIDUS as an Android app.</strong> The Play listing is a window onto the same hive. The wrapper does not add tracking. Game progress still lives on the device. Uninstalling the app deletes that copy of the hive unless you stashed a slot somewhere else.
       </p>
       <p>
@@ -30,7 +33,7 @@ function Privacy() {
         <strong className="text-gilt">Contact.</strong> Nytheria Nyx / NYX HIVEQUEEN. GitHub: NYXHIVEQUEEN. Spotify: Nytheria Nyx. For a Play listing, put a mail you actually read on the store form — the hive itself does not collect mail.
       </p>
       <EraseData />
-      <p>Last written 1 September 2026. This page is the policy.</p>
+      <p>Last written 24 September 2026. This page is the policy.</p>
     </LegalPage>
   );
 }

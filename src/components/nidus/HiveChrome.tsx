@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Aperture,
+  Crown,
   BookOpen,
   ChevronUp,
   Eye,
@@ -104,6 +105,7 @@ export function LeftRail({
   onMute,
   onCollapse,
   onStay: _onStay,
+  onCourt,
 }: {
   muted: boolean;
   spinPaused: boolean;
@@ -115,6 +117,7 @@ export function LeftRail({
   onMute: () => void;
   onCollapse: () => void;
   onStay: () => void;
+  onCourt: () => void;
 }) {
   const [fly, setFly] = useState<null | "view" | "rite">(null);
   const prefs = useSyncPrefs();
@@ -132,6 +135,16 @@ export function LeftRail({
       className="nidus-rail pointer-events-auto absolute left-2 top-[max(5.6rem,calc(env(safe-area-inset-top)+4.8rem))] z-40 flex flex-row items-start gap-1 overflow-visible"
     >
       <div className="flex flex-col gap-1">
+        <RailBtn
+          label="COURT"
+          title="Sovereigns. Try any hero free."
+          onClick={() => {
+            setFly(null);
+            onCourt();
+          }}
+        >
+          <Crown className="size-3 text-gilt" />
+        </RailBtn>
         <RailBtn
           label="HELP"
           title="This screen — what the buttons do."

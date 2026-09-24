@@ -244,4 +244,7 @@ export type GameState = {
   printFocus: { caste: Caste; n: number };
   zoneRank: Record<ZoneId, number>;
   callPaid: number;
+  sovereigns: string[];
+  trial: { id: string; until: number } | null;
+  trialsUsed: string[];
 };

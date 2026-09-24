@@ -59,6 +59,8 @@ import {
 import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALVAGE_COOK, casteXpNeed, postBoostPct, autoHoldBerths, callNeed, OFFICER_CAP, techUnlocked } from "@/lib/nidus/progress";
 import { ChromeBound, StationMount } from "./StationMount";
 import { SettingsPanel, type RitePane } from "./SettingsPanel";
+import { SovereignHall } from "./SovereignHall";
+import { initBilling, getShop } from "@/lib/nidus/billing";
 import { GoalDock, GuideSheet, LeftRail, StatusChip, Whisper, muteToggle, useDensity, useIdleChrome, useSyncPrefs, useViewport } from "./HiveChrome";
 import { cycleDensity, getPrefs, getSpinPaused, helpSeen, lookAtRoom, subscribeSpin } from "@/lib/nidus/view";
 import type { Caste, Rarity, Tab } from "@/lib/nidus/types";
@@ -112,6 +114,9 @@ export function NidusApp() {
     setHeld(peekHive());
     hydrate();
     registerNidusPwa();
+    void initBilling().then((confirmed) => {
+      if (confirmed) useNidus.getState().keepOwnedHeroes(getShop().owned);
+    });
     let cancelled = false;
     void runBoot((next) => {
       if (!cancelled) setBoot(next);
@@ -247,13 +252,14 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   const setTab = useNidus((s) => s.setTab);
   const [riteOpen, setRiteOpen] = useState(false);
   const [riteStart, setRiteStart] = useState<RitePane>("view");
+  const [court, setCourt] = useState(false);
   const [guide, setGuide] = useState<GuideId | null>(null);
   const [whisper, setWhisper] = useState<string | null>(null);
   const [muted, setMuted] = useState(() => getPrefs().muted);
   const prefs = useSyncPrefs();
   const spinPaused = useSyncExternalStore(subscribeSpin, getSpinPaused, getSpinPaused);
   const locked = waking || gift;
-  const { collapsed, bump, showChrome, toggleHide } = useIdleChrome(locked || riteOpen || Boolean(guide));
+  const { collapsed, bump, showChrome, toggleHide } = useIdleChrome(locked || riteOpen || court || Boolean(guide));
   const whispered = useState(() => new Set<string>())[0];
   const s = useNidus();
   const goal = (() => {
@@ -330,6 +336,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   }, [toggleHide, setTab]);
 
   const openRitePane = (pane: RitePane) => {
+    setCourt(false);
     setRiteStart(pane);
     setRiteOpen(true);
   };
@@ -344,7 +351,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
       <StationMount />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-void/12 via-transparent to-void/8" />
       <div className="nidus-vignette pointer-events-none absolute inset-0" />
-      <LeftRail
+      {!court && <LeftRail
         muted={muted}
         spinPaused={spinPaused}
         collapsed={collapsed}
@@ -357,7 +364,11 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
         onStay={bump}
         onMute={() => muteToggle(muted, setMuted)}
         onCollapse={toggleHide}
-      />
+        onCourt={() => {
+          setRiteOpen(false);
+          setCourt(true);
+        }}
+      />}
       <div className="pointer-events-none relative z-10 flex h-full flex-col">
         <ResourceBar compact />
         {tab !== "raid" && (
@@ -396,6 +407,11 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
           data-chrome
         >
           <SettingsPanel start={riteStart} onClose={() => setRiteOpen(false)} />
+        </div>
+      )}
+      {court && (
+        <div className="pointer-events-auto absolute inset-x-2 bottom-[3.5rem] top-[max(4.6rem,calc(env(safe-area-inset-top)+4rem))] z-50 flex flex-col justify-end">
+          <SovereignHall onClose={() => setCourt(false)} />
         </div>
       )}
       {waking && <WakeOverlay />}

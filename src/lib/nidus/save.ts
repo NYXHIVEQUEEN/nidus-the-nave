@@ -95,6 +95,9 @@ function migrate(raw: GameState): GameState {
   if (merged.rankingRoom && !merged.rooms[merged.rankingRoom]) merged.rankingRoom = null;
   if (merged.activeTech && !merged.tech[merged.activeTech]) merged.activeTech = null;
   if (typeof merged.callPaid !== "number" || Number.isNaN(merged.callPaid)) merged.callPaid = 0;
+  merged.sovereigns = Array.isArray(merged.sovereigns) ? merged.sovereigns.filter((x) => typeof x === "string").slice(0, 3) : [];
+  if (!merged.trial || typeof merged.trial.id !== "string" || typeof merged.trial.until !== "number") merged.trial = null;
+  merged.trialsUsed = Array.isArray(merged.trialsUsed) ? merged.trialsUsed.filter((x) => typeof x === "string") : [];
   for (const id of Object.keys(merged.rooms) as (keyof typeof merged.rooms)[]) {
     const room = merged.rooms[id];
     if (typeof room.rank !== "number") room.rank = room.built ? 1 : 0;

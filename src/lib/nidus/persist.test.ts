@@ -488,3 +488,40 @@ test("nidusKeys finds only NIDUS keys", async () => {
   const store = { length: keys.length, key: (i: number) => keys[i] ?? null };
   assert.deepEqual(nidusKeys(store), ["nidus.save.v3", "nidus.prefs.v1"]);
 });
+
+test("sovereigns: seats, trials, bundle, refunds, and real economy power", async () => {
+  const H = await import("./heroes.ts");
+  const { ownedFrom } = await import("./billing.ts");
+  assert.equal(H.SOVEREIGNS.length, 20);
+  assert.equal(new Set(H.SOVEREIGNS.map((h) => h.id)).size, 20);
+  assert.equal(ownedFrom(["sovereign_all"]).size, 20);
+  assert.deepEqual([...ownedFrom(["hero_vesper", "junk"])], ["vesper"]);
+
+  const now = 1_000_000;
+  const base = { ...defaultState(), swarm: { ...defaultState().swarm, miner: 10 } };
+  const owned = new Set(["vesper", "mora", "nyxara"]);
+  assert.deepEqual(H.enthrone(base, "pyre", owned).sovereigns, [], "unowned cannot sit");
+  let s = H.enthrone(base, "vesper", owned);
+  assert.deepEqual(s.sovereigns, ["vesper"]);
+  s = H.enthrone(s, "mora", owned);
+  assert.deepEqual(s.sovereigns, ["mora"], "one seat before molt");
+  s = H.enthrone({ ...s, moltLayer: 5 }, "vesper", owned);
+  s = H.enthrone(s, "nyxara", owned);
+  assert.deepEqual(s.sovereigns, ["mora", "vesper", "nyxara"], "caps at three");
+
+  const ore0 = rates(base, now).orePerSec;
+  const ore1 = rates(H.enthrone(base, "vesper", owned), now).orePerSec;
+  assert.ok(Math.abs(ore1 / ore0 - 1.6) < 1e-9, "VESPER is +60% ore");
+
+  const t = H.startTrial(base, "pyre", now);
+  assert.equal(t.trial?.id, "pyre");
+  assert.ok(rates(t, now).sparkPerSec > rates(base, now).sparkPerSec);
+  assert.equal(rates(t, now + H.TRIAL_MS + 1).sparkPerSec, rates(base, now + H.TRIAL_MS + 1).sparkPerSec, "trial ends");
+  const used = { ...t, trial: null };
+  assert.equal(H.startTrial(used, "pyre", now + H.TRIAL_MS * 2), used, "one trial per hero");
+
+  assert.deepEqual(H.keepOwned(s, new Set(["vesper"])).sovereigns, ["vesper"]);
+  const old = importSave(JSON.stringify({ version: 3, ore: 5, rooms: {}, sovereigns: "bad" }));
+  assert.deepEqual(old?.sovereigns, []);
+  assert.equal(old?.trial, null);
+});

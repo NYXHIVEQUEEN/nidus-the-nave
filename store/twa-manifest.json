@@ -19,9 +19,16 @@
   "generatorApp": "bubblewrap",
   "webManifestUrl": "https://REPLACE_WITH_HTTPS_HOST/manifest.webmanifest",
   "fallbackType": "customtabs",
-  "features": {},
+  "features": {
+    "playBilling": {
+      "enabled": true
+    }
+  },
   "minSdkVersion": 24,
   "orientation": "default",
   "isChromeOSOnly": false,
-  "isMetaQuest": false
+  "isMetaQuest": false,
+  "alphaDependencies": {
+    "enabled": true
+  }
 }

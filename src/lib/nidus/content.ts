@@ -14,6 +14,7 @@ import type {
   ZoneId,
 } from "./types";
 import { idFrom, pick, rand } from "./rng";
+import { edict, edictHours, printDiscount } from "./heroes";
 
 export const CASTES: { id: Caste; label: string; verb: string }[] = [
   { id: "miner", label: "MINE", verb: "Chip" },
@@ -297,6 +298,9 @@ export function defaultState(now = Date.now()): GameState {
     printFocus: { caste: "miner", n: 0 },
     zoneRank: { spine: 0, hold: 0, nave: 0, fleet: 0, crypt: 0 },
     callPaid: 0,
+    sovereigns: [],
+    trial: null,
+    trialsUsed: [],
   };
 }
 
@@ -378,7 +382,7 @@ export function chargeCap(s: GameState): number {
 export function offlineCapSec(s: GameState): number {
   const h = s.tech.daysilo?.done ? 24 : s.rooms.silo?.built || s.tech.longsilo?.done ? 14 : 10;
   const rank = s.rooms.silo?.rank ?? 0;
-  return (h + rank) * 3600;
+  return (h + rank + edictHours(s, Date.now())) * 3600;
 }
 
 export function totalSwarm(s: GameState): number {
@@ -389,7 +393,8 @@ export function printCost(s: GameState): { ore: number; parts: number } {
   const base = Math.pow(1.08, Math.max(0, s.printed - 16));
   const cheap = s.tech.cheapprint?.done ? 0.74 : 1;
   const foundry = 1 - Math.min(0.18, (s.rooms.foundry.rank ?? 0) * 0.04);
-  return { ore: Math.ceil(4 * base * cheap * foundry), parts: Math.ceil(2 * base * cheap * foundry) };
+  const crown = printDiscount(s, Date.now());
+  return { ore: Math.ceil(4 * base * cheap * foundry * crown), parts: Math.ceil(2 * base * cheap * foundry * crown) };
 }
 
 export function throneCap(s: GameState): number {
@@ -536,16 +541,17 @@ export function rates(s: GameState, now: number) {
       (s.rooms.refinery?.rank ?? 0) * 0.03 +
       (s.rooms.foundry?.rank ?? 0) * 0.012) *
     zHold *
-    slow;
-  const oreOut = orePerSec * zHold * slow;
-  const partsOut = partsPerSec * zSpine * slow;
+    slow *
+    edict(s, "credits", now);
+  const oreOut = orePerSec * zHold * slow * edict(s, "ore", now);
+  const partsOut = partsPerSec * zSpine * slow * edict(s, "parts", now);
   return {
     orePerSec: oreOut,
     partsPerSec: partsOut,
     oreSpendPerSec: partsOut * ORE_PER_PART,
-    buildPerSec: buildPerSec * zNave * slow,
-    labPerSec: labPerSec * zNave * slow,
-    sparkPerSec: sparkPerSec * slow,
+    buildPerSec: buildPerSec * zNave * slow * edict(s, "build", now),
+    labPerSec: labPerSec * zNave * slow * edict(s, "lab", now),
+    sparkPerSec: sparkPerSec * slow * edict(s, "spark", now),
     sparkDrain,
     chargeGen,
     chargeDrain,

@@ -1,17 +1,17 @@
 {
   "questionnaire": "IARC / Google Play content rating",
-  "expected": "PEGI 12 / ESRB Teen / IARC 12+ (confirm in the official form)",
+  "expected": "IARC 16+ / PEGI 16 / ESRB Mature 17+ is the target (confirm in the official form). Suggestive armored female heroes, fantasy violence, dried-blood palette. No nudity, no sex.",
   "answers": {
-    "violence": "Yes — fantasy/cartoon wrecks and raids. No realistic gore, no torture.",
-    "blood": "Yes — implied, dried-blood palette, not realistic dismemberment.",
+    "violence": "Yes \u2014 fantasy/cartoon wrecks and raids. No realistic gore, no torture.",
+    "blood": "Yes \u2014 implied, dried-blood palette, not realistic dismemberment.",
     "language": "Mild. No hate speech.",
-    "sexual_content": "No. Armored characters, not explicit, no nudity, no sex.",
+    "sexual_content": "Suggestive themes only: attractive armored adult women in combat gear. No nudity, no sexual acts, no explicit content.",
     "drugs": "No.",
     "gambling": "No. Idle numbers are not real-money gambling.",
     "user_interaction": "No. Single player. No chat, no UGC, no social.",
     "location_sharing": "No.",
-    "digital_purchases": "No in this build.",
+    "digital_purchases": "Yes. One-time in-app purchases through Google Play Billing: each hero $0.99, all 20 for $9.99. No loot boxes, no random paid items, no subscriptions.",
     "unrestricted_internet": "Spotify button opens an external catalog. No in-app browser for arbitrary URLs besides that and this privacy page.",
-    "age_target": "Not designed for children under 13."
+    "age_target": "Adults. Not designed for children under 13; M/17+ presentation."
   }
 }
