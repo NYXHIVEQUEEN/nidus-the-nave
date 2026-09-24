@@ -9,7 +9,7 @@ Sentient Command minds, industrial femme deathcore. Owner is Nytheria Nyx, 31,
 self-consenting. Art is **hot, armored, not explicit**. Do not clone her face.
 
 **Acceptance (not optional polish):** the full Game Design Lead directive in
-`.grok/skills/space-hull-3d/references/gdl-acceptance.md` is the review bar.
+`.grok/skills/space-hull-3d/references/gdl-acceptance.md` (moving to `docs/hull/`) is the review bar.
 Visual quality, readable idle activity, and measured mobile cost must all pass.
 A failed category cannot be averaged away. Do not call the hive AAA or finished
 without evidence. Rollback: last tagged snapshot in `SNAPSHOT.md`.
@@ -44,7 +44,7 @@ matching reference (`hull-profiles`, `texture-design`, `shaders`, `lighting`,
 
 ## Locked product
 
-- Single player. No auth. No cloud. Save is `localStorage` key `nidus.save.v1`
+- Single player. No auth. No cloud. Save is `localStorage` key `nidus.save.v3`
   (+ `.bak`). Prefs `nidus.prefs.v1`.
 - **Never wipe the save** unless the player confirms NEW HIVE. Never
   `localStorage.clear()` in playtests. Persist immediately on print / raid /
@@ -54,8 +54,8 @@ matching reference (`hull-profiles`, `texture-design`, `shaders`, `lighting`,
 - Selectors into the 3D scene **must be primitives**
   (`s.rooms.solar.built`, `Math.round(s.charge)`). A new object every tick
   remounts the Canvas and kills mobile.
-- 3D is lazy (`StationMount` + Suspense). Title/WAKE must SSR. Do not import
-  `three` from a route module.
+- 3D is lazy (`StationMount` + Suspense). Title/WAKE must paint before the
+  3D chunk loads. Do not import `three` from a route module.
 
 ## Ship snapshot (mandatory)
 
@@ -72,7 +72,7 @@ typed “save”. A green overhaul that never left the sandbox is a lost build.
    untouched blobs.
 3. Diff against HEAD first. `sim.ts` / `save.ts` / `store.ts` / `content.ts`
    stay byte-identical unless this pass meant to edit them.
-4. Player keys stay in the browser: `nidus.save.v1` + `.bak` + `nidus.slot.*` +
+4. Player keys stay in the browser: `nidus.save.v3` + `.bak` + `.preimport` + `nidus.slot.v3.*` +
    `nidus.prefs.v1`. Git is the package. Their hive is not.
 5. Packaging = `src/lib/nidus/*` + `src/components/nidus/*` + `public/nidus` +
    `AGENTS.nidus.md` + `SNAPSHOT.md`. Not `node_modules`. Not a zip of
@@ -185,7 +185,7 @@ Tick order in `applyTick`: resources → rooms → rites → spark/wake → auto
 → auto-build/rite → battle tick / auto-raid → clamp. Advisor (`advise`) is
 read-only UI. Scripts (`scripts` / HIVE) write through that same pipeline.
 
-Save: `nidus.save.v1` + `.bak`. Slots `nidus.slot.0..2` are copies — loading a
+Save: `nidus.save.v3` + `.bak` (+ `.preimport` before an IMPORT). Slots `nidus.slot.v3.0..2` are copies — loading a
 slot writes the live key, it does **not** wipe the other pews. `migrate()`
 merges new fields; do not bump version to add a boolean.
 

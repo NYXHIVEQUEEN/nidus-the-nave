@@ -1,5 +1,5 @@
 /* NIDUS: try the net, fall back to cache. Save stays in localStorage. */
-const SHELL = "nidus-shell-v2";
+const SHELL = "nidus-shell-v3";
 const KEEP = [
   "/",
   "/manifest.webmanifest",
@@ -10,6 +10,7 @@ const KEEP = [
   "/apple-touch-icon.png",
   "/privacy",
   "/terms",
+  "/support",
   "/fonts/barlow-400.woff2",
   "/fonts/barlow-600.woff2",
   "/fonts/barlow-700.woff2",

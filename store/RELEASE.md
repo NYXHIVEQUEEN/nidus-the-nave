@@ -14,6 +14,9 @@ Package id: `com.nyxhivequeen.nidus`.
 | License | `LICENSE` |
 | Privacy | `/privacy` (`src/routes/privacy.tsx`) |
 | Terms | `/terms` |
+| Support page | `/support` (`src/routes/support.tsx`) |
+| In-game FAQ + fault report | SETTINGS → FAQ (`src/lib/nidus/support.ts`) |
+| Launch gap list | `store/MARKET.md` |
 | PWA manifest + icons | `public/manifest.webmanifest`, `public/icons/` |
 | Play listing copy | `store/listing.txt` |
 | Name check | `store/NAME.md` |
@@ -24,7 +27,7 @@ Package id: `com.nyxhivequeen.nidus`.
 | Asset links stub | `public/.well-known/assetlinks.json` |
 | OG game card | `src/lib/og/site.json` (`type: x:game`) |
 
-Saves are **never** in git. Players keep `nidus.save.v1` in the browser.
+Saves are **never** in git. Players keep `nidus.save.v3` in the browser.
 
 ## You still do (cannot finish from this chat)
 

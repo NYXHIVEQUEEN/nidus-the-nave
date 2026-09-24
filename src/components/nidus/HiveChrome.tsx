@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import {
   Aperture,
+  Crown,
   BookOpen,
   ChevronUp,
   Eye,
   EyeOff,
   HelpCircle,
+  LifeBuoy,
   Pause,
   RotateCw,
   Save,
@@ -15,7 +17,8 @@ import {
   Scaling,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { GUIDES, firstWhisper, type GuideId } from "@/lib/nidus/guide";
+import type { RitePane } from "./SettingsPanel";
+import { GUIDES, type GuideId } from "@/lib/nidus/guide";
 import {
   applyCamPreset,
   CAM_PRESETS,
@@ -102,6 +105,7 @@ export function LeftRail({
   onMute,
   onCollapse,
   onStay: _onStay,
+  onCourt,
 }: {
   muted: boolean;
   spinPaused: boolean;
@@ -109,10 +113,11 @@ export function LeftRail({
   helpPulse: boolean;
   density: DensityResolved;
   onHelp: () => void;
-  onRitePane: (pane: "opt" | "view" | "codex" | "save") => void;
+  onRitePane: (pane: RitePane) => void;
   onMute: () => void;
   onCollapse: () => void;
   onStay: () => void;
+  onCourt: () => void;
 }) {
   const [fly, setFly] = useState<null | "view" | "rite">(null);
   const prefs = useSyncPrefs();
@@ -130,6 +135,16 @@ export function LeftRail({
       className="nidus-rail pointer-events-auto absolute left-2 top-[max(5.6rem,calc(env(safe-area-inset-top)+4.8rem))] z-40 flex flex-row items-start gap-1 overflow-visible"
     >
       <div className="flex flex-col gap-1">
+        <RailBtn
+          label="COURT"
+          title="Sovereigns. Try any hero free."
+          onClick={() => {
+            setFly(null);
+            onCourt();
+          }}
+        >
+          <Crown className="size-3 text-gilt" />
+        </RailBtn>
         <RailBtn
           label="HELP"
           title="This screen — what the buttons do."
@@ -226,6 +241,13 @@ export function LeftRail({
             onClick={() => onRitePane("save")}
           >
             <Save className="size-3" />
+          </RailBtn>
+          <RailBtn
+            label="FAQ"
+            title="Answers, fault report, support."
+            onClick={() => onRitePane("help")}
+          >
+            <LifeBuoy className="size-3" />
           </RailBtn>
         </div>
       )}

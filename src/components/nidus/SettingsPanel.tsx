@@ -16,7 +16,8 @@ import {
   type Density,
   type ViewPrefs,
 } from "@/lib/nidus/view";
-import { slotStamp } from "@/lib/nidus/save";
+import { eraseAllData, slotStamp } from "@/lib/nidus/save";
+import { APP_VERSION, buildReport, FAQ, SUPPORT_EMAIL, supportIssueUrl, supportMailto } from "@/lib/nidus/support";
 import { openNyxSpotify, setMusicBed, syncAudioGains } from "@/lib/nidus/audio";
 
 const CODEX: { id: string; title: string; body: string }[] = [
@@ -60,12 +61,22 @@ const CODEX: { id: string; title: string; body: string }[] = [
   { id: "nest", title: "NESTS", body: "Rooms and rites nest. A lock is a prior node, not a wall." },
 ];
 
+export type RitePane = "opt" | "view" | "codex" | "save" | "help";
+
+const PANE_LABEL: Record<RitePane, string> = {
+  view: "VIEW",
+  opt: "TUNE",
+  codex: "CODEX",
+  save: "SAVE",
+  help: "HELP",
+};
+
 export function SettingsPanel({
   onClose,
   start = "view",
 }: {
   onClose: () => void;
-  start?: "opt" | "view" | "codex" | "save";
+  start?: RitePane;
 }) {
   const [tab, setTab] = useState(start);
   useEffect(() => {
@@ -95,23 +106,24 @@ export function SettingsPanel({
   const toggleAuto = useNidus((s) => s.toggleAuto);
   const fileRef = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState("");
+  const [importNote, setImportNote] = useState("");
   const hits = CODEX.filter((c) => !q || `${c.title} ${c.body}`.toLowerCase().includes(q.toLowerCase()));
 
   return (
     <div className="pointer-events-auto max-h-[70dvh] overflow-y-auto p-2">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="grid grid-cols-4 gap-1">
-          {(["view", "opt", "codex", "save"] as const).map((t) => (
+        <div className="grid grid-cols-5 gap-1">
+          {(["view", "opt", "codex", "save", "help"] as const).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setTab(t)}
               className={cn(
-                "nidus-cut min-h-10 px-1 font-display text-[0.62rem] tracking-[0.16em]",
+                "nidus-cut min-h-10 px-0.5 font-display text-[0.6rem] tracking-[0.12em]",
                 tab === t ? "nidus-cut-on" : "text-muted",
               )}
             >
-              {t === "view" ? "VIEW" : t === "opt" ? "SETTINGS" : t === "codex" ? "CODEX" : "SAVE"}
+              {PANE_LABEL[t]}
             </button>
           ))}
         </div>
@@ -275,9 +287,19 @@ export function SettingsPanel({
               const file = e.target.files?.[0];
               if (!file) return;
               const text = await file.text();
-              importHive(text);
+              e.target.value = "";
+              setImportNote(
+                importHive(text)
+                  ? "HIVE BOUND. THE OLD HIVE WAS KEPT ASIDE."
+                  : "NOT A HIVE. ONLY AN EXPORT OR COPY JSON FILE WORKS. YOUR HIVE IS UNTOUCHED.",
+              );
             }}
           />
+          {importNote && (
+            <p role="status" className="text-[0.7rem] tracking-[0.12em] text-gilt">
+              {importNote}
+            </p>
+          )}
           <button
             type="button"
             className="min-h-11 border border-gilt font-display text-xs tracking-[0.2em] text-gilt"
@@ -299,8 +321,10 @@ export function SettingsPanel({
           >
             NEW HIVE
           </button>
+          <EraseData />
         </div>
       )}
+      {tab === "help" && <HelpPane />}
       <div className="mt-3 flex gap-2">
         <a href="/privacy" className="flex min-h-11 flex-1 items-center justify-center border border-border font-display text-[0.62rem] tracking-[0.18em] text-gilt">
           PRIVACY
@@ -309,6 +333,117 @@ export function SettingsPanel({
           TERMS
         </a>
       </div>
+    </div>
+  );
+}
+
+export function EraseData() {
+  const [armed, setArmed] = useState(false);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = window.setTimeout(() => setArmed(false), 6000);
+    return () => window.clearTimeout(t);
+  }, [armed]);
+  if (done) {
+    return <p role="status" className="text-[0.7rem] tracking-[0.12em] text-gilt">ERASED. NOTHING OF YOURS IS LEFT ON THIS DEVICE.</p>;
+  }
+  return (
+    <div className="nidus-card p-2">
+      <p className="font-display text-[0.7rem] tracking-[0.18em] text-gilt">YOUR DATA</p>
+      <p className="mt-1 text-[0.75rem] leading-snug text-muted">
+        Erases every hive, backup, pew, setting, and offline file NIDUS keeps on this device. Nothing is stored anywhere else. Hero purchases return from Google Play.
+      </p>
+      <button
+        type="button"
+        className={cn(
+          "mt-2 min-h-11 w-full border font-display text-xs tracking-[0.2em]",
+          armed ? "border-blood bg-blood text-bone" : "border-blood text-blood-bright",
+        )}
+        onClick={async () => {
+          if (!armed) {
+            setArmed(true);
+            return;
+          }
+          await eraseAllData();
+          setDone(true);
+          window.setTimeout(() => window.location.replace("/"), 900);
+        }}
+      >
+        {armed ? "TAP AGAIN TO ERASE EVERYTHING" : "ERASE MY DATA"}
+      </button>
+    </div>
+  );
+}
+
+function HelpPane() {
+  const [copied, setCopied] = useState(false);
+  const report = () => {
+    const g = useNidus.getState();
+    return buildReport(g, {
+      nav: navigator,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      standalone: window.matchMedia?.("(display-mode: standalone)").matches,
+    });
+  };
+  return (
+    <div className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-2">
+        {FAQ.map((f) => (
+          <li key={f.q} className="nidus-card p-2">
+            <p className="font-display text-xs tracking-[0.2em] text-gilt">{f.q}</p>
+            <p className="text-sm text-bone">{f.a}</p>
+          </li>
+        ))}
+      </ul>
+      <div className="nidus-card p-2">
+        <p className="font-display text-[0.7rem] tracking-[0.18em] text-gilt">REPORT A FAULT</p>
+        <p className="mt-1 text-[0.75rem] leading-snug text-muted">
+          The report holds the build, rough hive size, and screen. Never your hive name or anything about you. You see it before it goes anywhere.
+        </p>
+      </div>
+      <button
+        type="button"
+        className="min-h-11 border border-border font-display text-xs tracking-[0.2em]"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(report());
+            setCopied(true);
+          } catch {
+            setCopied(false);
+          }
+        }}
+      >
+        {copied ? "REPORT COPIED" : "COPY REPORT"}
+      </button>
+      {SUPPORT_EMAIL ? (
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            window.location.href = supportMailto(report());
+          }}
+          className="flex min-h-11 items-center justify-center border border-gilt font-display text-xs tracking-[0.2em] text-gilt"
+        >
+          MAIL THE QUEEN
+        </a>
+      ) : (
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            window.open(supportIssueUrl(report()), "_blank", "noopener,noreferrer");
+          }}
+          className="flex min-h-11 items-center justify-center border border-gilt font-display text-xs tracking-[0.2em] text-gilt"
+        >
+          FILE A FAULT
+        </a>
+      )}
+      <a href="/support" className="flex min-h-11 items-center justify-center border border-border font-display text-xs tracking-[0.2em] text-muted">
+        SUPPORT PAGE
+      </a>
+      <p className="text-[0.65rem] tracking-[0.12em] text-muted">NIDUS {APP_VERSION} · Nytheria Nyx · NYX HIVEQUEEN</p>
     </div>
   );
 }

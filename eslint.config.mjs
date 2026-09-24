@@ -5,7 +5,6 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
-/** Flat ESLint config for the TanStack Start app-builder template. */
 export default tseslint.config(
   {
     ignores: [
@@ -15,6 +14,13 @@ export default tseslint.config(
       ".nitro/**",
       "node_modules/**",
       "src/routeTree.gen.ts",
+      "src/lib/auth/**",
+      "src/lib/app-data/**",
+      "src/lib/multiplayer/**",
+      "src/lib/og/**",
+      "src/lib/db.ts",
+      "src/lib/preview-*.ts",
+      "src/components/preview-host-bridge.tsx",
     ],
   },
   js.configs.recommended,

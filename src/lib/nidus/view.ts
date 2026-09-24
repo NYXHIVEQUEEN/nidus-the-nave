@@ -1,3 +1,4 @@
+import { storageSealed } from "./save";
 const KEY = "nidus.prefs.v1";
 
 export type HelpId = "hull" | "forge" | "lab" | "raid" | "minds" | "view" | "wake" | "idle" | "flow";
@@ -113,7 +114,7 @@ function read() {
 read();
 
 function write() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || storageSealed()) return;
   try {
     localStorage.setItem(KEY, JSON.stringify(prefs));
   } catch {
@@ -182,7 +183,7 @@ export function subscribeSpin(fn: () => void) {
   };
 }
 
-export function resolveDensity(p = prefs, w = 390, h = 844, landscape = false): DensityResolved {
+export function resolveDensity(p = prefs, _w = 390, h = 844, landscape = false): DensityResolved {
   if (p.density === "watch") return "compact";
   if (p.density === "compact" || p.density === "comfort") return p.density;
   if (landscape && h < 480) return "compact";
