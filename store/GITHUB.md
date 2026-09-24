@@ -27,6 +27,9 @@ Easiest (free, connects straight to this repo):
 
 Set Node to **22** in the host's build settings. Deploy from `main` only after the PR is merged.
 
+Selling heroes on Play? Pick **Cloudflare Pages or Vercel**: they also run the purchase check
+that stops Google from auto-refunding sales (`store/PRODUCTS.md` → Purchase check).
+
 GitHub Pages works only with a **custom domain** (Settings → Pages → Custom domain,
 then Enforce HTTPS) or from a repo named `nyxhivequeen.github.io`. Pages also ignores
 `_headers`, so the page falls back to the built-in Content-Security-Policy only.

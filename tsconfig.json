@@ -26,7 +26,7 @@
     },
     "allowImportingTsExtensions": true
   },
-  "include": ["src"],
+  "include": ["src", "api", "functions"],
   "exclude": [
     "src/lib/auth",
     "src/lib/app-data",

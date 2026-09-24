@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage } from "@/components/nidus/LegalPage";
 import { EraseData } from "@/components/nidus/SettingsPanel";
+import { ACK_URL } from "@/lib/nidus/support";
 
 export const Route = createFileRoute("/privacy")({ component: Privacy });
 
@@ -20,6 +21,11 @@ function Privacy() {
       <p>
         <strong className="text-gilt">Purchases.</strong> Sovereign heroes and Double Tithe are one-time purchases handled entirely by Google Play. We never see your card, name, or account. The app asks Play which heroes you own and keeps that list on this device so the court works offline. Refunds and receipts follow Google Play's rules.
       </p>
+      {ACK_URL && (
+        <p>
+          <strong className="text-gilt">Purchase check.</strong> Google Play refunds a purchase unless the game confirms it within three days. After you buy, the app sends Google's purchase code for that item (not your name, email, or card) to this site's own server, which passes it to Google Play to confirm the purchase. The server stores nothing.
+        </p>
+      )}
       <p>
         <strong className="text-gilt">If you wrap NIDUS as an Android app.</strong> The Play listing is a window onto the same hive. The wrapper does not add tracking. Game progress still lives on the device. Uninstalling the app deletes that copy of the hive unless you stashed a slot somewhere else.
       </p>

@@ -11,8 +11,8 @@
     "build": "vite build && node tools/static-routes.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/lib/nidus/*.test.ts",
-    "lint": "eslint src tools",
+    "test": "tsx --test src/lib/nidus/*.test.ts src/server/*.test.ts",
+    "lint": "eslint src tools api functions",
     "format": "prettier --write src tools"
   },
   "dependencies": {

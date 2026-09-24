@@ -7,6 +7,9 @@ export const SUPPORT_EMAIL = "";
 export const SUPPORT_ISSUES = "https://github.com/NYXHIVEQUEEN/nidus-the-nave/issues/new";
 // The Queen's website. Empty hides every NYX WEBSITE button.
 export const WEBSITE_URL = "";
+// Play purchase confirmation endpoint (same site only, e.g. "/api/ack"). Empty = off: nothing is sent.
+// Turn on only with the Queen's yes and her Play service key on the host (store/PRODUCTS.md).
+export const ACK_URL = "";
 
 export const FAQ: { q: string; a: string }[] = [
   {

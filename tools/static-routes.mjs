@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 
@@ -11,6 +11,9 @@ for (const route of ["privacy", "terms", "support"]) {
 }
 copyFileSync(shell, join(dist, "404.html"));
 console.log("static routes: privacy, terms, support, 404");
+
+// Old preview-platform files in public/ are not part of the game; keep them off the live site.
+rmSync(join(dist, "__grok"), { recursive: true, force: true });
 
 // One offline cache per build: the new worker drops the old cache, so phones never hoard stale builds.
 const sw = join(dist, "sw.js");

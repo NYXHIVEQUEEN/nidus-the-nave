@@ -1,9 +1,11 @@
 import { BUNDLE_SKU, SOVEREIGNS, heroSku } from "./heroes";
 import { storageSealed } from "./save";
 import { BOOST_SKU } from "./boost";
+import { ACK_URL } from "./support";
 
 const PLAY = "https://play.google.com/billing";
 const CACHE = "nidus.owned.v1";
+const ACKED = "nidus.acked.v1";
 
 type ItemDetails = { itemId: string; title?: string; price: { currency: string; value: string } };
 type PurchaseDetails = { itemId: string; purchaseToken: string };
@@ -78,10 +80,62 @@ function writeCache(skus: string[]) {
   }
 }
 
+// Same-origin only, so the CSP and the privacy page both stay true.
+export function ackTarget(url: string): string | null {
+  return url.startsWith("/") && !url.startsWith("//") ? url : null;
+}
+
+const ackKey = (p: PurchaseDetails) => `${p.itemId}:${p.purchaseToken.slice(-24)}`;
+const inflight = new Set<string>();
+
+function readAcked(): Set<string> {
+  try {
+    const list = JSON.parse(localStorage.getItem(ACKED) ?? "[]") as unknown;
+    return new Set(Array.isArray(list) ? list.filter((x): x is string => typeof x === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+// Google refunds unconfirmed purchases after three days. Retried every launch until the server says done.
+async function confirmPurchases(list: PurchaseDetails[]): Promise<void> {
+  const target = ackTarget(ACK_URL);
+  if (!target) return;
+  const done = readAcked();
+  const todo = list.filter((p) => p.purchaseToken && !done.has(ackKey(p)) && !inflight.has(ackKey(p))).slice(0, 25);
+  if (!todo.length) return;
+  for (const p of todo) inflight.add(ackKey(p));
+  const ctrl = new AbortController();
+  const timer = window.setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch(target, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ items: todo.map((p) => ({ sku: p.itemId, token: p.purchaseToken })) }),
+      credentials: "omit",
+      cache: "no-store",
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return;
+    const data = (await res.json()) as { results?: { ok?: unknown }[] };
+    todo.forEach((p, i) => {
+      if (data.results?.[i]?.ok === true) done.add(ackKey(p));
+    });
+    if (!storageSealed()) localStorage.setItem(ACKED, JSON.stringify([...done].slice(-60)));
+  } catch {
+    /* offline or off: next launch tries again */
+  } finally {
+    window.clearTimeout(timer);
+    for (const p of todo) inflight.delete(ackKey(p));
+  }
+}
+
 async function syncPurchases(): Promise<boolean> {
   if (!service) return false;
   try {
-    const skus = (await service.listPurchases()).map((p) => p.itemId);
+    const list = await service.listPurchases();
+    void confirmPurchases(list);
+    const skus = list.map((p) => p.itemId);
     writeCache(skus);
     emit({ owned: ownedFrom(skus), boost: skus.includes(BOOST_SKU), ready: true });
     return true;
@@ -129,7 +183,9 @@ export async function buy(sku: string): Promise<boolean> {
       total: { label: "Total", amount: { currency: "USD", value: "0" } },
     });
     const response = await request.show();
+    const token = (response.details as { purchaseToken?: unknown } | null)?.purchaseToken;
     await response.complete("success");
+    if (typeof token === "string") void confirmPurchases([{ itemId: sku, purchaseToken: token }]);
     await syncPurchases();
     return true;
   } catch (e) {

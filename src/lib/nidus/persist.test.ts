@@ -590,3 +590,13 @@ test("a hostile save cannot inject junk, remote images, or broken numbers", () =
   assert.equal("extraField" in evil, false);
   assert.equal(({} as Record<string, unknown>).polluted, undefined, "no prototype pollution");
 });
+
+test("purchase confirmation is off by default and never leaves this site", async () => {
+  const { ACK_URL } = await import("./support.ts");
+  const { ackTarget } = await import("./billing.ts");
+  assert.equal(ACK_URL, "", "off until the Queen says yes");
+  assert.equal(ackTarget(""), null);
+  assert.equal(ackTarget("https://evil.example/ack"), null, "no other hosts");
+  assert.equal(ackTarget("//evil.example/ack"), null, "no protocol-relative hosts");
+  assert.equal(ackTarget("/api/ack"), "/api/ack");
+});
