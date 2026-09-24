@@ -170,7 +170,7 @@ export function harden(m: GameState, base: GameState): GameState {
     if (typeof bv === "number") o[k] = num(o[k], bv);
     else if (typeof bv === "boolean") o[k] = typeof o[k] === "boolean" ? o[k] : bv;
   }
-  for (const k of Object.keys(o)) if (!(k in b)) delete o[k];
+  for (const k of Object.keys(o)) if (!Object.prototype.hasOwnProperty.call(b, k)) delete o[k];
   m.hiveName = str(m.hiveName, "NAVE-1", 16) || "NAVE-1";
   m.eventKind = str(m.eventKind, "", 24);
   m.tab = oneOf(m.tab, TABS, "hull");
@@ -194,6 +194,11 @@ export function harden(m: GameState, base: GameState): GameState {
     tech[id] = { done: t.done === true, progress: num(t.progress, 0) };
   }
   m.tech = tech;
+  // Pointers into rooms/tech must name a real entry, never an inherited key like "__proto__".
+  const own = (o: object, k: unknown) => typeof k === "string" && Object.prototype.hasOwnProperty.call(o, k);
+  if (!own(rooms, m.queuedRoom)) m.queuedRoom = null;
+  if (!own(rooms, m.rankingRoom)) m.rankingRoom = null;
+  if (!own(tech, m.activeTech)) m.activeTech = null;
   const raidIds = RAIDS.map((r) => r.id);
   m.raidCleared = Array.isArray(m.raidCleared) ? m.raidCleared.filter((id) => raidIds.includes(id)) : [];
   const count: GameState["raidCount"] = {};
@@ -235,6 +240,11 @@ export function harden(m: GameState, base: GameState): GameState {
       };
     })
     .filter((x): x is GameState["minds"][number] => x !== null);
+  const seenIds = new Set<string>();
+  for (const mind of m.minds) {
+    while (seenIds.has(mind.id)) mind.id = `m${Math.random().toString(36).slice(2, 8)}`;
+    seenIds.add(mind.id);
+  }
   if (m.waking !== null) {
     const w = Array.isArray(m.waking) ? m.waking.slice(0, 3).map(cleanCandidate).filter((x): x is NonNullable<ReturnType<typeof cleanCandidate>> => x !== null) : [];
     m.waking = w.length ? w : null;
@@ -278,8 +288,8 @@ export function harden(m: GameState, base: GameState): GameState {
       stamp: x.stamp === undefined ? undefined : str(x.stamp, "", 40),
     }));
   const heroIds = SOVEREIGNS.map((h) => h.id);
-  m.sovereigns = m.sovereigns.filter((id) => heroIds.includes(id));
-  m.trialsUsed = m.trialsUsed.filter((id) => heroIds.includes(id)).slice(0, heroIds.length);
+  m.sovereigns = [...new Set(m.sovereigns.filter((id) => heroIds.includes(id)))];
+  m.trialsUsed = [...new Set(m.trialsUsed.filter((id) => heroIds.includes(id)))];
   if (m.trial && !heroIds.includes(m.trial.id)) m.trial = null;
   if (m.trial) m.trial = { id: m.trial.id, until: num(m.trial.until, 0) };
   return m;

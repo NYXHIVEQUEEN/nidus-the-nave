@@ -26,7 +26,7 @@ decisions only Nytheria Nyx can make.
 - [x] Double Tithe ($2.99, permanent 2x resources) on Play.
 - [x] Music rotation (anthem ↔ three procedural ambient pieces) and a varied space-ambience layer.
 - [x] Leaner hero ship, rooms grow onto the hull in 3D, and live 3D FORGE / LAB / MINDS.
-- [ ] **QUEEN — website URL** for the NYX WEBSITE button (`WEBSITE_URL` in `src/lib/nidus/support.ts`).
+- [ ] **QUEEN — website URL** for the NYX WEBSITE button (`WEBSITE` in `src/lib/nidus/support.ts`, must start with `https://`).
 
 ## Must before launch
 

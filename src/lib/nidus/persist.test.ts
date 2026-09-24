@@ -591,6 +591,27 @@ test("a hostile save cannot inject junk, remote images, or broken numbers", () =
   assert.equal(({} as Record<string, unknown>).polluted, undefined, "no prototype pollution");
 });
 
+test("a hostile save cannot point at inherited keys or duplicate commanders", () => {
+  const raw = `{"version":3,"ore":5,"parts":5,"queuedRoom":"__proto__","rankingRoom":"toString","activeTech":"constructor","__proto__":{"polluted":true},
+    "minds":[{"id":"a","frame":"warden","alive":true},{"id":"a","frame":"warden","alive":true}],
+    "sovereigns":["vesper","vesper"],"trialsUsed":["pyre","pyre"]}`;
+  const evil = importSave(raw);
+  assert.ok(evil);
+  assert.equal(evil.queuedRoom, null);
+  assert.equal(evil.rankingRoom, null);
+  assert.equal(evil.activeTech, null);
+  assert.equal(evil.minds.length, 2);
+  assert.notEqual(evil.minds[0].id, evil.minds[1].id, "duplicate ids are split");
+  assert.deepEqual(evil.sovereigns, ["vesper"]);
+  assert.deepEqual(evil.trialsUsed, ["pyre"]);
+  assert.equal(Object.prototype.hasOwnProperty.call(evil, "__proto__"), false);
+  assert.equal(({} as Record<string, unknown>).polluted, undefined, "no prototype pollution");
+  const ok = importSave(JSON.stringify({ version: 3, ore: 5, printed: 1, queuedRoom: "solar", activeTech: Object.keys(defaultState().tech)[0] }));
+  assert.ok(ok, "a plain save still imports");
+  assert.equal(ok.queuedRoom, "solar", "real pointers survive");
+  assert.equal(ok.activeTech, Object.keys(defaultState().tech)[0]);
+});
+
 test("purchase confirmation is off by default and never leaves this site", async () => {
   const { ACK_URL } = await import("./support.ts");
   const { ackTarget } = await import("./billing.ts");

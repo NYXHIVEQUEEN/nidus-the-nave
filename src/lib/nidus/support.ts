@@ -5,8 +5,9 @@ export const APP_VERSION = "1.0.0";
 // Empty until the owner picks a public inbox. The UI falls back to GitHub issues.
 export const SUPPORT_EMAIL = "";
 export const SUPPORT_ISSUES = "https://github.com/NYXHIVEQUEEN/nidus-the-nave/issues/new";
-// The Queen's website. Empty hides every NYX WEBSITE button.
-export const WEBSITE_URL = "";
+// The Queen's website (https only). Empty or not https hides every NYX WEBSITE button.
+const WEBSITE = "";
+export const WEBSITE_URL = /^https:\/\/[^\s"'<>]+$/.test(WEBSITE) ? WEBSITE : "";
 // Play purchase confirmation endpoint (same site only, e.g. "/api/ack"). Empty = off: nothing is sent.
 // Turn on only with the Queen's yes and her Play service key on the host (store/PRODUCTS.md).
 export const ACK_URL = "";

@@ -1,3 +1,21 @@
+# Pre-merge self-audit (24 Sep 2026)
+
+Full read of this PR's diff before merging. Fixed:
+- Saves: an own `"__proto__"` key in an imported file survived cleaning (the key filter used `in`);
+  now dropped. Room/research pointers must name a real entry; duplicate commander ids are split;
+  duplicate hero entries collapse. New regression test (43 tests).
+- Offline worker: on slow networks it gave up after 2.8 s with an error even when nothing was cached;
+  now it waits for the network unless a cached copy exists. `/api/` and media range requests bypass it.
+- Updates: if a release lands while the game is open, missing old code files trigger one saved reload
+  (at most once a minute) instead of a broken screen.
+- Website button accepts only an `https://` address (`WEBSITE` in `support.ts`).
+
+Verified: typecheck, 43/43 tests, lint 0 errors, production build; delayed-server test (uncached file
+served after 4.5 s, 404 stays 404), stale-code reload fires once only, saves intact; production smoke
+at 390×844, 844×390, 1280×800 with no page, console, or CSP errors.
+
+---
+
 # Handoff — pass 5: security, trust, platform sweep (24 Sep 2026, overnight)
 
 Rollback: `3906156` (branch before this sweep). No save wipe; save keys unchanged. New local keys:
