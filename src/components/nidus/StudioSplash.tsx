@@ -90,8 +90,10 @@ void main() {
 }`;
 
 type Timing = { pre: number; intro: number; hold: number; outro: number; fade: number };
-const FIRST: Timing = { pre: 250, intro: 1700, hold: 1100, outro: 1700, fade: 380 };
-const AGAIN: Timing = { pre: 120, intro: 1100, hold: 450, outro: 1300, fade: 320 };
+// First viewing is a rite: forge, hold, slow burn, then a long dissolve.
+// A return is the same shape, a little shorter. Tap still skips.
+const FIRST: Timing = { pre: 600, intro: 3200, hold: 2400, outro: 3600, fade: 2600 };
+const AGAIN: Timing = { pre: 400, intro: 2200, hold: 1800, outro: 2800, fade: 2600 };
 
 const ease = (t: number) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
@@ -130,17 +132,17 @@ export function StudioSplash({ onDone }: { onDone: () => void }) {
       patchPrefs({ splashSeen: true });
       done.current();
     };
-    const hintTimer = window.setTimeout(() => setHint(true), 900);
+    const hintTimer = window.setTimeout(() => setHint(true), 2400);
     if (mode !== "gl") {
-      // No shader: a calm fade, still skippable.
-      const total = mode === "calm" ? 1500 : timing.pre + timing.intro + timing.hold + timing.outro;
-      const t1 = window.setTimeout(() => setFading(true), total - 400);
-      const t2 = window.setTimeout(finish, total);
+      // No shader: the same slow forge and dissolve, still skippable.
+      const span = mode === "calm" ? 2200 : timing.pre + timing.intro + timing.hold + timing.outro + timing.fade;
+      const t1 = window.setTimeout(() => setFading(true), span - timing.fade);
+      const t2 = window.setTimeout(finish, span);
       skip.current = () => {
         setFading(true);
         window.clearTimeout(t1);
         window.clearTimeout(t2);
-        window.setTimeout(finish, 350);
+        window.setTimeout(finish, 1100);
       };
       return () => {
         window.clearTimeout(hintTimer);
@@ -278,7 +280,8 @@ export function StudioSplash({ onDone }: { onDone: () => void }) {
     <div
       role="img"
       aria-label="Nytheria Nyx"
-      className={`fixed inset-0 z-[100] cursor-pointer bg-void transition-opacity duration-300 ${fading ? "pointer-events-none opacity-0" : "opacity-100"}`}
+      className={`fixed inset-0 z-[100] cursor-pointer bg-void ease-out ${fading ? "pointer-events-none opacity-0" : "opacity-100"}`}
+      style={{ transition: "opacity 2600ms ease-out" }}
       onPointerDown={() => skip.current()}
     >
       {mode === "gl" ? (
