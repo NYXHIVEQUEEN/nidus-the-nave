@@ -45,7 +45,7 @@ decisions only Nytheria Nyx can make.
 - [ ] `.vercel/output/` build files (88) are committed. Untrack and ignore them.
 - [ ] Live https host + `assetlinks.json` SHA-256 (see `store/PLAY.md`).
 - [ ] **QUEEN — 20 hero portraits** from `docs/ART-BRIEF.md` into `public/nidus/heroes/`. The court ships stand-ins until then.
-- [ ] Create the 21 products in Play Console exactly as `store/PRODUCTS.md` lists, then run its 5-step purchase test on the Internal track.
+- [ ] Create the 22 products in Play Console exactly as `store/PRODUCTS.md` lists, then run its 5-step purchase test on the Internal track.
 - [ ] **QUEEN — delete the leftover Grok/platform files** (safety check blocked it for agents; see PR notes).
 - [ ] Test on a real mid-range Android phone: 30+ FPS, no heat, save survives
       force-close and reboot. `store/QUALITY.md` lists this as unverified.

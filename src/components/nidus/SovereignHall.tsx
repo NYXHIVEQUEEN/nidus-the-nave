@@ -5,6 +5,7 @@ import { useNidus } from "@/lib/nidus/store";
 import { chime } from "@/lib/nidus/audio";
 import { BUNDLE_PRICE, BUNDLE_SKU, HERO_PRICE, SOVEREIGNS, heroSku, sovereignSeats, type Sovereign } from "@/lib/nidus/heroes";
 import { buy, getShop, restore, subscribeShop } from "@/lib/nidus/billing";
+import { BOOST_PRICE, BOOST_SKU } from "@/lib/nidus/boost";
 
 const PLAY_URL = "https://play.google.com/store/apps/details?id=com.nyxhivequeen.nidus";
 
@@ -81,6 +82,7 @@ export function SovereignHall({ onClose }: { onClose: () => void }) {
           <HeroDetail hero={hero} now={now} onBack={() => setPick(null)} />
         ) : (
           <>
+            <BoostCard />
             {!allOwned && <BundleCard />}
             {trial && now < trial.until && (
               <p className="mb-2 text-center font-display text-[0.62rem] tracking-[0.18em] text-venom">
@@ -124,6 +126,28 @@ export function SovereignHall({ onClose }: { onClose: () => void }) {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function BoostCard() {
+  const shop = useShop();
+  const on = useNidus((s) => s.boost2x);
+  const price = shop.prices[BOOST_SKU] ?? BOOST_PRICE;
+  return (
+    <div className="nidus-foil mb-2 flex items-center gap-3 p-3">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center border border-gilt/60 bg-void font-display text-2xl text-gilt">2×</div>
+      <div className="min-w-0 flex-1">
+        <p className="whitespace-nowrap font-display text-[0.78rem] tracking-[0.2em] text-gilt">DOUBLE TITHE</p>
+        <p className="text-[0.68rem] leading-snug text-bone/85">Twice the ore, parts, spark, and cut. Forever. Offline and raids too.</p>
+      </div>
+      {on ? (
+        <span className="nidus-chip nidus-chip-lit shrink-0">ACTIVE</span>
+      ) : (
+        <div className="shrink-0">
+          <BuyButton sku={BOOST_SKU} label={price} />
+        </div>
+      )}
     </div>
   );
 }
@@ -277,6 +301,19 @@ function HeroDetail({ hero, now, onBack }: { hero: Sovereign; now: number; onBac
 }
 
 function Reveal({ sku, onDone, onPick }: { sku: string; onDone: () => void; onPick: (id: string) => void }) {
+  if (sku === BOOST_SKU) {
+    return (
+      <div className="nidus-reveal absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 p-4 text-center">
+        <span className="nidus-reveal-rays" aria-hidden />
+        <p className="nidus-reveal-card relative font-display text-7xl text-gilt">2×</p>
+        <p className="relative font-display text-[0.7rem] tracking-[0.3em] text-gilt">THE HIVE DOUBLES ITS TITHE</p>
+        <p className="relative text-sm text-bone/85">Ore, parts, spark, and cut now flow twice as fast. Forever.</p>
+        <button type="button" className="nidus-cut nidus-cut-on relative min-h-12 w-full max-w-xs font-display text-sm tracking-[0.24em]" onClick={onDone}>
+          BACK TO THE NAVE
+        </button>
+      </div>
+    );
+  }
   const all = sku === BUNDLE_SKU;
   const hero = all ? (SOVEREIGNS.find((h) => h.edict === "all") ?? SOVEREIGNS[0]) : SOVEREIGNS.find((h) => heroSku(h.id) === sku);
   if (!hero) return null;

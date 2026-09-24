@@ -4,6 +4,7 @@ Create each as a **one-time product** (Monetize → Products → In-app products
 
 | Product ID | Name | Price | Power |
 | --- | --- | --- | --- |
+| `boost_x2` | Double Tithe (permanent) | $2.99 | 2× ore, parts, spark, cut, offline and raid cut. Not part of the bundle. |
 | `sovereign_all` | The Full Court (all 20) | $9.99 | every hero below |
 | `hero_vesper` | VESPER — Saint of the Ice Ring | $0.99 | +60% ORE |
 | `hero_mora` | MORA — Furnace Abbess | $0.99 | +60% PARTS |

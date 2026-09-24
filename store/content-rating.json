@@ -10,7 +10,7 @@
     "gambling": "No. Idle numbers are not real-money gambling.",
     "user_interaction": "No. Single player. No chat, no UGC, no social.",
     "location_sharing": "No.",
-    "digital_purchases": "Yes. One-time in-app purchases through Google Play Billing: each hero $0.99, all 20 for $9.99. No loot boxes, no random paid items, no subscriptions.",
+    "digital_purchases": "Yes. One-time in-app purchases through Google Play Billing: each hero $0.99, all 20 heroes for $9.99, Double Tithe (permanent 2x resources) $2.99. No loot boxes, no random paid items, no subscriptions.",
     "unrestricted_internet": "Spotify button opens an external catalog. No in-app browser for arbitrary URLs besides that and this privacy page.",
     "age_target": "Adults. Not designed for children under 13; M/17+ presentation."
   }

@@ -17,7 +17,7 @@ import {
   type ViewPrefs,
 } from "@/lib/nidus/view";
 import { eraseAllData, slotStamp } from "@/lib/nidus/save";
-import { APP_VERSION, buildReport, FAQ, SUPPORT_EMAIL, supportIssueUrl, supportMailto } from "@/lib/nidus/support";
+import { APP_VERSION, buildReport, FAQ, SUPPORT_EMAIL, WEBSITE_URL, supportIssueUrl, supportMailto } from "@/lib/nidus/support";
 import { openNyxSpotify, setMusicBed, syncAudioGains } from "@/lib/nidus/audio";
 
 const CODEX: { id: string; title: string; body: string }[] = [
@@ -333,6 +333,16 @@ export function SettingsPanel({
           TERMS
         </a>
       </div>
+      {WEBSITE_URL && (
+        <a
+          href={WEBSITE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="nidus-cut nidus-cut-gilt mt-2 flex min-h-11 items-center justify-center font-display text-[0.65rem] tracking-[0.18em]"
+        >
+          NYX WEBSITE
+        </a>
+      )}
     </div>
   );
 }

@@ -5,6 +5,8 @@ export const APP_VERSION = "1.0.0";
 // Empty until the owner picks a public inbox. The UI falls back to GitHub issues.
 export const SUPPORT_EMAIL = "";
 export const SUPPORT_ISSUES = "https://github.com/NYXHIVEQUEEN/nidus-the-nave/issues/new";
+// The Queen's website. Empty hides every NYX WEBSITE button.
+export const WEBSITE_URL = "";
 
 export const FAQ: { q: string; a: string }[] = [
   {

@@ -525,3 +525,21 @@ test("sovereigns: seats, trials, bundle, refunds, and real economy power", async
   assert.deepEqual(old?.sovereigns, []);
   assert.equal(old?.trial, null);
 });
+
+test("double tithe doubles resource income and raid cut, and old saves default to off", async () => {
+  const { raidCutPayout } = await import("./fleet.ts");
+  const { ownedFrom } = await import("./billing.ts");
+  const now = 2_000_000;
+  const base = { ...defaultState(), swarm: { ...defaultState().swarm, miner: 10, fab: 4 }, ore: 50 };
+  const on = { ...base, boost2x: true };
+  const a = rates(base, now);
+  const b = rates(on, now);
+  for (const k of ["orePerSec", "partsPerSec", "sparkPerSec", "creditsPerSec"] as const) {
+    assert.ok(Math.abs(b[k] / a[k] - 2) < 1e-9, k);
+  }
+  assert.equal(b.buildPerSec, a.buildPerSec, "build speed is not a resource");
+  assert.equal(raidCutPayout(on, "ice"), raidCutPayout(base, "ice") * 2);
+  assert.equal(importSave(JSON.stringify({ version: 3, ore: 5, rooms: {} }))?.boost2x, false);
+  assert.equal(importSave(JSON.stringify({ version: 3, ore: 5, rooms: {}, boost2x: "yes" }))?.boost2x, false);
+  assert.equal(ownedFrom(["boost_x2"]).size, 0, "boost is not a hero");
+});

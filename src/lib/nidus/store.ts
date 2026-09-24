@@ -80,6 +80,7 @@ type Store = GameState & {
   unthroneHero: (id: string) => void;
   tryHero: (id: string) => void;
   keepOwnedHeroes: (owned: ReadonlySet<string>) => void;
+  setBoost: (on: boolean) => void;
 };
 
 let lastWrite = 0;
@@ -333,6 +334,11 @@ export const useNidus = create<Store>((set, get) => ({
   tryHero: (id) => {
     set(startTrial(pickGame(get()), id, Date.now()));
     writeSave(pickGame(get()));
+  },
+  setBoost: (on) => {
+    if (get().boost2x === on) return;
+    set({ boost2x: on });
+    if (get().started) writeSave(pickGame(get()));
   },
   keepOwnedHeroes: (owned) => {
     const next = keepOwned(pickGame(get()), owned);

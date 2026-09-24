@@ -1,5 +1,6 @@
 import { BUNDLE_SKU, SOVEREIGNS, heroSku } from "./heroes";
 import { storageSealed } from "./save";
+import { BOOST_SKU } from "./boost";
 
 const PLAY = "https://play.google.com/billing";
 const CACHE = "nidus.owned.v1";
@@ -15,12 +16,14 @@ type WithGoods = Window & { getDigitalGoodsService?: (provider: string) => Promi
 export type Shop = {
   mode: "loading" | "play" | "web";
   owned: ReadonlySet<string>;
+  boost: boolean;
+  ready: boolean;
   prices: Record<string, string>;
   busy: string | null;
   note: string;
 };
 
-export const ALL_SKUS = [BUNDLE_SKU, ...SOVEREIGNS.map((h) => heroSku(h.id))];
+export const ALL_SKUS = [BUNDLE_SKU, BOOST_SKU, ...SOVEREIGNS.map((h) => heroSku(h.id))];
 
 export function ownedFrom(skus: readonly string[]): Set<string> {
   if (skus.includes(BUNDLE_SKU)) return new Set(SOVEREIGNS.map((h) => h.id));
@@ -40,7 +43,7 @@ export function formatPrice(p: { currency: string; value: string }): string {
   }
 }
 
-let shop: Shop = { mode: "loading", owned: new Set(), prices: {}, busy: null, note: "" };
+let shop: Shop = { mode: "loading", owned: new Set(), boost: false, ready: false, prices: {}, busy: null, note: "" };
 let service: DigitalGoods | null = null;
 const listeners = new Set<() => void>();
 
@@ -80,10 +83,11 @@ async function syncPurchases(): Promise<boolean> {
   try {
     const skus = (await service.listPurchases()).map((p) => p.itemId);
     writeCache(skus);
-    emit({ owned: ownedFrom(skus) });
+    emit({ owned: ownedFrom(skus), boost: skus.includes(BOOST_SKU), ready: true });
     return true;
   } catch {
-    emit({ owned: ownedFrom(readCache()), note: "OFFLINE. SHOWING YOUR LAST KNOWN HEROES." });
+    const cached = readCache();
+    emit({ owned: ownedFrom(cached), boost: cached.includes(BOOST_SKU), ready: true, note: "OFFLINE. SHOWING YOUR LAST KNOWN PURCHASES." });
     return false;
   }
 }
@@ -96,13 +100,13 @@ export function initBilling(): Promise<boolean> {
   started = (async () => {
     const w = typeof window === "undefined" ? null : (window as WithGoods);
     if (!w?.getDigitalGoodsService || typeof PaymentRequest === "undefined") {
-      emit({ mode: "web", owned: new Set() });
+      emit({ mode: "web", owned: new Set(), boost: false, ready: true });
       return false;
     }
     try {
       service = await w.getDigitalGoodsService(PLAY);
     } catch {
-      emit({ mode: "web", owned: new Set() });
+      emit({ mode: "web", owned: new Set(), boost: false, ready: true });
       return false;
     }
     emit({ mode: "play" });

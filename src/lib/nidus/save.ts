@@ -98,6 +98,7 @@ function migrate(raw: GameState): GameState {
   merged.sovereigns = Array.isArray(merged.sovereigns) ? merged.sovereigns.filter((x) => typeof x === "string").slice(0, 3) : [];
   if (!merged.trial || typeof merged.trial.id !== "string" || typeof merged.trial.until !== "number") merged.trial = null;
   merged.trialsUsed = Array.isArray(merged.trialsUsed) ? merged.trialsUsed.filter((x) => typeof x === "string") : [];
+  merged.boost2x = merged.boost2x === true;
   for (const id of Object.keys(merged.rooms) as (keyof typeof merged.rooms)[]) {
     const room = merged.rooms[id];
     if (typeof room.rank !== "number") room.rank = room.built ? 1 : 0;
