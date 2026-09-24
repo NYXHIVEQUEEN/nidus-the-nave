@@ -23,6 +23,10 @@ decisions only Nytheria Nyx can make.
 - [x] Every button reports refused taps (deny tone + shake) instead of a false success sound.
 - [x] 20 Sovereign heroes with real edicts, free 10-minute trials, Play Billing ($0.99 each / $9.99 all), restore, purchase reveal. Product list: `store/PRODUCTS.md`.
 - [x] Rolling counters, gain pops, tap sparks, court strip on the HUD.
+- [x] Double Tithe ($2.99, permanent 2x resources) on Play.
+- [x] Music rotation (anthem ↔ three procedural ambient pieces) and a varied space-ambience layer.
+- [x] Leaner hero ship, rooms grow onto the hull in 3D, and live 3D FORGE / LAB / MINDS.
+- [ ] **QUEEN — website URL** for the NYX WEBSITE button (`WEBSITE_URL` in `src/lib/nidus/support.ts`).
 
 ## Must before launch
 

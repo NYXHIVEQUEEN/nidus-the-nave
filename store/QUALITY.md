@@ -1,3 +1,28 @@
+# GDL handoff — pass 4: lean warship, 3D rooms, live interiors (24 Sep 2026)
+
+Rollback: `1d4775b` (main before this pass). No save wipe; new field `boost2x` defaults false via migrate().
+
+## Owner feedback addressed
+- "Ship looks dorky; off textures and animations": longer, narrower nave with a needle ram; tall lead-slate
+  pointed roof with ridge pinnacles; thin gilt bands; long swept wings + canards; smaller engine bells with
+  additive plumes; baked belly/spine grime; blinking nav lights and spire beacon; patrol weave with bank.
+- "Replaced my 3D animated rooms with static art": 22 room modules grow onto the hull (grow-in, rank collars,
+  build scaffold, animated sails/wheel/dish/bell), and FORGE / LAB / MINDS are live 3D scenes in the ship's Canvas.
+
+## Verified (Chromium 390×844, SwiftShader, not a phone)
+- Draw calls: HULL 35 (≈48 with every room built, 65k tris), RAID 35, FORGE 17, LAB 34, MINDS 11.
+- No page or console errors on any tab, dev and static production build.
+- Typecheck clean, 36/36 tests, lint 0 errors.
+
+## Still unverified
+- Physical-device FPS / heat. Owner approval of the new look.
+
+## Defects remaining
+- Throne hall is dim on some screens; throne models are simple.
+- Remaining `tex-*` originals keep the blurred cross seam; `-s` copies and `tex-hull.jpg` are mirrored clean crops.
+
+---
+
 # GDL handoff — cathedral hull rebuild (pass 3)
 
 Directive: `.grok/skills/space-hull-3d/references/gdl-acceptance.md`. Rollback: git `49dfe77`

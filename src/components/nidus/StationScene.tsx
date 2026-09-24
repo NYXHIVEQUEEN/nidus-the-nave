@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, useTexture } from "@react-three/drei";
 import type { BufferGeometry as BufferGeometryT, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial, Points, SpriteMaterial, Texture } from "three";
@@ -22,6 +22,7 @@ import {
 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { RoomModules } from "./RoomModules";
+import { INTERIOR_CAM, INTERIOR_LOOK, INTERIOR_TABS, Interior, ROOM_CAMS } from "./Interiors";
 import { ROOM_SOCKETS } from "./roomKit";
 import { useNidus } from "@/lib/nidus/store";
 import { chime } from "@/lib/nidus/audio";
@@ -696,11 +697,31 @@ function Rig() {
   const raiding = useNidus((s) => Boolean(s.raid));
   const watching = useNidus((s) => Boolean(s.raid?.watching));
   const showShip = useNidus((s) => s.tab === "raid" || s.tab === "hull");
+  const tab = useNidus((s) => s.tab);
+  const inside = INTERIOR_TABS.has(tab);
+  const wasInside = useRef(false);
   const extent = 1 + roomsLit * 0.55 + molt * 0.85;
   const touched = useRef(0);
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.1);
     const cam = state.camera;
+    if (inside) {
+      // A slow breathing dolly inside the room; no orbit.
+      const t = state.clock.elapsedTime;
+      const k = wasInside.current ? 1 - Math.exp(-dt * 2.2) : 1;
+      wasInside.current = true;
+      const pose = ROOM_CAMS[tab] ?? { cam: INTERIOR_CAM, look: INTERIOR_LOOK };
+      _look.set(pose.cam.x + (REDUCE ? 0 : Math.sin(t * 0.13) * 0.25), pose.cam.y + (REDUCE ? 0 : Math.sin(t * 0.21) * 0.06), pose.cam.z);
+      cam.position.lerp(_look, k);
+      cam.lookAt(pose.look);
+      return;
+    }
+    if (wasInside.current) {
+      wasInside.current = false;
+      const [x, y, z] = camPosition(prefs.camDist);
+      cam.position.set(x, y, z);
+      touched.current = performance.now();
+    }
     if ("fov" in cam && Math.abs((cam.fov as number) - prefs.camFov) > 0.04) {
       cam.fov = prefs.camFov;
       cam.updateProjectionMatrix();
@@ -771,13 +792,14 @@ function Rig() {
 
 function Mood() {
   const kind = useNidus((s) => s.eventKind);
+  const inside = useNidus((s) => INTERIOR_TABS.has(s.tab));
   const { gl, scene } = useThree();
   useFrame(() => {
     const fog = scene.fog as { color: Color; near: number; far: number } | null;
     if (!fog) return;
     fog.color.set("#0c0a09");
-    fog.near = 70;
-    fog.far = 200;
+    fog.near = inside ? 7 : 70;
+    fog.far = inside ? 24 : 200;
     gl.toneMappingExposure = kind === "ECLIPSE" ? 1.0 : kind === "PULSAR" ? 1.3 : 1.15;
   });
   return null;
@@ -788,6 +810,8 @@ export function StationScene() {
   const start = camPosition(CAM_DEFAULT);
   const [paused, setPaused] = useState(false);
   const showShip = useNidus((s) => s.tab === "raid" || s.tab === "hull");
+  const tab = useNidus((s) => s.tab);
+  const inside = INTERIOR_TABS.has(tab);
   useEffect(() => {
     const on = () => setPaused(typeof document !== "undefined" && document.hidden);
     on();
@@ -819,14 +843,21 @@ export function StationScene() {
       <directionalLight position={[7, 6, 8]} intensity={2.3} color="#ffcdb0" />
       <directionalLight position={[-7, 4, 5]} intensity={1.3} color="#d8b884" />
       <directionalLight position={[8, 1.5, -7]} intensity={0.45} color="#6c5a78" />
-      <Stars radius={110} depth={50} count={mobile ? 80 : 160} factor={2.8} saturation={0.08} fade speed={REDUCE ? 0 : 0.12} />
       <Mood />
-      <Backdrop />
-      <Planet />
-      <BlackWell />
-      <Dust />
-      <Hull />
-      <BattleField />
+      <group visible={!inside}>
+        <Stars radius={110} depth={50} count={mobile ? 80 : 160} factor={2.8} saturation={0.08} fade speed={REDUCE ? 0 : 0.12} />
+        <Backdrop />
+        <Planet />
+        <BlackWell />
+        <Dust />
+        <Hull />
+        <BattleField />
+      </group>
+      {inside && (
+        <Suspense fallback={null}>
+          <Interior tab={tab} />
+        </Suspense>
+      )}
       <Rig />
     </Canvas>
   );

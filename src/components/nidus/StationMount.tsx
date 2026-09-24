@@ -51,14 +51,7 @@ export class ChromeBound extends Component<{ children: ReactNode }, { failed: bo
   }
 }
 
-const INTERIOR: Record<string, string> = {
-  hull: "/nidus/interior-hull.jpg",
-  forge: "/nidus/interior-forge.jpg",
-  lab: "/nidus/interior-lab.jpg",
-  minds: "/nidus/interior-minds.jpg",
-};
-
-/** 3D canvas stays mounted so RAID never cold-starts WebGL. Interiors overlay it. */
+/** One 3D canvas for every tab: ship on HULL/RAID, live rooms on FORGE/LAB/MINDS. */
 export const StationMount = memo(function StationMount() {
   const [on, setOn] = useState(false);
   const tab = useNidus((s) => s.tab);
@@ -66,15 +59,7 @@ export const StationMount = memo(function StationMount() {
   useEffect(() => setOn(true), []);
   if (!on) return <div className="absolute inset-0 bg-void" />;
   return (
-    <>
-      <div
-        className="absolute inset-0"
-        style={{
-          visibility: showShip ? "visible" : "hidden",
-          pointerEvents: showShip ? "auto" : "none",
-        }}
-        aria-hidden={!showShip}
-      >
+    <div className="absolute inset-0" style={{ pointerEvents: showShip ? "auto" : "none" }} aria-hidden={!showShip}>
         <HullBound>
           <Suspense
             fallback={<img src="/nidus/nave.jpg" alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" />}
@@ -82,15 +67,6 @@ export const StationMount = memo(function StationMount() {
             <Scene />
           </Suspense>
         </HullBound>
-      </div>
-      {!showShip && (
-        <img
-          src={INTERIOR[tab] ?? INTERIOR.hull}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover pointer-events-none"
-          crossOrigin="anonymous"
-        />
-      )}
-    </>
+    </div>
   );
 });

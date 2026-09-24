@@ -1,3 +1,11 @@
+# NIDUS snapshot — pass 4
+
+Double Tithe ($2.99 permanent 2x), website link (URL pending), music rotation + space ambience, lean warship,
+3D room modules on the hull, live 3D FORGE / LAB / MINDS, trimmed boot preload. Rollback: `1d4775b`.
+Save keys unchanged; `boost2x` added with a false default. Details: `store/QUALITY.md`.
+
+---
+
 # NIDUS snapshot — cathedral hull rebuild
 
 `claude/lucid-archimedes-b4sfpo` → PR to `main`. Rollback: `49dfe77`. No hive wipe; save format unchanged.

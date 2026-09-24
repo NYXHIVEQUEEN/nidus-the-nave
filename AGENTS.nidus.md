@@ -128,7 +128,7 @@ typed “save”. A green overhaul that never left the sandbox is a lost build.
 - Packed PRINT still feeds SPARK + caste XP. Never a dead stamp. AUTO holds two berths until Barracks or EXPAND.
 - First Ice is a short tutorial wreck. RAID chrome lists open wrecks + two
   locked teases, never a 13-card dump. Cleared wrecks read **FARM**.
-- Room finish **does not glue a leftover annex blob**. Rooms keep their sim bonus (underfunction). Only designed hardpoints (RAILGUN / AUTOCANNON) change the silhouette. Molt tints the keel.
+- **Rooms are 3D again (Queen's call, 24 Sep).** Every finished room grows a designed module at its socket (`roomKit.ts` / `RoomModules.tsx`): grow-in animation, gilt rank collars, a scaffold while it builds, then one baked batch. Never a leftover capsule or blob. RAILGUN / AUTOCANNON keep their hardpoints. Molt tints the keel.
 - Chrome SIZE: AUTO / TIGHT / ROOMY / WATCH. AUTO reads height + rotation. UI SCALE in VIEW. Keyboard U cycles SIZE.
 - Compact hull shows queue + next + one tease, not the whole strip.
 - OrbitControls: drag to rotate, SPIN/HOLD, speed in LOCAL. Hull itself
@@ -175,7 +175,8 @@ The hull is a **cathedral-factory**, not a crate and not a poly pile.
 - **Sky:** tall cylinder backdrop (no horizon edge), shader gas giant with its
   own crescent light, black hole, mid asteroid field with harvest drones, near
   dust. Do not map 16:9 plates onto a full UV sphere.
-- **Growth:** rooms raise economy, not extra sausages. The hull is a designed capital — faceted body, armor cheeks, wings, engine block — not a lathe that sprouts capsules. Ghost next-unlock stays chrome, not a gilt annex silhouette. Halo and molt waist scale with molt/rooms.
+- **Growth:** rooms raise the economy AND show on the hull as designed modules (see Successes). Keep the bake: all rooms built must stay near a dozen extra draw calls.
+- **Rooms screens:** FORGE / LAB / MINDS are live 3D interiors (`Interiors.tsx`) in the same Canvas as the ship; no second WebGL context, no painted interiors. FORGE press slams on PRINT, LAB floor ring shows rite progress, MINDS banners show seated commanders.
 
 ## Architecture (do not flatten)
 

@@ -119,7 +119,7 @@ the game"; the game shows portraits large.
 | --- | --- | --- | --- |
 | Hero portrait | 1024×1280 (4:5) | head to hips | `public/nidus/heroes/<id>.webp` |
 | Title / key art | 1536×2048 (3:4) | group or single hero, top-heavy | `public/nidus/title.jpg` |
-| Room interior | 1080×1920 (9:16) | wide interior, no people in focus, dark top and bottom thirds for UI | `public/nidus/interior-<room>.jpg` |
+| Room interior | — | **Not needed.** FORGE / LAB / MINDS are live 3D scenes now. Do not make painted interiors. | — |
 | Raid wreck card | 1280×720 (16:9) | derelict ship silhouette in void, gilt-lit | `public/nidus/raid-<id>.jpg` |
 | Store feature graphic | 1024×500 | key art, subject left, empty right third for title | `public/store/feature-graphic.png` |
 
