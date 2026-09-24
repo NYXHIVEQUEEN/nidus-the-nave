@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, useTexture } from "@react-three/drei";
-import type { Group, InstancedMesh, MeshBasicMaterial, MeshStandardMaterial } from "three";
+import type { BufferGeometry as BufferGeometryT, Group, InstancedMesh, MeshBasicMaterial, MeshStandardMaterial, Points, SpriteMaterial, Texture } from "three";
 import {
   ACESFilmicToneMapping,
   AdditiveBlending,
   BackSide,
+  BufferGeometry,
   Color,
+  DoubleSide,
+  Float32BufferAttribute,
   LatheGeometry,
   Object3D as Obj3D,
   PMREMGenerator,
@@ -17,20 +20,35 @@ import {
   Vector2,
   Vector3,
 } from "three";
-import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { CapsuleGeometry, CylinderGeometry, BoxGeometry, BufferGeometry, ConeGeometry } from "three";
 import { useNidus } from "@/lib/nidus/store";
 import { chime } from "@/lib/nidus/audio";
 import { CAM_DEFAULT, CAM_MAX, CAM_MIN, CAM_POLAR, applyCamPreset, camPosition, getPrefs, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
+import {
+  ENGINES,
+  ROSE,
+  bandsGeo,
+  buttressGeo,
+  droneGeo,
+  glowTexture,
+  keelGeo,
+  lancetGeo,
+  machineryGeo,
+  naveGeo,
+  rockGeo,
+  roofGeo,
+  wingGeo,
+} from "./hullKit";
 
 const dummy = new Obj3D();
+// Raid duel sits above and behind the ship so both hulls fit a portrait phone.
+const FOE = new Vector3(0.3, 1.7, -3.8);
+const FOE_LOOK = new Vector3(0.35, 0.85, -1.7);
 const _look = new Vector3();
 const GILT = "#c4a574";
 const BLOOD = "#7a1f2b";
-const STEEL = "#8a929c";
-const STEEL_DARK = "#5c646e";
-const VIEWPORT = "#1c242c";
+const BONE_IRON = "#cfc3b0";
+const IRON = "#3e3a37";
 const REDUCE =
   typeof window !== "undefined" &&
   typeof window.matchMedia === "function" &&
@@ -64,197 +82,119 @@ const SOCKETS: Record<string, [number, number, number]> = {
   prow: [0, 0.04, 2.15],
 };
 
-function craftGeo(s = 1) {
-  const body = new CapsuleGeometry(0.016 * s, 0.09 * s, 6, 12);
-  body.rotateX(Math.PI / 2);
-  const fin = new CapsuleGeometry(0.005 * s, 0.03 * s, 4, 8);
-  fin.rotateZ(Math.PI / 2);
-  fin.translate(0, 0.012 * s, -0.018 * s);
-  const engine = new CylinderGeometry(0.007 * s, 0.011 * s, 0.018 * s, 8);
-  engine.rotateX(Math.PI / 2);
-  engine.translate(0, 0, -0.065 * s);
-  const g = mergeGeometries([body, fin, engine], false) ?? body;
-  g.computeVertexNormals();
-  return g;
-}
-
-function mergeParts(parts: BufferGeometry[]) {
-  const g = mergeGeometries(parts, false);
-  for (const p of parts) p.dispose();
-  if (!g) return new BoxGeometry(0.2, 0.2, 1);
-  g.computeVertexNormals();
-  return g;
-}
-
-function boxAt(w: number, h: number, d: number, x: number, y: number, z: number) {
-  const g = new BoxGeometry(w, h, d);
-  g.translate(x, y, z);
-  return g;
-}
-
-function cylAt(rt: number, rb: number, h: number, segs: number, x: number, y: number, z: number, rotX = Math.PI / 2) {
-  const g = new CylinderGeometry(rt, rb, h, segs);
-  g.rotateX(rotX);
-  g.translate(x, y, z);
-  return g;
-}
-
-function heroHullGeo() {
-  // Faceted capital: hard panel breaks, oval section, chisel prow — not a sausage.
-  const pts = [
-    new Vector2(0.0, -2.58),
-    new Vector2(0.045, -2.58),
-    new Vector2(0.045, -2.58),
-    new Vector2(0.16, -2.36),
-    new Vector2(0.16, -2.36),
-    new Vector2(0.3, -2.08),
-    new Vector2(0.3, -2.08),
-    new Vector2(0.42, -1.52),
-    new Vector2(0.42, -1.52),
-    new Vector2(0.46, -0.92),
-    new Vector2(0.46, -0.92),
-    new Vector2(0.34, -0.18),
-    new Vector2(0.34, -0.18),
-    new Vector2(0.34, 0.32),
-    new Vector2(0.44, 0.82),
-    new Vector2(0.44, 0.82),
-    new Vector2(0.52, 1.32),
-    new Vector2(0.52, 1.32),
-    new Vector2(0.46, 1.78),
-    new Vector2(0.28, 2.12),
-    new Vector2(0.28, 2.12),
-    new Vector2(0.14, 2.34),
-    new Vector2(0.14, 2.34),
-    new Vector2(0.0, 2.4),
-  ];
-  const body = new LatheGeometry(pts, 10);
-  body.rotateX(Math.PI / 2);
-  body.scale(1.32, 0.54, 1);
-
-  const prow = new ConeGeometry(0.2, 0.62, 8);
-  prow.rotateX(-Math.PI / 2);
-  prow.translate(0, 0.02, 2.52);
-
-  const parts: BufferGeometry[] = [
-    body,
-    prow,
-    boxAt(0.18, 0.2, 2.55, 0, 0.26, 0.08),
-    boxAt(0.38, 0.16, 0.58, 0, 0.08, 2.12),
-    boxAt(0.22, 0.1, 0.36, 0, 0.14, 2.38),
-    boxAt(0.28, 0.18, 0.5, 0, 0.4, 0.88),
-    boxAt(0.18, 0.08, 0.28, 0, 0.52, 0.86),
-    boxAt(0.08, 0.16, 0.22, 0, 0.58, 0.78),
-    boxAt(0.7, 0.34, 0.7, 0, -0.02, -1.98),
-    boxAt(0.1, 0.12, 0.55, 0, 0.42, -1.55),
-    boxAt(0.36, 0.08, 0.42, 0, 0.22, -1.15),
-  ];
-  for (const s of [-1, 1]) {
-    parts.push(boxAt(0.16, 0.26, 1.42, s * 0.5, 0.02, 0.12));
-    parts.push(boxAt(0.62, 0.055, 0.92, s * 0.78, -0.02, -0.28));
-    parts.push(boxAt(0.34, 0.04, 0.42, s * 0.7, 0.04, 0.42));
-    parts.push(boxAt(0.2, 0.14, 1.05, s * 0.6, -0.14, -0.62));
-    parts.push(boxAt(0.08, 0.22, 0.7, s * 0.36, 0.18, 0.55));
-    parts.push(boxAt(0.1, 0.08, 0.28, s * 0.22, 0.16, 1.65));
-    parts.push(cylAt(0.035, 0.05, 0.22, 6, s * 0.42, 0.12, 1.95));
-  }
-  return mergeParts(parts);
-}
-
-function heroDarkGeo() {
-  const parts: BufferGeometry[] = [
-    boxAt(0.62, 0.22, 0.48, 0, -0.08, -2.12),
-    cylAt(0.12, 0.16, 0.42, 8, 0, -0.04, -2.28),
-    boxAt(0.38, 0.16, 0.28, 0, -0.18, -0.95),
-    boxAt(0.14, 0.06, 1.8, 0, 0.32, 0.1),
-  ];
-  for (const s of [-1, 1]) {
-    parts.push(cylAt(0.1, 0.12, 0.92, 8, s * 0.6, -0.14, -1.12));
-    parts.push(boxAt(0.14, 0.1, 0.32, s * 0.6, -0.14, -1.62));
-    parts.push(boxAt(0.12, 0.05, 0.4, s * 0.82, 0.02, 0.15));
-    parts.push(boxAt(0.08, 0.12, 0.18, s * 0.48, -0.16, 0.55));
-  }
-  return mergeParts(parts);
-}
-
-function heroKeelGeo() {
-  return mergeParts([boxAt(0.1, 0.18, 2.85, 0, -0.3, 0.02), boxAt(0.22, 0.08, 0.7, 0, -0.34, 0.85)]);
-}
-
-function viewportGeo() {
-  const parts: BufferGeometry[] = [];
-  for (const z of [-1.02, -0.42, 0.22, 0.88]) {
-    for (const s of [-1, 1]) parts.push(boxAt(0.018, 0.042, 0.095, s * 0.4, 0.1, z));
-  }
-  parts.push(boxAt(0.12, 0.04, 0.08, 0, 0.5, 0.92));
-  return mergeParts(parts);
-}
-
 function useSpin() {
   return useSyncExternalStore(subscribeSpin, getPrefs, getPrefs);
 }
 
 function useHullTextures() {
-  const [rivet, height, rough, arch, rift] = useTexture([
+  const [rivet, height, rough, rose, plate] = useTexture([
     "/nidus/tex-rivet.jpg",
     "/nidus/tex-height.jpg",
     "/nidus/tex-rough.jpg",
-    "/nidus/sky-arch.jpg",
-    "/nidus/sky-rift.jpg",
+    "/nidus/tex-rose.jpg",
+    "/nidus/tex-hull.jpg",
   ]);
   rivet.colorSpace = SRGBColorSpace;
-  arch.colorSpace = SRGBColorSpace;
-  rift.colorSpace = SRGBColorSpace;
+  plate.colorSpace = SRGBColorSpace;
+  rose.colorSpace = SRGBColorSpace;
   height.colorSpace = NoColorSpace;
   rough.colorSpace = NoColorSpace;
   const ani = typeof window !== "undefined" && window.innerWidth < 500 ? 4 : 8;
-  for (const t of [rivet, height, rough]) {
+  for (const t of [rivet, height, rough, rose, plate]) {
     t.wrapS = t.wrapT = RepeatWrapping;
     t.anisotropy = ani;
-    t.repeat.set(2.2, 3.4);
   }
-  return { rivet, height, rough, arch, rift };
+  return { rivet, height, rough, rose, plate };
 }
 
-function Hardpoints({
-  railgun,
-  cannon,
-  railRank = 0,
-  canRank = 0,
-}: {
-  railgun: boolean;
-  cannon: boolean;
-  railRank?: number;
-  canRank?: number;
-}) {
-  // Teeth only. Other rooms keep their sim bonus and do not glue leftover hull blobs.
+function tiled(t: Texture, x: number, y: number) {
+  const c = t.clone();
+  c.repeat.set(x, y);
+  c.needsUpdate = true;
+  return c;
+}
+
+function Hardpoints({ railgun, cannon, railRank = 0, canRank = 0 }: { railgun: boolean; cannon: boolean; railRank?: number; canRank?: number }) {
+  // Only designed teeth change the silhouette. Other rooms pay their sim bonus.
   return (
     <group>
       {railgun && (
-        <group position={[0.68, 0.12, 0.08]}>
-          <mesh>
-            <boxGeometry args={[0.16, 0.1, 0.26]} />
-            <meshStandardMaterial color="#3a4048" metalness={0.28} roughness={0.52} dithering />
+        <group position={[0.62, 0.02, 0.36]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <capsuleGeometry args={[0.06, 0.18, 6, 16]} />
+            <meshStandardMaterial color={IRON} metalness={0.6} roughness={0.42} dithering />
           </mesh>
-          <mesh position={[0, 0.02, -0.42]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.016, 0.022, 0.62 + railRank * 0.05, 8]} />
-            <meshStandardMaterial color="#2a3036" metalness={0.32} roughness={0.46} />
+          <mesh position={[0, 0.02, 0.44 + railRank * 0.025]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.014, 0.02, 0.7 + railRank * 0.05, 12]} />
+            <meshStandardMaterial color={GILT} metalness={0.85} roughness={0.32} envMapIntensity={1} />
           </mesh>
         </group>
       )}
       {cannon && (
-        <group position={[-0.68, 0.1, 0.28]}>
-          <mesh>
-            <boxGeometry args={[0.18, 0.1, 0.22]} />
-            <meshStandardMaterial color="#3a4048" metalness={0.26} roughness={0.54} dithering />
+        <group position={[-0.62, 0.02, 0.36]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <capsuleGeometry args={[0.065, 0.14, 6, 16]} />
+            <meshStandardMaterial color={IRON} metalness={0.6} roughness={0.42} dithering />
           </mesh>
-          {(canRank >= 2 ? [-0.04, 0.04] : [0]).map((x) => (
-            <mesh key={`can-${x}`} position={[x, 0.02, -0.24]} rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.02, 0.026, 0.3 + canRank * 0.02, 8]} />
-              <meshStandardMaterial color="#2a3036" metalness={0.28} roughness={0.48} />
+          {(canRank >= 2 ? [-0.035, 0.035] : [0]).map((x) => (
+            <mesh key={`can-${x}`} position={[x, 0.02, 0.3]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.018, 0.024, 0.34 + canRank * 0.02, 12]} />
+              <meshStandardMaterial color={IRON} metalness={0.7} roughness={0.36} />
             </mesh>
           ))}
         </group>
       )}
+    </group>
+  );
+}
+
+function EngineGlow({ glow, surging }: { glow: number; surging: boolean }) {
+  const tex = useMemo(() => glowTexture(), []);
+  const cores = useRef<(SpriteMaterial | null)[]>([]);
+  const halos = useRef<(SpriteMaterial | null)[]>([]);
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    const heat = 0.55 + glow * 0.3 + (surging ? 0.25 : 0);
+    ENGINES.forEach((_, i) => {
+      const flick = REDUCE ? 0 : Math.sin(t * 23 + i * 1.7) * 0.05 + Math.sin(t * 7.1 + i) * 0.04;
+      const c = cores.current[i];
+      const h = halos.current[i];
+      if (c) c.opacity = Math.min(1, heat + flick);
+      if (h) h.opacity = Math.min(0.85, heat * 0.55 + flick);
+    });
+  });
+  return (
+    <group>
+      {ENGINES.map(([x, y, z, r], i) => (
+        <group key={`eng-${i}`} position={[x, y, z]}>
+          <mesh position={[0, 0, 0.03]} rotation={[0, Math.PI, 0]}>
+            <circleGeometry args={[r * 0.95, 24]} />
+            <meshBasicMaterial color="#ffc89a" toneMapped={false} />
+          </mesh>
+          <sprite scale={[r * 3.2, r * 3.2, 1]}>
+            <spriteMaterial ref={(m) => { cores.current[i] = m; }} map={tex} color="#ffd9b0" blending={AdditiveBlending} depthWrite={false} transparent toneMapped={false} />
+          </sprite>
+          <sprite scale={[r * 9, r * 9, 1]}>
+            <spriteMaterial ref={(m) => { halos.current[i] = m; }} map={tex} color="#c45a4a" blending={AdditiveBlending} depthWrite={false} transparent toneMapped={false} />
+          </sprite>
+        </group>
+      ))}
+      <pointLight position={[0, 0, -3.1]} color="#ff9a6a" intensity={surging ? 3 : 1.6} distance={3.2} decay={2} />
+    </group>
+  );
+}
+
+function RoseWindow({ rose }: { rose: Texture }) {
+  return (
+    <group position={[0, ROSE.y, ROSE.z]}>
+      <mesh>
+        <circleGeometry args={[ROSE.r, 32]} />
+        <meshStandardMaterial map={rose} emissiveMap={rose} emissive="#ffffff" emissiveIntensity={0.85} roughness={0.2} metalness={0} />
+      </mesh>
+      <mesh position={[0, 0, 0.004]}>
+        <torusGeometry args={[ROSE.r, 0.014, 8, 40]} />
+        <meshStandardMaterial color={GILT} metalness={0.9} roughness={0.28} envMapIntensity={1.1} />
+      </mesh>
     </group>
   );
 }
@@ -276,48 +216,65 @@ function Hull() {
   const raidStart = useNidus((s) => s.raid?.startedAt ?? 0);
   const raidWing = useNidus((s) => s.raid?.strikers ?? 0);
   const watching = useNidus((s) => Boolean(s.raid?.watching));
-  const glow = useNidus((s) => Math.min(1, s.spark / 18));
+  const glow = useNidus((s) => Math.round(Math.min(1, s.spark / 18) * 10) / 10);
   const surging = useNidus((s) => s.surgeUntil > Date.now());
-  const raiding = useNidus((s) => Boolean(s.raid));
   const railgunRank = useNidus((s) => s.rooms.railgun?.rank ?? 0);
   const cannonRank = useNidus((s) => s.rooms.cannon?.rank ?? 0);
+  const { size } = useThree();
 
-  const { rivet, height, rough, arch, rift } = useHullTextures();
-  const engineHeat = useRef<MeshBasicMaterial>(null);
-  const naveMat = useRef<MeshStandardMaterial>(null);
-  const stationRef = useRef<Group>(null);
-  const fighters = useRef<InstancedMesh>(null);
-  const hullGeo = useMemo(() => heroHullGeo(), []);
-  const darkGeo = useMemo(() => heroDarkGeo(), []);
-  const keelGeo = useMemo(() => heroKeelGeo(), []);
-  const portGeo = useMemo(() => viewportGeo(), []);
-  const dartGeo = useMemo(() => craftGeo(1.4), []);
-  const bloodC = useMemo(() => new Color(BLOOD), []);
-
+  const { rivet, rough, rose, plate } = useHullTextures();
+  const tex = useMemo(
+    () => ({
+      nave: tiled(plate, 2, 3),
+      naveRough: tiled(rough, 2, 3),
+      roof: tiled(plate, 1.6, 1.6),
+      wing: tiled(plate, 1.2, 1.2),
+      iron: tiled(rivet, 3, 3),
+      glass: tiled(rose, 4, 4),
+    }),
+    [rivet, rough, rose, plate],
+  );
+  const geo = useMemo(
+    () => ({
+      nave: naveGeo(),
+      roof: roofGeo(),
+      wing: wingGeo(),
+      buttress: buttressGeo(),
+      bands: bandsGeo(),
+      keel: keelGeo(),
+      machine: machineryGeo(),
+      lancets: lancetGeo(),
+      dart: droneGeo(),
+    }),
+    [],
+  );
   useEffect(
     () => () => {
-      hullGeo.dispose();
-      darkGeo.dispose();
-      keelGeo.dispose();
-      portGeo.dispose();
+      for (const g of Object.values(geo)) g.dispose();
+      for (const t of Object.values(tex)) t.dispose();
     },
-    [hullGeo, darkGeo, keelGeo, portGeo],
+    [geo, tex],
   );
+
+  const stationRef = useRef<Group>(null);
+  const fighters = useRef<InstancedMesh>(null);
+  const glass = useRef<MeshStandardMaterial>(null);
+  const bloodC = useMemo(() => new Color(BLOOD), []);
+  const fit = Math.min(1, Math.max(0.62, (size.width / Math.max(1, size.height)) * 1.35));
 
   useFrame((state, delta) => {
     const d = Math.min(delta, 0.1);
     const t = state.clock.elapsedTime;
     if (typeof document !== "undefined" && document.hidden) return;
-    if (stationRef.current) {
-      stationRef.current.visible = !watching;
-      stationRef.current.rotation.z = 0;
-      stationRef.current.position.y = 0;
-      stationRef.current.scale.setScalar(1.72 + roomsLit * 0.01 + molt * 0.018);
+    const ship = stationRef.current;
+    if (ship) {
+      ship.visible = !watching;
+      ship.scale.setScalar((1.5 + roomsLit * 0.01 + molt * 0.018) * fit);
+      ship.rotation.z = REDUCE ? 0 : Math.sin(t * 0.21) * 0.035;
+      ship.rotation.x = REDUCE ? 0 : Math.sin(t * 0.17 + 1.3) * 0.012;
+      ship.position.y = REDUCE ? 0 : Math.sin(t * 0.33) * 0.05;
     }
-    if (naveMat.current) naveMat.current.emissiveIntensity = 0.03 + glow * 0.04;
-    if (engineHeat.current) {
-      engineHeat.current.opacity = 0.55 + glow * 0.25 + (REDUCE ? 0 : Math.sin(t * 6.2) * 0.06) + (surging ? 0.12 : 0);
-    }
+    if (glass.current) glass.current.emissiveIntensity = 0.9 + glow * 0.4 + (surging ? 0.35 : 0);
     const now = Date.now();
     const fighting = raidEnds > now;
     const u = fighting ? (now - raidStart) / Math.max(1, raidEnds - raidStart) : 0;
@@ -331,10 +288,14 @@ function Hull() {
         } else {
           const launch = Math.max(0, Math.min(1, u * 2.4 - i * 0.07));
           const a = t * 0.9 + i * 0.7;
-          dummy.position.set(Math.sin(a) * (0.35 + launch * 1.1), -0.55 + launch * 0.9, -1.45 - launch * (5.5 + i * 0.22));
-          dummy.lookAt(dummy.position.x, dummy.position.y, dummy.position.z - 1);
-          dummy.rotateX(Math.PI / 2);
-          dummy.scale.setScalar(0.7 + launch * 0.5);
+          const wob = Math.sin(a) * (0.25 + launch * 0.5);
+          dummy.position.set(
+            FOE.x * launch + wob,
+            -0.5 + (FOE.y + 0.5) * launch + Math.cos(a) * 0.2 * launch,
+            -1.4 + (FOE.z + 1.4 + 0.8) * launch,
+          );
+          dummy.lookAt(FOE);
+          dummy.scale.setScalar(2.2 + launch * 0.8);
         }
         dummy.updateMatrix();
         wing.setMatrixAt(i, dummy.matrix);
@@ -352,123 +313,269 @@ function Hull() {
 
   return (
     <group>
-      <mesh rotation={[0, 0.18, 0.04]}>
-        <cylinderGeometry args={[92, 92, 48, 24, 1, true]} />
-        <meshBasicMaterial map={arch} color="#3a3238" side={BackSide} />
-      </mesh>
-      <mesh position={[-24, -16, 22]}>
-        <sphereGeometry args={[10, 24, 16]} />
-        <meshBasicMaterial map={rift} color="#8a8e96" />
-      </mesh>
-      <mesh position={[8, 0.8, 20]} rotation={[0.4, 0.2, 0.15]}>
-        <torusGeometry args={[4.2, 0.06, 6, 32]} />
-        <meshBasicMaterial color={GILT} transparent opacity={0.28} depthWrite={false} />
-      </mesh>
-
       <group ref={stationRef}>
-        <mesh geometry={hullGeo}>
-          <meshStandardMaterial
-            ref={naveMat}
-            map={rivet}
-            bumpMap={height}
-            bumpScale={0.18}
-            roughnessMap={rough}
-            color={STEEL}
-            metalness={0.28}
-            roughness={0.62}
-            dithering
-            envMapIntensity={0.28}
-            emissive="#1a1e24"
-            emissiveIntensity={0.04}
-          />
+        <mesh geometry={geo.nave}>
+          <meshStandardMaterial map={tex.nave} bumpMap={tex.nave} bumpScale={1.2} roughnessMap={tex.naveRough} color={BONE_IRON} metalness={0.45} roughness={0.56} envMapIntensity={0.65} dithering />
         </mesh>
-        <mesh position={[0, 0.36, 0.08]}>
-          <boxGeometry args={[0.035, 0.028, 2.15]} />
-          <meshStandardMaterial color={GILT} metalness={0.62} roughness={0.3} envMapIntensity={0.72} dithering />
+        <mesh geometry={geo.roof}>
+          <meshStandardMaterial map={tex.roof} bumpMap={tex.roof} bumpScale={0.8} color="#f0e6d6" metalness={0.15} roughness={0.7} envMapIntensity={0.45} dithering />
         </mesh>
-        <mesh geometry={darkGeo}>
-          <meshStandardMaterial
-            map={rivet}
-            bumpMap={height}
-            bumpScale={0.12}
-            roughnessMap={rough}
-            color={STEEL_DARK}
-            metalness={0.36}
-            roughness={0.48}
-            dithering
-            envMapIntensity={0.34}
-          />
+        <mesh geometry={geo.wing}>
+          <meshStandardMaterial map={tex.wing} bumpMap={tex.wing} bumpScale={0.8} color="#b8ad9e" metalness={0.5} roughness={0.5} envMapIntensity={0.6} dithering />
         </mesh>
-        <mesh geometry={keelGeo}>
+        <mesh geometry={geo.machine}>
+          <meshStandardMaterial map={tex.iron} color="#8a8078" metalness={0.72} roughness={0.4} envMapIntensity={0.7} side={DoubleSide} dithering />
+        </mesh>
+        <mesh geometry={geo.buttress}>
+          <meshStandardMaterial color="#9a8e80" metalness={0.65} roughness={0.4} envMapIntensity={0.8} dithering />
+        </mesh>
+        <mesh geometry={geo.bands}>
+          <meshStandardMaterial color={GILT} metalness={0.9} roughness={0.28} envMapIntensity={1.1} dithering />
+        </mesh>
+        <mesh geometry={geo.keel}>
           <meshStandardMaterial
-            color={molt > 0 ? BLOOD : "#3a424a"}
+            color={molt > 0 ? BLOOD : "#3a2226"}
             metalness={0.3}
-            roughness={0.5}
+            roughness={0.34}
             emissive={molt > 0 ? BLOOD : "#000000"}
             emissiveIntensity={molt > 0 ? 0.16 + molt * 0.07 : 0}
+            envMapIntensity={0.8}
             dithering
           />
         </mesh>
-        <mesh geometry={portGeo}>
-          <meshStandardMaterial color={VIEWPORT} metalness={0.18} roughness={0.22} envMapIntensity={0.55} />
+        <mesh geometry={geo.lancets}>
+          <meshStandardMaterial ref={glass} map={tex.glass} emissiveMap={tex.glass} emissive="#ffffff" emissiveIntensity={1.1} roughness={0.25} metalness={0} toneMapped={false} />
         </mesh>
-        {([[0, -0.04, -2.42], [0.28, -0.12, -2.32], [-0.28, -0.12, -2.32]] as [number, number, number][]).map((p, i) => (
-          <group key={`eng-${i}`} position={p}>
-            <mesh rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.09, 0.14, 0.28, 8]} />
-              <meshStandardMaterial color="#2e343a" metalness={0.34} roughness={0.46} dithering />
-            </mesh>
-            <mesh position={[0, 0, -0.14]} rotation={[Math.PI, 0, 0]}>
-              <circleGeometry args={[0.072, 10]} />
-              <meshBasicMaterial color="#c45a4a" toneMapped={false} />
-            </mesh>
-          </group>
-        ))}
-        <mesh position={[0, -0.04, -2.58]}>
-          <sphereGeometry args={[0.09, 8, 6]} />
-          <meshBasicMaterial ref={engineHeat} color="#c45a4a" transparent opacity={0.5} depthWrite={false} toneMapped={false} />
-        </mesh>
+        <RoseWindow rose={rose} />
+        <EngineGlow glow={glow} surging={surging} />
         <Hardpoints railgun={railgun} cannon={cannon} railRank={railgunRank} canRank={cannonRank} />
       </group>
-
-      <instancedMesh ref={fighters} args={[dartGeo, undefined, 8]} visible={false}>
-        <meshStandardMaterial color={STEEL} metalness={0.18} roughness={0.62} emissive={bloodC} emissiveIntensity={0.2} />
+      <Harvest dart={geo.dart} shipScale={1.5 * fit} />
+      <instancedMesh ref={fighters} args={[geo.dart, undefined, 8]} visible={false}>
+        <meshStandardMaterial color="#9a9186" metalness={0.5} roughness={0.5} emissive={bloodC} emissiveIntensity={0.35} />
       </instancedMesh>
-      {raiding && (
-        <group position={[7.2, 0.4, -4.8]} rotation={[0.1, 0.55, -0.05]}>
-          <mesh rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.16, 0.22, 1.25, 8]} />
-            <meshStandardMaterial map={rivet} color="#5a6068" metalness={0.22} roughness={0.62} />
-          </mesh>
-          <mesh position={[0, 0.1, 0.15]}>
-            <boxGeometry args={[0.16, 0.08, 0.32]} />
-            <meshStandardMaterial color="#4a5058" metalness={0.24} roughness={0.58} />
-          </mesh>
-        </group>
-      )}
     </group>
   );
 }
 
-function BlackWell() {
-  const disk = useRef<Group>(null);
-  useFrame((state) => {
-    if (disk.current) disk.current.rotation.z = state.clock.elapsedTime * 0.04;
+const ROCKS = 14;
+const FIELD = new Vector3(-2.4, 1.0, 7.6);
+
+function Harvest({ dart, shipScale }: { dart: BufferGeometry; shipScale: number }) {
+  const miners = useNidus((s) => Math.min(22, 2 + s.swarm.miner));
+  const raiding = useNidus((s) => Boolean(s.raid));
+  const rough = useTexture("/nidus/tex-rough.jpg");
+  const rock = useMemo(() => rockGeo(), []);
+  const rocks = useRef<InstancedMesh>(null);
+  const drones = useRef<InstancedMesh>(null);
+  const field = useRef<Group>(null);
+  const seats = useMemo(
+    () =>
+      Array.from({ length: ROCKS }, (_, i) => {
+        const a = i * 2.399;
+        const r = 0.6 + (i % 5) * 0.42;
+        return {
+          p: new Vector3(Math.cos(a) * r, Math.sin(i * 1.7) * 0.7, Math.sin(a) * r * 0.8),
+          s: 0.14 + ((i * 37) % 11) * 0.035,
+          rot: new Vector3(i * 0.7, i * 1.3, i * 0.4),
+        };
+      }),
+    [],
+  );
+  useEffect(() => () => rock.dispose(), [rock]);
+  useEffect(() => {
+    const m = rocks.current;
+    if (!m) return;
+    seats.forEach((k, i) => {
+      dummy.position.copy(k.p);
+      dummy.rotation.set(k.rot.x, k.rot.y, k.rot.z);
+      dummy.scale.setScalar(k.s);
+      dummy.updateMatrix();
+      m.setMatrixAt(i, dummy.matrix);
+    });
+    m.instanceMatrix.needsUpdate = true;
+  }, [seats]);
+
+  const from = useMemo(() => new Vector3(), []);
+  const to = useMemo(() => new Vector3(), []);
+  const mid = useMemo(() => new Vector3(), []);
+  const ahead = useMemo(() => new Vector3(), []);
+  const at = (a: Vector3, c: Vector3, b: Vector3, u: number, out: Vector3) => {
+    const v = 1 - u;
+    return out.set(v * v * a.x + 2 * v * u * c.x + u * u * b.x, v * v * a.y + 2 * v * u * c.y + u * u * b.y, v * v * a.z + 2 * v * u * c.z + u * u * b.z);
+  };
+
+  useFrame((state, delta) => {
+    const t = state.clock.elapsedTime;
+    if (field.current && !REDUCE) field.current.rotation.y += Math.min(delta, 0.1) * 0.03;
+    const m = drones.current;
+    if (!m) return;
+    m.visible = !raiding;
+    if (raiding) return;
+    from.set(0, -0.32 * shipScale, -0.8 * shipScale);
+    for (let i = 0; i < 22; i++) {
+      if (i >= miners) {
+        dummy.position.set(0, -80, 0);
+        dummy.scale.setScalar(0.001);
+      } else {
+        const seat = seats[i % ROCKS];
+        to.copy(seat.p).applyAxisAngle(Y_AXIS, field.current?.rotation.y ?? 0).add(FIELD);
+        mid.addVectors(from, to).multiplyScalar(0.5);
+        mid.x += (i % 2 ? 1 : -1) * (1.2 + (i % 3) * 0.4);
+        mid.y += 0.9 + (i % 4) * 0.2;
+        const phase = (t * (0.045 + (i % 5) * 0.006) + i / miners) % 1;
+        const out = phase < 0.5;
+        const raw = out ? phase * 2 : 1 - (phase - 0.5) * 2;
+        const u = raw * raw * (3 - 2 * raw);
+        at(from, mid, to, u, dummy.position);
+        at(from, mid, to, Math.min(1, Math.max(0, u + (out ? 0.01 : -0.01))), ahead);
+        dummy.lookAt(ahead);
+        dummy.scale.setScalar(1.7);
+      }
+      dummy.updateMatrix();
+      m.setMatrixAt(i, dummy.matrix);
+    }
+    m.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <group>
+      <group ref={field} position={FIELD}>
+        <instancedMesh ref={rocks} args={[rock, undefined, ROCKS]}>
+          <meshStandardMaterial map={rough} color="#8a7466" roughness={0.9} metalness={0.05} dithering />
+        </instancedMesh>
+      </group>
+      <instancedMesh ref={drones} args={[dart, undefined, 22]}>
+        <meshStandardMaterial color="#6e655c" metalness={0.65} roughness={0.4} emissive="#c45a4a" emissiveIntensity={0.55} envMapIntensity={0.8} />
+      </instancedMesh>
+    </group>
+  );
+}
+
+const Y_AXIS = new Vector3(0, 1, 0);
+
+function Dust() {
+  const n = typeof window !== "undefined" && window.innerWidth < 500 ? 110 : 200;
+  const pts = useRef<Points>(null);
+  const geo = useMemo(() => {
+    const g = new BufferGeometry();
+    const a = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      a[i * 3] = (Math.sin(i * 91.7) * 0.5 + 0.5) * 16 - 8;
+      a[i * 3 + 1] = (Math.sin(i * 47.3) * 0.5 + 0.5) * 10 - 5;
+      a[i * 3 + 2] = (Math.sin(i * 13.1) * 0.5 + 0.5) * 24 - 10;
+    }
+    g.setAttribute("position", new Float32BufferAttribute(a, 3));
+    return g;
+  }, [n]);
+  useEffect(() => () => geo.dispose(), [geo]);
+  useFrame((_, delta) => {
+    if (REDUCE || !pts.current) return;
+    const p = geo.getAttribute("position");
+    const arr = p.array as Float32Array;
+    const step = Math.min(delta, 0.1) * 0.9;
+    for (let i = 0; i < n; i++) {
+      let z = arr[i * 3 + 2] - step;
+      if (z < -10) z += 24;
+      arr[i * 3 + 2] = z;
+    }
+    p.needsUpdate = true;
   });
   return (
-    <group position={[12, -9.5, 6]}>
-      <mesh>
-        <sphereGeometry args={[1.5, 24, 16]} />
-        <meshBasicMaterial color="#000000" />
+    <points ref={pts} geometry={geo}>
+      <pointsMaterial color="#d8cbb8" size={0.035} sizeAttenuation transparent opacity={0.45} depthWrite={false} />
+    </points>
+  );
+}
+
+const PLANET_VERT = `varying vec3 vN; varying vec3 vW;
+void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`;
+const PLANET_FRAG = `uniform vec3 uLight; uniform vec3 uDay; uniform vec3 uNight; uniform vec3 uAir; varying vec3 vN; varying vec3 vW;
+void main(){
+  vec3 v = normalize(cameraPosition - vW);
+  float l = dot(vN, normalize(uLight));
+  float day = smoothstep(-0.08, 0.55, l);
+  float band = 0.5 + 0.5 * sin(vN.y * 38.0 + vN.x * 7.0);
+  vec3 col = mix(uNight, uDay * (0.82 + 0.18 * band), day);
+  float rim = pow(1.0 - max(dot(vN, v), 0.0), 3.0);
+  col += uAir * rim * (0.08 + 0.8 * smoothstep(-0.1, 0.5, l));
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+// Planet limb: its own light so the crescent always faces the ship, whatever the key does.
+function Planet() {
+  const uniforms = useMemo(
+    () => ({
+      uLight: { value: new Vector3(-0.92, -0.13, -0.37) },
+      uDay: { value: new Color("#9a6a52") },
+      uNight: { value: new Color("#0e0b0b") },
+      uAir: { value: new Color("#c45a4a") },
+    }),
+    [],
+  );
+  return (
+    <mesh position={[-64, -2, 72]}>
+      <sphereGeometry args={[13, 64, 40]} />
+      <shaderMaterial vertexShader={PLANET_VERT} fragmentShader={PLANET_FRAG} uniforms={uniforms} fog={false} />
+    </mesh>
+  );
+}
+
+function Backdrop() {
+  const arch = useTexture("/nidus/sky-arch.jpg");
+  arch.colorSpace = SRGBColorSpace;
+  return (
+    <group>
+      <mesh rotation={[0, 0.18, 0.04]}>
+        <cylinderGeometry args={[150, 150, 320, 32, 1, true]} />
+        <meshBasicMaterial map={arch} color="#2a2328" side={BackSide} depthWrite={false} fog={false} />
       </mesh>
-      <group rotation={[0.62, 0.32, 0.1]} ref={disk}>
+      <mesh position={[26, 6, 60]} rotation={[0.35, 0.3, 0.12]}>
+        <torusGeometry args={[7.5, 0.08, 8, 64]} />
+        <meshBasicMaterial color={GILT} transparent opacity={0.22} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
+
+function BlackWell() {
+  const disk = useRef<Group>(null);
+  const tex = useMemo(() => glowTexture(), []);
+  useFrame((state) => {
+    if (disk.current && !REDUCE) disk.current.rotation.z = state.clock.elapsedTime * 0.04;
+  });
+  return (
+    <group position={[-96, 6, 66]} scale={0.8}>
+      <sprite scale={[16, 16, 1]}>
+        <spriteMaterial map={tex} color="#7a1f2b" blending={AdditiveBlending} depthWrite={false} transparent opacity={0.55} toneMapped={false} fog={false} />
+      </sprite>
+      <mesh>
+        <sphereGeometry args={[2.4, 32, 20]} />
+        <meshBasicMaterial color="#000000" fog={false} />
+      </mesh>
+      <group rotation={[1.2, 0.32, 0.1]} ref={disk}>
         <mesh>
-          <torusGeometry args={[1.7, 0.018, 6, 48]} />
-          <meshBasicMaterial color="#c4b8b0" transparent opacity={0.4} depthWrite={false} />
+          <torusGeometry args={[3.4, 0.06, 8, 96]} />
+          <meshBasicMaterial color="#c45a4a" transparent opacity={0.55} depthWrite={false} blending={AdditiveBlending} toneMapped={false} fog={false} />
+        </mesh>
+        <mesh>
+          <torusGeometry args={[4.1, 0.025, 6, 96]} />
+          <meshBasicMaterial color="#c4a574" transparent opacity={0.35} depthWrite={false} blending={AdditiveBlending} toneMapped={false} fog={false} />
         </mesh>
       </group>
     </group>
   );
+}
+
+function wreckGeo(): BufferGeometryT {
+  const g = new LatheGeometry(
+    ([[0, -0.9], [0.14, -0.86], [0.24, -0.5], [0.22, 0.1], [0.26, 0.4], [0.14, 0.82], [0, 0.9]] as [number, number][]).map(([r, z]) => new Vector2(r, z)),
+    20,
+  );
+  g.rotateX(Math.PI / 2);
+  g.scale(1.1, 0.75, 1);
+  return g;
 }
 
 function BattleField() {
@@ -477,6 +584,16 @@ function BattleField() {
   const dead = Boolean(raid && raid.hp <= 0);
   const rivet = useTexture("/nidus/tex-rivet.jpg");
   rivet.colorSpace = SRGBColorSpace;
+  const hull = useMemo(() => wreckGeo(), []);
+  const fins = useMemo(() => wingGeo(), []);
+  const tex = useMemo(() => glowTexture(), []);
+  useEffect(
+    () => () => {
+      hull.dispose();
+      fins.dispose();
+    },
+    [hull, fins],
+  );
   const group = useRef<Group>(null);
   const tracerA = useRef<MeshBasicMaterial>(null);
   const tracerB = useRef<MeshBasicMaterial>(null);
@@ -484,8 +601,8 @@ function BattleField() {
   useFrame((state) => {
     if (!raid || !group.current) return;
     const t = state.clock.elapsedTime;
-    group.current.position.z = dead ? -7.2 - (t % 8) * 0.08 : -7.15;
-    group.current.rotation.y = Math.PI;
+    group.current.position.set(FOE.x, FOE.y, dead ? FOE.z - (t % 8) * 0.08 : FOE.z);
+    group.current.lookAt(0, 0, 0);
     const pulse = dead ? 0.05 : 0.25 + Math.sin(t * (boosted ? 14 : 8)) * 0.25;
     if (tracerA.current) tracerA.current.opacity = pulse;
     if (tracerB.current) tracerB.current.opacity = pulse * 0.7;
@@ -500,22 +617,34 @@ function BattleField() {
   });
   if (!raid) return null;
   return (
-    <group ref={group} position={[0, 0.05, -7.2]} rotation={[0, Math.PI, 0]}>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.16, 0.22, 1.7, 8]} />
-        <meshStandardMaterial map={rivet} color={dead ? "#1a1614" : "#5a6068"} metalness={0.22} roughness={0.62} dithering />
+    <group ref={group} position={FOE}>
+      <mesh geometry={hull} scale={1.3}>
+        <meshStandardMaterial map={rivet} color={dead ? "#1a1614" : "#6a5e56"} metalness={0.4} roughness={0.6} envMapIntensity={0.5} dithering />
       </mesh>
-      <mesh position={[0, 0.12, 0.2]}>
-        <boxGeometry args={[0.18, 0.1, 0.4]} />
-        <meshStandardMaterial color={dead ? "#141210" : "#4a5058"} metalness={0.24} roughness={0.58} />
+      <mesh position={[0, 0.2, 0.1]} rotation={[Math.PI / 2, 0, 0]}>
+        <capsuleGeometry args={[0.07, 0.4, 6, 12]} />
+        <meshStandardMaterial color={dead ? "#141210" : "#3e3a37"} metalness={0.6} roughness={0.45} />
+      </mesh>
+      <mesh geometry={fins} scale={[0.7, 0.9, 0.62]} position={[0, 0.02, 0.9]}>
+        <meshStandardMaterial color={dead ? "#141210" : "#4a3e3a"} metalness={0.55} roughness={0.5} dithering />
       </mesh>
       {!dead && (
         <>
-          <mesh position={[0.2, 0.12, -2.4]} rotation={[Math.PI / 2, 0, 0]}>
+          <sprite position={[0, 0, -1.25]} scale={[0.7, 0.7, 1]}>
+            <spriteMaterial map={tex} color="#c45a4a" blending={AdditiveBlending} depthWrite={false} transparent toneMapped={false} />
+          </sprite>
+          <sprite position={[0, 0.28, 0.5]} scale={[0.22, 0.22, 1]}>
+            <spriteMaterial map={tex} color="#ff3a2a" blending={AdditiveBlending} depthWrite={false} transparent toneMapped={false} />
+          </sprite>
+        </>
+      )}
+      {!dead && (
+        <>
+          <mesh position={[0.2, 0.12, 2.4]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.012, 0.012, 4.6, 5]} />
             <meshBasicMaterial ref={tracerA} color="#ffb08a" transparent opacity={0.35} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
           </mesh>
-          <mesh position={[-0.25, 0.08, -2.1]} rotation={[Math.PI / 2, 0, 0]}>
+          <mesh position={[-0.25, 0.08, 2.1]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.018, 0.018, 3.4, 5]} />
             <meshBasicMaterial ref={tracerB} color="#ff7a55" transparent opacity={0.28} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
           </mesh>
@@ -527,6 +656,7 @@ function BattleField() {
 
 function Rig() {
   const prefs = useSpin();
+  const { size } = useThree();
   const lastCam = useRef(-1);
   const lastDist = useRef(-1);
   const ctl = useRef<{ target: Vector3; autoRotate: boolean } | null>(null);
@@ -559,7 +689,7 @@ function Rig() {
     const looking = Boolean(p.lookId) && Date.now() < p.lookUntil;
     const sock = looking ? SOCKETS[p.lookId] : undefined;
     if (sock) _look.set(sock[0], sock[1] * 0.85, sock[2]);
-    else if (raiding) _look.set(0, 0.1, -3.4);
+    else if (raiding) _look.copy(FOE_LOOK);
     else _look.set(0, 0.05, 0);
     if (ctl.current) {
       const k = 1 - Math.exp(-dt * (looking ? 3.4 : 1.8));
@@ -567,8 +697,9 @@ function Rig() {
       ctl.current.autoRotate = !p.spinPaused && !looking && !raiding;
     }
     if (raiding && performance.now() - touched.current > 900) {
-      const want = watching ? 11.5 : 15;
-      const [tx, ty, tz] = [want * 0.72, want * 0.28, -3.4 + want * 0.18];
+      const tall = size.height > size.width * 1.2 ? 1.5 : 1;
+      const want = (watching ? 11.5 : 14) * tall;
+      const [tx, ty, tz] = [FOE_LOOK.x + want * 0.8, FOE_LOOK.y + want * 0.3, FOE_LOOK.z - want * 0.52];
       const k = 1 - Math.exp(-dt * 1.4);
       cam.position.x += (tx - cam.position.x) * k;
       cam.position.y += (ty - cam.position.y) * k;
@@ -618,7 +749,7 @@ function Mood() {
     fog.color.set("#0c0a09");
     fog.near = 70;
     fog.far = 200;
-    gl.toneMappingExposure = kind === "ECLIPSE" ? 0.92 : kind === "PULSAR" ? 1.08 : 1.0;
+    gl.toneMappingExposure = kind === "ECLIPSE" ? 1.0 : kind === "PULSAR" ? 1.3 : 1.15;
   });
   return null;
 }
@@ -645,22 +776,26 @@ export function StationScene() {
       onCreated={({ gl, camera, scene }) => {
         gl.setClearColor("#0c0a09");
         gl.toneMapping = ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.0;
+        gl.toneMappingExposure = 1.15;
         const [x, y, z] = camPosition();
         camera.position.set(x, y, z);
         const pmrem = new PMREMGenerator(gl);
         const env = pmrem.fromScene(new RoomEnvironment(), 0.04);
         scene.environment = env.texture;
-        scene.environmentIntensity = 0.2;
+        scene.environmentIntensity = 0.5;
       }}
     >
       <fog attach="fog" args={["#0c0a09", 70, 200]} />
-      <hemisphereLight args={["#a8b0b8", "#1a1816", 0.62]} />
-      <directionalLight position={[8, 6, -7]} intensity={1.7} color="#e4ddd6" />
-      <directionalLight position={[-6, 2, 5]} intensity={0.32} color="#8a96a4" />
+      <hemisphereLight args={["#2e2434", "#0c0a09", 0.55]} />
+      <directionalLight position={[7, 6, 8]} intensity={2.3} color="#ffcdb0" />
+      <directionalLight position={[-7, 4, 5]} intensity={1.3} color="#d8b884" />
+      <directionalLight position={[8, 1.5, -7]} intensity={0.45} color="#6c5a78" />
       <Stars radius={110} depth={50} count={mobile ? 80 : 160} factor={2.8} saturation={0.08} fade speed={REDUCE ? 0 : 0.12} />
       <Mood />
+      <Backdrop />
+      <Planet />
       <BlackWell />
+      <Dust />
       <Hull />
       <BattleField />
       <Rig />

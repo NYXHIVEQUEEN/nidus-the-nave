@@ -158,8 +158,9 @@ typed “save”. A green overhaul that never left the sandbox is a lost build.
 The hull is a **cathedral-factory**, not a crate and not a poly pile.
 
 - **Body:** faceted oval lathe + chisel prow + armor cheeks, wings, bridge, engine block. Not a round sausage. Rooms do not attach as leftover capsules.
-- **Light:** ACES exposure ~1.34 (Mood shifts on events: PULSAR 1.42, ECLIPSE
-  0.92). Gilt key, blood furnace, cool rim (cool rim skipped on mobile).
+- **Light:** ACES exposure 1.15 (Mood: PULSAR 1.3, ECLIPSE 1.0). Ember key,
+  gilt rim, dim violet fill, IBL 0.5. Geometry lives in `hullKit.ts`: lathe nave,
+  arch roof, spires, buttresses, blade wings, engine bells. No BoxGeometry.
   Window leaks are **three** short additive cones on the mid LOD, not a
   forest of giant shafts. No `EffectComposer` on mobile. No pulsar shaft cone
   on mobile.
@@ -171,8 +172,9 @@ The hull is a **cathedral-factory**, not a crate and not a poly pile.
   `window.__nidusPerf` reports `{ calls, triangles, frameMs }`.
   Aim under ~100 draws on a mid hive. Pause work when tab hidden.
   Respect `prefers-reduced-motion` in the Canvas, not only CSS.
-- **Sky:** cylinder backdrop + titan spheres. Do not map 16:9 plates onto a
-  full UV sphere.
+- **Sky:** tall cylinder backdrop (no horizon edge), shader gas giant with its
+  own crescent light, black hole, mid asteroid field with harvest drones, near
+  dust. Do not map 16:9 plates onto a full UV sphere.
 - **Growth:** rooms raise economy, not extra sausages. The hull is a designed capital — faceted body, armor cheeks, wings, engine block — not a lathe that sprouts capsules. Ghost next-unlock stays chrome, not a gilt annex silhouette. Halo and molt waist scale with molt/rooms.
 
 ## Architecture (do not flatten)

@@ -1,62 +1,67 @@
-# GDL handoff — flight scene (pass 2)
+# GDL handoff — cathedral hull rebuild (pass 3)
 
-Directive: `.grok/skills/space-hull-3d/references/gdl-acceptance.md` (full text, not shortened).
-Rollback: git `d25e11d` (this pass) or `3cc6b33` (pre-GDL). No hive wipe. No engine change. Save key stays `nidus.save.v3`.
+Directive: `.grok/skills/space-hull-3d/references/gdl-acceptance.md`. Rollback: git `49dfe77`
+(`git checkout 49dfe77 -- src/components/nidus/StationScene.tsx` and delete `hullKit.ts`). No hive wipe; saves untouched.
 
-## Three largest remaining failures (this pass)
+## Three largest failures found (before)
 
-1. **Lighting test failed.** Still frames were crushed brown/black (ship-band mean ~rgb(18,14,12), ~8% lit). Volume, nose, and engines did not read.
-2. **Camera hid propulsion.** Default view was nose-on (`CAM_DIR` +Z). Engines sat on the far side. Exhaust glow was also on the wrong end of the bell.
-3. **Idle work and scale were missing.** Drones / harvest gnats were forced `visible={false}`. Distant planets used dark Standard materials and spun with the sky wallpaper.
+1. **Hero ship was a box stack.** A 10-sided lathe wrapped in ~25 glued `BoxGeometry` slabs; faceted, and too long for a
+   portrait phone, so the nose and stern were cropped and facing/propulsion could not be read.
+2. **Composition was cluttered.** A large sphere with a stretched photo sat directly behind the ship; the backdrop
+   cylinder edge cut a hard horizon through the frame; no scale layering.
+3. **Flat, grey light and no visible work.** White-grey key + grey hemi, one material everywhere, engines unseen,
+   and no drones — the idle activity was invisible.
 
 ## Implemented
 
-- Chase camera (aft-starboard). Nose +Z into the well; engines toward the player. HOLD is the new default; SPIN remains opt-in.
-- Hull: wasp-waist lathe, larger nacelles, bridge, gilt keel, stern bells with hot cores firing −Z.
-- Materials: bone iron (metalness ~0.16, roughness ~0.62), gilt keel, darker engine housings, capsule window slits (no glowing boxes on the hero).
-- Light shaped around the new camera: ember key, gilt rim, hemi fill, camera-side point, ACES ~1.22, RoomEnvironment IBL ~0.55. Hull keeps a dim bounce emissive so plates do not fall to featureless black.
-- Space layers: planetary limb (unlit, so it reads), transit ring, distant wreck, black-well disc. Landmarks do not spin with the sky cylinder.
-- Drones orbit again (harvest activity). Engine heat still tracks SPARK/SURGE. Bank/breath stay. GoalDock still answers next verb / rates / build %.
-- Window slits are capsules. FORGE / LAB / MINDS stay painted interiors. HULL + RAID stay the live 3D scene.
+- **Ship** (`src/components/nidus/hullKit.ts`): 24-radial lathe nave with creased panel breaks and a wasp waist;
+  pointed-arch cathedral roof (extruded, bevelled) with a main spire and two flanking spires; three pairs of
+  flying buttresses (tubes); swept bevelled blade wings; keel blade; armor cheek pods; five gilt filigree bands and a
+  roof ridge; three lathe engine bells on struts. **No BoxGeometry anywhere on the hero.**
+- **Materials with identity:** bone-iron plated hull, pale bone roof, darker wings, dark machinery, gilt bands
+  (high metal, low rough), blood keel (molt tint kept), emissive stained-glass lancets (10) and a rose window using
+  `tex-rose.jpg`. New seamless `tex-hull.jpg` built from `tex-plate.jpg` (the original plate/rivet maps carry a
+  blurred seam cross; see Defects).
+- **Engines:** hot core disc + additive core and halo sprites per bell, flicker, SPARK/SURGE heat, a short practical
+  light at the stern.
+- **Light:** ember key `#ffcdb0` 2.3, gilt rim `#d8b884` 1.3, dim violet camera-side fill, violet hemi 0.55,
+  RoomEnvironment IBL 0.5, ACES exposure 1.15 (PULSAR 1.3, ECLIPSE 1.0).
+- **Space layers:** near dust drifting past (motion reads as flight), mid asteroid field with harvest drones, far
+  banded gas giant with its own crescent light and atmosphere rim, black hole with accretion rings, taller backdrop
+  (horizon line gone).
+- **Idle made visible:** harvest drones (count follows miners, 2–22) fly hangar → asteroid → hangar on eased curves.
+- **Motion:** slow bank/breath on the ship, slow field rotation; all of it and the dust stop under reduced motion.
+- **Framing:** ship scale fits the viewport aspect so the whole hull reads in portrait.
+- **Raid:** duel restacked vertically for portrait (enemy above-behind, camera pulls back 1.5× in portrait); enemy is
+  a lathe hull with fins, crimson engine glow and a running light, and faces the ship; fighters fly to it.
+- **Bug fixed:** HIDE/SHOW saved a preference from inside a React state updater (“cannot update a component while
+  rendering” console error).
 
 ## Verified in this environment
 
-- Typecheck clean. Persist tests 30/30 (economy/save untouched).
-- Preview Chromium 390×844, **software GL, not a phone.**
-- Comparable ship-band pixels, same 390×844 gameplay crop:
-  - Before this pass: mean ~rgb(18,14,12), lit 0.08, center ~rgb(7,6,5).
-  - After still (HUD hidden): mean ~rgb(40,32,31), lit 0.29.
-  - Close inspect: mean ~rgb(55,46,43), lit 0.39.
-- DOM: `<canvas>` visible, no interior `<img>` on HULL.
-- Draw ~41–45 calls, ~24k triangles (planet + drones + gate). `frameMs` 15–100 here is the **sandbox GPU**, not a device claim.
-- Short WebM of ordinary play was recorded in this same Chromium. It is not a physical-device capture.
+- Chromium 390×844, **software GL (SwiftShader), not a phone.** Same viewpoints before/after, HUD sheet hidden.
+- Draw calls / triangles: before 8 / 1.9k (hull only, no activity) → after 29 / 27.7k (NAVE), 26 / 27.6k (CLOSE),
+  41 / 24.5k (RAID). Well under the ~100-draw budget. Frame times here are the software GPU and prove nothing.
+- No page errors or console errors on NAVE, CLOSE, RAID, reduced motion, and the static production build.
+- Typecheck clean, 35/35 tests, lint 0 errors.
 
 ## Still unverified
 
-- Physical-device 30/60 FPS and memory.
-- 5s / 15s / 1 min onboarding with a real player.
-- Owner approval of silhouette, material identity, and “remarkable spacecraft” bar.
-- Software-GL stills still crush dark metal relative to a real GPU. Inspect on a phone.
-
-## Asset provenance
-
-- Procedural three.js geometry (original).
-- Existing `public/nidus/tex-*.jpg` and sky plates.
-- No purchased kits. Music remains Nytheria Nyx.
+- Physical-device FPS, heat, and memory. Mobile dpr stays capped at 1.
+- Owner approval of the silhouette and palette.
+- 5 s / 15 s / 1 min onboarding with a real player.
 
 ## Defects remaining
 
-- Annex dress can still clutter a high-room hive.
-- No HDR IBL (budget). Metals use lights + PMREM RoomEnvironment.
-- FORGE / LAB / MINDS are still 2D plates.
-- HUD sheet still occupies the lower third on compact phones (WATCH hides it).
-- Drones read as gnats at NAVE distance; activity is clearer on CLOSE.
-- A failed GDL category cannot be averaged away. Do **not** call this AAA, optimized, or finished.
+- `tex-plate.jpg`, `tex-rivet.jpg` (and likely the other `tex-*` maps) have a blurred cross seam from offset-healing.
+  `tex-hull.jpg` is a mirrored clean crop; the mirror symmetry is visible up close. Regenerate proper tileables
+  (brief rules in `Grok.Art.md`).
+- Room growth still changes the economy but not the hull beyond hardpoints and molt keel.
+- FORGE / LAB / MINDS remain 2D interiors.
+- Fighters are small at RAID distance.
+- A failed GDL category cannot be averaged away. Do **not** call this AAA or finished.
 
-## Rollback
+## Asset provenance
 
-```
-git checkout d25e11d -- src/components/nidus/StationScene.tsx src/lib/nidus/view.ts
-```
-
-Hive in `localStorage` is not in git. Do not `localStorage.clear()`.
+Procedural three.js geometry (original). Existing repo textures; `tex-hull.jpg` derived from `tex-plate.jpg`.
+No purchased assets. No new dependencies.
