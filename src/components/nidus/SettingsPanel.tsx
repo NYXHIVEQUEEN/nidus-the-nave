@@ -16,7 +16,7 @@ import {
   type Density,
   type ViewPrefs,
 } from "@/lib/nidus/view";
-import { slotStamp } from "@/lib/nidus/save";
+import { eraseAllData, slotStamp } from "@/lib/nidus/save";
 import { APP_VERSION, buildReport, FAQ, SUPPORT_EMAIL, supportIssueUrl, supportMailto } from "@/lib/nidus/support";
 import { openNyxSpotify, setMusicBed, syncAudioGains } from "@/lib/nidus/audio";
 
@@ -321,6 +321,7 @@ export function SettingsPanel({
           >
             NEW HIVE
           </button>
+          <EraseData />
         </div>
       )}
       {tab === "help" && <HelpPane />}
@@ -332,6 +333,45 @@ export function SettingsPanel({
           TERMS
         </a>
       </div>
+    </div>
+  );
+}
+
+export function EraseData() {
+  const [armed, setArmed] = useState(false);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = window.setTimeout(() => setArmed(false), 6000);
+    return () => window.clearTimeout(t);
+  }, [armed]);
+  if (done) {
+    return <p role="status" className="text-[0.7rem] tracking-[0.12em] text-gilt">ERASED. NOTHING OF YOURS IS LEFT ON THIS DEVICE.</p>;
+  }
+  return (
+    <div className="nidus-card p-2">
+      <p className="font-display text-[0.7rem] tracking-[0.18em] text-gilt">YOUR DATA</p>
+      <p className="mt-1 text-[0.75rem] leading-snug text-muted">
+        Erases every hive, backup, pew, setting, and offline file NIDUS keeps on this device. Nothing is stored anywhere else. Hero purchases return from Google Play.
+      </p>
+      <button
+        type="button"
+        className={cn(
+          "mt-2 min-h-11 w-full border font-display text-xs tracking-[0.2em]",
+          armed ? "border-blood bg-blood text-bone" : "border-blood text-blood-bright",
+        )}
+        onClick={async () => {
+          if (!armed) {
+            setArmed(true);
+            return;
+          }
+          await eraseAllData();
+          setDone(true);
+          window.setTimeout(() => window.location.replace("/"), 900);
+        }}
+      >
+        {armed ? "TAP AGAIN TO ERASE EVERYTHING" : "ERASE MY DATA"}
+      </button>
     </div>
   );
 }

@@ -481,3 +481,10 @@ test("act reports a refused tap as deny and a real one as ok", async () => {
   assert.equal(act(get, () => { st = { ...st, ore: 5 }; }, "print", (k) => heard.push(k)), true);
   assert.deepEqual(heard, ["deny", "print"]);
 });
+
+test("nidusKeys finds only NIDUS keys", async () => {
+  const { nidusKeys } = await import("./save.ts");
+  const keys = ["nidus.save.v3", "other.app", "nidus.prefs.v1", "nidusfake"];
+  const store = { length: keys.length, key: (i: number) => keys[i] ?? null };
+  assert.deepEqual(nidusKeys(store), ["nidus.save.v3", "nidus.prefs.v1"]);
+});

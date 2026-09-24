@@ -8,6 +8,12 @@ export const PRE_IMPORT_KEY = "nidus.save.v3.preimport";
 const SAVE_VERSION = 3;
 const IMPORT_MAX_BYTES = 2_000_000;
 
+let sealed = false;
+
+export function storageSealed() {
+  return sealed;
+}
+
 const HIVE_MARKS = ["rooms", "ore", "minds", "hiveRank", "printed", "swarm"] as const;
 
 export function looksLikeHive(raw: unknown): raw is GameState {
@@ -133,7 +139,7 @@ export function loadSave(): GameState {
 }
 
 export function writeSave(state: GameState) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || sealed) return;
   try {
     const payload = JSON.stringify({ ...state, version: SAVE_VERSION, lastSaveAt: Date.now() });
     const prev = localStorage.getItem(KEY);
@@ -171,7 +177,7 @@ export function importSave(raw: string): GameState | null {
 }
 
 export function stashPreImport(state: GameState) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || sealed) return;
   try {
     localStorage.setItem(PRE_IMPORT_KEY, JSON.stringify(state));
   } catch {
@@ -190,13 +196,25 @@ export function wipeSave() {
   for (let i = 0; i < 3; i++) {
     localStorage.removeItem(`nidus.slot.v2.${i}`);
     localStorage.removeItem(`nidus.slot.v3.${i}`);
+    localStorage.removeItem(`nidus.auto.v3.${i}`);
   }
 }
 
 const SLOT = (i: number) => `nidus.slot.v3.${i}`;
+const AUTO = (i: number) => `nidus.auto.v3.${i}`;
+
+// Rolling safety copies. Never the player's STASH pews.
+export function writeAutoSnap(i: number, state: GameState) {
+  if (typeof window === "undefined" || sealed) return;
+  try {
+    localStorage.setItem(AUTO(i % 3), JSON.stringify({ ...state, lastSaveAt: Date.now() }));
+  } catch {
+    /* quota */
+  }
+}
 
 export function writeSlot(i: number, state: GameState) {
-  if (typeof window === "undefined") return false;
+  if (typeof window === "undefined" || sealed) return false;
   try {
     localStorage.setItem(SLOT(i), JSON.stringify({ ...state, lastSaveAt: Date.now() }));
     return true;
@@ -225,5 +243,33 @@ export function slotStamp(i: number): string | null {
     return p.hiveName || "HIVE";
   } catch {
     return null;
+  }
+}
+
+export function nidusKeys(store: Pick<Storage, "length" | "key">): string[] {
+  const keys: string[] = [];
+  for (let i = 0; i < store.length; i++) {
+    const k = store.key(i);
+    if (k && k.startsWith("nidus.")) keys.push(k);
+  }
+  return keys;
+}
+
+// Removes everything NIDUS keeps on this device: hives, backups, slots, prefs, purchases cache, offline files.
+export async function eraseAllData(): Promise<void> {
+  if (typeof window === "undefined") return;
+  sealed = true;
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      for (const k of nidusKeys(store)) store.removeItem(k);
+    } catch {
+      /* storage blocked */
+    }
+  }
+  try {
+    const names = await caches.keys();
+    await Promise.all(names.filter((n) => n.startsWith("nidus-")).map((n) => caches.delete(n)));
+  } catch {
+    /* no cache api */
   }
 }

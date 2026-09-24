@@ -1,3 +1,4 @@
+import { storageSealed } from "./save";
 const KEY = "nidus.prefs.v1";
 
 export type HelpId = "hull" | "forge" | "lab" | "raid" | "minds" | "view" | "wake" | "idle" | "flow";
@@ -113,7 +114,7 @@ function read() {
 read();
 
 function write() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || storageSealed()) return;
   try {
     localStorage.setItem(KEY, JSON.stringify(prefs));
   } catch {

@@ -27,7 +27,7 @@ import {
   sellStock,
   raiseZone,
 } from "./sim";
-import { exportSave, importSave, loadSave, readSlot, requestPersist, stashPreImport, wipeSave, writeSave, writeSlot } from "./save";
+import { exportSave, importSave, loadSave, readSlot, requestPersist, stashPreImport, wipeSave, writeAutoSnap, writeSave, writeSlot } from "./save";
 import type { GameState } from "./types";
 
 type Store = GameState & {
@@ -107,9 +107,13 @@ export const useNidus = create<Store>((set, get) => ({
       const next = applyTick(pickGame(live), now);
       next.tab = tab;
       next.selectedMind = selectedMind;
+      if (!live.started) {
+        set(next);
+        return;
+      }
       if (now - (next.lastSnapAt || 0) > 120_000) {
         const i = (next.snapIndex ?? 0) % 3;
-        writeSlot(i, next);
+        writeAutoSnap(i, next);
         next.snapIndex = i + 1;
         next.lastSnapAt = now;
       }
@@ -121,7 +125,7 @@ export const useNidus = create<Store>((set, get) => ({
     } catch {
       const s = pickGame(get());
       s.lastTick = now;
-      writeSave(s);
+      if (s.started) writeSave(s);
     }
   },
   start: () => {
