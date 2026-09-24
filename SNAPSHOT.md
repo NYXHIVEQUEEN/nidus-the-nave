@@ -1,3 +1,11 @@
+# NIDUS snapshot — cathedral hull rebuild
+
+`claude/lucid-archimedes-b4sfpo` → PR to `main`. Rollback: `49dfe77`. No hive wipe; save format unchanged.
+Hero ship rebuilt in `hullKit.ts` (no boxes), new light rig, planet/black hole/asteroid field/harvest drones/dust,
+raid duel reframed for portrait. Details and measurements: `store/QUALITY.md`.
+
+---
+
 # NIDUS snapshot — standalone web build, Sovereign court, audit
 
 Branch `claude/lucid-archimedes-b4sfpo` (PR to `main`). **No hive wipe.** Rollback: `330af0a`.

@@ -355,14 +355,12 @@ export function useIdleChrome(_locked: boolean) {
     setPoke((n) => n + 1);
   };
   const toggleHide = () => {
-    setCollapsed((c) => {
-      const next = !c;
-      const p = getPrefs();
-      patchPrefs({
-        watchNave: next,
-        ...(c && p.density === "watch" ? { density: "compact" as const } : {}),
-      });
-      return next;
+    const next = !collapsed;
+    const p = getPrefs();
+    setCollapsed(next);
+    patchPrefs({
+      watchNave: next,
+      ...(collapsed && p.density === "watch" ? { density: "compact" as const } : {}),
     });
     setPoke((n) => n + 1);
   };
