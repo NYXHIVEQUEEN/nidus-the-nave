@@ -44,7 +44,7 @@ matching reference (`hull-profiles`, `texture-design`, `shaders`, `lighting`,
 
 ## Locked product
 
-- Single player. No auth. No cloud. Save is `localStorage` key `nidus.save.v1`
+- Single player. No auth. No cloud. Save is `localStorage` key `nidus.save.v3`
   (+ `.bak`). Prefs `nidus.prefs.v1`.
 - **Never wipe the save** unless the player confirms NEW HIVE. Never
   `localStorage.clear()` in playtests. Persist immediately on print / raid /
@@ -72,7 +72,7 @@ typed “save”. A green overhaul that never left the sandbox is a lost build.
    untouched blobs.
 3. Diff against HEAD first. `sim.ts` / `save.ts` / `store.ts` / `content.ts`
    stay byte-identical unless this pass meant to edit them.
-4. Player keys stay in the browser: `nidus.save.v1` + `.bak` + `nidus.slot.*` +
+4. Player keys stay in the browser: `nidus.save.v3` + `.bak` + `.preimport` + `nidus.slot.v3.*` +
    `nidus.prefs.v1`. Git is the package. Their hive is not.
 5. Packaging = `src/lib/nidus/*` + `src/components/nidus/*` + `public/nidus` +
    `AGENTS.nidus.md` + `SNAPSHOT.md`. Not `node_modules`. Not a zip of
@@ -185,7 +185,7 @@ Tick order in `applyTick`: resources → rooms → rites → spark/wake → auto
 → auto-build/rite → battle tick / auto-raid → clamp. Advisor (`advise`) is
 read-only UI. Scripts (`scripts` / HIVE) write through that same pipeline.
 
-Save: `nidus.save.v1` + `.bak`. Slots `nidus.slot.0..2` are copies — loading a
+Save: `nidus.save.v3` + `.bak` (+ `.preimport` before an IMPORT). Slots `nidus.slot.v3.0..2` are copies — loading a
 slot writes the live key, it does **not** wipe the other pews. `migrate()`
 merges new fields; do not bump version to add a boolean.
 

@@ -10,6 +10,7 @@ You cannot finish Play from this chat. You need: a Play developer account, a liv
 
 - Privacy at `/privacy` (Play will refuse without a public policy URL)
 - Terms at `/terms`
+- Support at `/support` + in-game SETTINGS → FAQ with a fault report
 - PWA manifest + icons + feature graphic
 - Data-safety answers: `store/data-safety.json`
 - Content-rating notes: `store/content-rating.json`

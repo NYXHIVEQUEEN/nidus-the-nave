@@ -27,7 +27,7 @@ import {
   sellStock,
   raiseZone,
 } from "./sim";
-import { exportSave, importSave, loadSave, readSlot, requestPersist, wipeSave, writeSave, writeSlot } from "./save";
+import { exportSave, importSave, loadSave, readSlot, requestPersist, stashPreImport, wipeSave, writeSave, writeSlot } from "./save";
 import type { GameState } from "./types";
 
 type Store = GameState & {
@@ -217,6 +217,7 @@ export const useNidus = create<Store>((set, get) => ({
   importHive: (raw) => {
     const loaded = importSave(raw);
     if (!loaded) return false;
+    if (get().started) stashPreImport(pickGame(get()));
     set({ ...loaded, started: true });
     writeSave({ ...loaded, started: true, lastSaveAt: Date.now() });
     return true;

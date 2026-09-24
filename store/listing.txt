@@ -27,7 +27,8 @@ Organization: NYX HIVEQUEEN
 Website: GitHub NYXHIVEQUEEN/nidus-the-nave
 Privacy policy URL: https://YOUR-HOST/privacy
 Terms URL: https://YOUR-HOST/terms
-Support email: (put a mail you actually read)
+Support URL: https://YOUR-HOST/support
+Support email: (put a mail you actually read, then set SUPPORT_EMAIL in src/lib/nidus/support.ts)
 
 Graphic assets (this repo):
 - High-res icon 512: public/store/icon-512.png

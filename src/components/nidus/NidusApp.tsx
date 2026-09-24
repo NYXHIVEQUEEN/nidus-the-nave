@@ -57,7 +57,7 @@ import {
 } from "@/lib/nidus/guide";
 import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALVAGE_COOK, casteXpNeed, postBoostPct, autoHoldBerths, callNeed, OFFICER_CAP, techUnlocked } from "@/lib/nidus/progress";
 import { ChromeBound, StationMount } from "./StationMount";
-import { SettingsPanel } from "./SettingsPanel";
+import { SettingsPanel, type RitePane } from "./SettingsPanel";
 import { GoalDock, GuideSheet, LeftRail, StatusChip, Whisper, muteToggle, useDensity, useIdleChrome, useSyncPrefs, useViewport } from "./HiveChrome";
 import { cycleDensity, getPrefs, getSpinPaused, helpSeen, lookAtRoom, subscribeSpin } from "@/lib/nidus/view";
 import type { Caste, Rarity, Tab } from "@/lib/nidus/types";
@@ -241,7 +241,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   const tab = useNidus((s) => s.tab);
   const setTab = useNidus((s) => s.setTab);
   const [riteOpen, setRiteOpen] = useState(false);
-  const [riteStart, setRiteStart] = useState<"opt" | "view" | "codex" | "save">("view");
+  const [riteStart, setRiteStart] = useState<RitePane>("view");
   const [guide, setGuide] = useState<GuideId | null>(null);
   const [whisper, setWhisper] = useState<string | null>(null);
   const [muted, setMuted] = useState(() => getPrefs().muted);
@@ -330,7 +330,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleHide, setTab]);
 
-  const openRitePane = (pane: "opt" | "view" | "codex" | "save") => {
+  const openRitePane = (pane: RitePane) => {
     setRiteStart(pane);
     setRiteOpen(true);
   };

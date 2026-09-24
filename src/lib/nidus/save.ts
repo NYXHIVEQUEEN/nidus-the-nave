@@ -4,7 +4,19 @@ import type { GameState } from "./types";
 export const SAVE_KEY = "nidus.save.v3";
 const KEY = SAVE_KEY;
 const BAK = "nidus.save.v3.bak";
+export const PRE_IMPORT_KEY = "nidus.save.v3.preimport";
 const SAVE_VERSION = 3;
+const IMPORT_MAX_BYTES = 2_000_000;
+
+const HIVE_MARKS = ["rooms", "ore", "minds", "hiveRank", "printed", "swarm"] as const;
+
+export function looksLikeHive(raw: unknown): raw is GameState {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
+  const o = raw as Record<string, unknown>;
+  if (o.rooms !== undefined && (typeof o.rooms !== "object" || o.rooms === null || Array.isArray(o.rooms))) return false;
+  if (o.minds !== undefined && !Array.isArray(o.minds)) return false;
+  return HIVE_MARKS.filter((k) => o[k] !== undefined).length >= 2;
+}
 
 function migrate(raw: GameState): GameState {
   const base = defaultState();
@@ -101,14 +113,18 @@ function migrate(raw: GameState): GameState {
 export function loadSave(): GameState {
   if (typeof window === "undefined") return defaultState();
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY) ?? localStorage.getItem(BAK);
     if (!raw) return defaultState();
     const parsed = JSON.parse(raw) as GameState;
+    if (!looksLikeHive(parsed)) throw new Error("not a hive");
     return migrate(parsed);
   } catch {
     try {
       const bak = localStorage.getItem(BAK);
-      if (bak) return migrate(JSON.parse(bak) as GameState);
+      if (bak) {
+        const parsed = JSON.parse(bak) as unknown;
+        if (looksLikeHive(parsed)) return migrate(parsed);
+      }
     } catch {
       /* fall through */
     }
@@ -144,12 +160,22 @@ export function exportSave(state: GameState) {
 }
 
 export function importSave(raw: string): GameState | null {
+  if (typeof raw !== "string" || raw.length > IMPORT_MAX_BYTES) return null;
   try {
-    const parsed = JSON.parse(raw) as GameState;
-    if (!parsed || typeof parsed !== "object") return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!looksLikeHive(parsed)) return null;
     return migrate(parsed);
   } catch {
     return null;
+  }
+}
+
+export function stashPreImport(state: GameState) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PRE_IMPORT_KEY, JSON.stringify(state));
+  } catch {
+    /* quota or private mode */
   }
 }
 
@@ -157,6 +183,7 @@ export function wipeSave() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(KEY);
   localStorage.removeItem(BAK);
+  localStorage.removeItem(PRE_IMPORT_KEY);
   localStorage.removeItem("nidus.save.v2");
   localStorage.removeItem("nidus.save.v2.bak");
   localStorage.removeItem("nidus.save.v1");

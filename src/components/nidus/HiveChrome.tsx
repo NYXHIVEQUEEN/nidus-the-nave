@@ -6,6 +6,7 @@ import {
   Eye,
   EyeOff,
   HelpCircle,
+  LifeBuoy,
   Pause,
   RotateCw,
   Save,
@@ -15,6 +16,7 @@ import {
   Scaling,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { RitePane } from "./SettingsPanel";
 import { GUIDES, firstWhisper, type GuideId } from "@/lib/nidus/guide";
 import {
   applyCamPreset,
@@ -109,7 +111,7 @@ export function LeftRail({
   helpPulse: boolean;
   density: DensityResolved;
   onHelp: () => void;
-  onRitePane: (pane: "opt" | "view" | "codex" | "save") => void;
+  onRitePane: (pane: RitePane) => void;
   onMute: () => void;
   onCollapse: () => void;
   onStay: () => void;
@@ -226,6 +228,13 @@ export function LeftRail({
             onClick={() => onRitePane("save")}
           >
             <Save className="size-3" />
+          </RailBtn>
+          <RailBtn
+            label="FAQ"
+            title="Answers, fault report, support."
+            onClick={() => onRitePane("help")}
+          >
+            <LifeBuoy className="size-3" />
           </RailBtn>
         </div>
       )}

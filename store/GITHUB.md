@@ -6,7 +6,7 @@ Canonical repo:
 
 Older private snapshot (do not split work): [NYXHIVEQUEEN/nidus](https://github.com/NYXHIVEQUEEN/nidus)
 
-Saves are **never** in git. `nidus.save.v1` lives in the player’s browser.
+Saves are **never** in git. `nidus.save.v3` lives in the player’s browser.
 
 Public package checklist: `store/RELEASE.md`.
 

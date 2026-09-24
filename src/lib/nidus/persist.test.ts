@@ -451,3 +451,23 @@ test("foundry drips CUT and SPARK nets up once the spine is lit", () => {
 
 
 
+
+test("importSave refuses files that are not a hive", async () => {
+  const { looksLikeHive } = await import("./save.ts");
+  for (const bad of ["{}", "[]", "null", "42", '"nave"', '{"hello":1}', '{"rooms":[],"ore":1}', '{"minds":{},"ore":1}', "not json"]) {
+    assert.equal(importSave(bad), null, bad);
+  }
+  assert.equal(importSave("x".repeat(2_000_001)), null);
+  assert.equal(looksLikeHive({ ore: 10, rooms: {} }), true);
+  assert.equal(looksLikeHive(defaultState()), true);
+});
+
+test("support report carries no hive name and names the version", async () => {
+  const { buildReport, APP_VERSION, supportIssueUrl } = await import("./support.ts");
+  const s = { ...defaultState(), hiveName: "SECRET-NAVE" };
+  const r = buildReport(s, { nav: { userAgent: "UA", language: "en" }, width: 390, height: 844, now: 0 });
+  assert.ok(r.includes(APP_VERSION));
+  assert.ok(r.includes("390×844"));
+  assert.ok(!r.includes("SECRET-NAVE"));
+  assert.ok(supportIssueUrl(r).startsWith("https://github.com/NYXHIVEQUEEN/nidus-the-nave/issues/new?"));
+});

@@ -36,12 +36,18 @@ npm test
 
 ## Save keys (do not wipe)
 
-- `nidus.save.v1` live hive
-- `nidus.save.v1.bak` previous write
-- `nidus.slot.0..2` pew copies
+- `nidus.save.v3` live hive
+- `nidus.save.v3.bak` previous write
+- `nidus.save.v3.preimport` the hive as it was before the last IMPORT
+- `nidus.slot.v3.0..2` pew copies
 - `nidus.prefs.v1` local sliders
 
 NEW HIVE is the only burn. Confirm first. Git never holds a player hive.
+
+## Support
+
+In the hive: SETTINGS → FAQ (answers + a fault report the player copies by hand). Public page: `/support`.
+Rules for every agent: `AGENTS.project.md`. Launch gaps: `store/MARKET.md`.
 
 ## License
 
