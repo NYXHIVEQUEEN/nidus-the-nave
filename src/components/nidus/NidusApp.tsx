@@ -39,6 +39,8 @@ import { advise } from "@/lib/nidus/advisor";
 import { markCost, markName, raidCutPayout, weaponMods } from "@/lib/nidus/fleet";
 import { chime, resumeAudio, setAmbiance, unlockAudio, type ChimeKind } from "@/lib/nidus/audio";
 import { act } from "@/lib/nidus/feedback";
+import { useGain, useRolling } from "@/lib/nidus/rolling";
+import { TapJuice } from "./TapJuice";
 import { registerNidusPwa } from "@/lib/nidus/pwa";
 import { SAVE_KEY } from "@/lib/nidus/save";
 import { BOOT_IDLE, runBoot, type BootState } from "@/lib/nidus/boot";
@@ -59,7 +61,7 @@ import {
 import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALVAGE_COOK, casteXpNeed, postBoostPct, autoHoldBerths, callNeed, OFFICER_CAP, techUnlocked } from "@/lib/nidus/progress";
 import { ChromeBound, StationMount } from "./StationMount";
 import { SettingsPanel, type RitePane } from "./SettingsPanel";
-import { SovereignHall } from "./SovereignHall";
+import { CourtStrip, SovereignHall } from "./SovereignHall";
 import { initBilling, getShop } from "@/lib/nidus/billing";
 import { GoalDock, GuideSheet, LeftRail, StatusChip, Whisper, muteToggle, useDensity, useIdleChrome, useSyncPrefs, useViewport } from "./HiveChrome";
 import { cycleDensity, getPrefs, getSpinPaused, helpSeen, lookAtRoom, subscribeSpin } from "@/lib/nidus/view";
@@ -374,6 +376,11 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
         {tab !== "raid" && (
           <div className="px-3">
             <GoalDock goal={goal} stage={stage} collapsed={collapsed} onExpand={showChrome} verb={s.queuedRoom ? "BUILD" : tip.verb} why={tip.why} pct={buildPct} />
+            {!court && (
+              <div className="flex pl-12">
+                <CourtStrip onOpen={() => setCourt(true)} />
+              </div>
+            )}
           </div>
         )}
         {tab === "raid" && (
@@ -414,6 +421,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
           <SovereignHall onClose={() => setCourt(false)} />
         </div>
       )}
+      <TapJuice />
       {waking && <WakeOverlay />}
       {gift && !waking && <GiftOverlay />}
       {showBrief && !waking && !gift && <BriefOverlay />}
@@ -447,10 +455,10 @@ function ResourceBar({ compact }: { compact: boolean }) {
           <p className="text-[0.55rem] tracking-[0.18em] text-muted">RANK</p>
           <p className="font-display text-xs tabular-nums text-gilt">{hiveTitle(hiveRank)}</p>
         </button>
-        <Chip label="CUT" value={fmt(credits ?? 0)} sub={`${fmt((r.creditsPerSec ?? 0) * 60)}/m`} cap={Math.max(80, (credits ?? 0) + 40)} cur={credits ?? 0} venom onTap={setOpen} />
-        <Chip label="ORE" value={fmt(ore)} sub={`${fmt(oreNet * 60)}/m`} cap={oreCap(s)} cur={ore} onTap={setOpen} />
-        <Chip label="PARTS" value={fmt(parts)} sub={kiln ? `${fmt(r.partsPerSec * 60)}/m` : "KILN OFF"} cap={partsCap(s)} cur={parts} onTap={setOpen} />
-        <Chip label="SPARK" value={waking ? "CALL" : sparkBanked(s) ? "BANK" : `${Math.floor(spark)}`} sub={`${(r.sparkPerSec - (r.sparkDrain ?? 0)) >= 0 ? "+" : ""}${fmt((r.sparkPerSec - (r.sparkDrain ?? 0)) * 60)}/m`} cap={sparkCap(s)} cur={spark} venom starve={starve} onTap={setOpen} />
+        <Chip label="CUT" num={credits ?? 0} sub={`${fmt((r.creditsPerSec ?? 0) * 60)}/m`} cap={Math.max(80, (credits ?? 0) + 40)} cur={credits ?? 0} venom onTap={setOpen} />
+        <Chip label="ORE" num={ore} sub={`${fmt(oreNet * 60)}/m`} cap={oreCap(s)} cur={ore} onTap={setOpen} />
+        <Chip label="PARTS" num={parts} sub={kiln ? `${fmt(r.partsPerSec * 60)}/m` : "KILN OFF"} cap={partsCap(s)} cur={parts} onTap={setOpen} />
+        <Chip label="SPARK" num={spark} text={waking ? "CALL" : sparkBanked(s) ? "BANK" : undefined} whole sub={`${(r.sparkPerSec - (r.sparkDrain ?? 0)) >= 0 ? "+" : ""}${fmt((r.sparkPerSec - (r.sparkDrain ?? 0)) * 60)}/m`} cap={sparkCap(s)} cur={spark} venom starve={starve} onTap={setOpen} />
         {echo > 0 && (
           <button type="button" className="text-left" onClick={() => setOpen(open === "ECHO" ? null : "ECHO")}>
             <p className="text-[0.55rem] tracking-[0.18em] text-muted">ECHO</p>
@@ -482,12 +490,15 @@ function ResourceBar({ compact }: { compact: boolean }) {
 }
 
 function Chip({
-  label, value, sub, cap, cur, venom, starve, onTap,
-}: { label: string; value: string; sub?: string; cap: number; cur: number; venom?: boolean; starve?: boolean; onTap: (k: string | null) => void }) {
+  label, num, text, whole, sub, cap, cur, venom, starve, onTap,
+}: { label: string; num: number; text?: string; whole?: boolean; sub?: string; cap: number; cur: number; venom?: boolean; starve?: boolean; onTap: (k: string | null) => void }) {
+  const shown = useRolling(num);
+  const gain = useGain(num);
   return (
-    <button type="button" className={cn("min-w-[2.4rem] shrink-0 text-left", starve && "nidus-pulse", cur / cap > 0.92 && "nidus-cap")} title={gloss(label) || `${label}`} onClick={() => onTap(label)}>
+    <button type="button" className={cn("relative min-w-[2.4rem] shrink-0 text-left", starve && "nidus-pulse", cur / cap > 0.92 && "nidus-cap")} title={gloss(label) || `${label}`} onClick={() => onTap(label)}>
+      {gain && <span key={gain.key} className="nidus-gain">+{fmt(gain.amount)}</span>}
       <p className="text-[0.48rem] tracking-[0.14em] text-muted">{label}</p>
-      <p className={cn("font-display text-[0.7rem] tabular-nums", venom ? "text-venom" : "text-bone")}>{value}</p>
+      <p className={cn("font-display text-[0.7rem] tabular-nums", venom ? "text-venom" : "text-bone")}>{text ?? (whole ? `${Math.floor(shown)}` : fmt(shown))}</p>
       {sub && <p className="text-[0.48rem] tabular-nums text-gilt-dim">{sub}</p>}
       <div className="mt-0.5 h-0.5 w-10 bg-iron">
         <div className={cn("h-0.5", venom ? "bg-venom" : "bg-gilt")} style={{ width: `${Math.min(100, (cur / cap) * 100)}%` }} />

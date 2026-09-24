@@ -18,6 +18,11 @@ decisions only Nytheria Nyx can make.
 - [x] Version shown in-game (`APP_VERSION` in `src/lib/nidus/support.ts`).
 - [x] Team and security rules for every agent: `AGENTS.project.md`.
 - [x] Docs named the wrong save keys (`v1`). Fixed to the real `v3` keys.
+- [x] Standalone static web build (no Grok platform code wired in); works on any https host and as the Play wrapper URL.
+- [x] ERASE MY DATA in SETTINGS → SAVE and on `/privacy`; auto-backups no longer overwrite STASH pews; nothing is stored before WAKE.
+- [x] Every button reports refused taps (deny tone + shake) instead of a false success sound.
+- [x] 20 Sovereign heroes with real edicts, free 10-minute trials, Play Billing ($0.99 each / $9.99 all), restore, purchase reveal. Product list: `store/PRODUCTS.md`.
+- [x] Rolling counters, gain pops, tap sparks, court strip on the HUD.
 
 ## Must before launch
 
@@ -25,7 +30,7 @@ decisions only Nytheria Nyx can make.
       not your personal inbox, since it becomes public). Put it in
       `SUPPORT_EMAIL`. Until then the FAQ button opens a GitHub issue, which
       needs a GitHub account and is public. Most players will not do that.
-- [ ] **QUEEN — money model.** Pick one:
+- [x] **QUEEN — money model.** Chosen: $0.99 per hero, $9.99 for all 20, no ads, Play Billing first. Kept below for the record:
       1. *Premium* (one price, e.g. $2.99–$4.99). No code change, privacy stays
          "collect nothing", fits "no ads". Lowest risk. Fewer downloads.
       2. *Free + supporter pack / cosmetics* through Play Billing. More
@@ -39,6 +44,9 @@ decisions only Nytheria Nyx can make.
       on your word.
 - [ ] `.vercel/output/` build files (88) are committed. Untrack and ignore them.
 - [ ] Live https host + `assetlinks.json` SHA-256 (see `store/PLAY.md`).
+- [ ] **QUEEN — 20 hero portraits** from `docs/ART-BRIEF.md` into `public/nidus/heroes/`. The court ships stand-ins until then.
+- [ ] Create the 21 products in Play Console exactly as `store/PRODUCTS.md` lists, then run its 5-step purchase test on the Internal track.
+- [ ] **QUEEN — delete the leftover Grok/platform files** (safety check blocked it for agents; see PR notes).
 - [ ] Test on a real mid-range Android phone: 30+ FPS, no heat, save survives
       force-close and reboot. `store/QUALITY.md` lists this as unverified.
 - [ ] Bump `APP_VERSION` and `appVersionCode` in `store/twa-manifest.json`

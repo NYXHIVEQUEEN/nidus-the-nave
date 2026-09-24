@@ -4,7 +4,9 @@ Read, in order, before any change:
 
 1. `AGENTS.project.md` — the Hive Queen's team, safety, and release rules. Highest priority.
 2. `AGENTS.nidus.md` — game guardrails, locked art and product, known failures.
-3. `docs/hull/` — 3D hull craft notes and the GDL acceptance bar.
+3. `.grok/skills/space-hull-3d/` — 3D hull craft notes and the GDL acceptance bar
+   (moves to `docs/hull/` when the Grok folder is removed).
+4. `docs/ART-BRIEF.md` — hero portrait spec. `store/PRODUCTS.md` — Play product IDs.
 
 ## Stack
 

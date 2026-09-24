@@ -1,3 +1,14 @@
+# NIDUS snapshot — standalone web build, Sovereign court, audit
+
+Branch `claude/lucid-archimedes-b4sfpo` (PR to `main`). **No hive wipe.** Rollback: `330af0a`.
+
+- Plain Vite + TanStack Router static build (`npm run build` → `dist/`). Grok plugins, auth, DB, preview bridge no longer wired.
+- Save: `nidus.save.v3` (+ `.bak`, `.preimport`), pews `nidus.slot.v3.*`, rolling `nidus.auto.v3.*`, prefs `nidus.prefs.v1`, owned heroes cache `nidus.owned.v1`.
+- New state fields (migrate defaults): `sovereigns`, `trial`, `trialsUsed`. `sim.ts` untouched; edicts hook `rates` / `offlineCapSec` / `printCost` / `raidCutPayout`.
+- Tests 35/35, typecheck clean, lint 0 errors, 390×844 Chromium passes (no page errors, erase leaves no keys).
+
+---
+
 # NIDUS snapshot — support, save safety, Hive Queen rules
 
 Branch `claude/lucid-archimedes-b4sfpo` (PR to `main`). **No hive wipe.** Rollback: `330af0a`.

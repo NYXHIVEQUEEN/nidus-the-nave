@@ -9,7 +9,7 @@ Sentient Command minds, industrial femme deathcore. Owner is Nytheria Nyx, 31,
 self-consenting. Art is **hot, armored, not explicit**. Do not clone her face.
 
 **Acceptance (not optional polish):** the full Game Design Lead directive in
-`.grok/skills/space-hull-3d/references/gdl-acceptance.md` is the review bar.
+`.grok/skills/space-hull-3d/references/gdl-acceptance.md` (moving to `docs/hull/`) is the review bar.
 Visual quality, readable idle activity, and measured mobile cost must all pass.
 A failed category cannot be averaged away. Do not call the hive AAA or finished
 without evidence. Rollback: last tagged snapshot in `SNAPSHOT.md`.

@@ -27,14 +27,15 @@ function clock(ms: number) {
 }
 
 export function Portrait({ hero, className }: { hero: Sovereign; className?: string }) {
-  const [src, setSrc] = useState(hero.art);
+  const chain = [hero.art, hero.art.replace(/\.webp$/, ".jpg"), hero.portrait];
+  const [i, setI] = useState(0);
   return (
     <img
-      src={src}
+      src={chain[i]}
       alt={`${hero.name}, ${hero.title}`}
       loading="lazy"
       decoding="async"
-      onError={() => setSrc((cur) => (cur === hero.portrait ? cur : hero.portrait))}
+      onError={() => setI((n) => Math.min(n + 1, chain.length - 1))}
       className={cn("h-full w-full object-cover object-[center_22%]", className)}
     />
   );
@@ -47,6 +48,12 @@ export function SovereignHall({ onClose }: { onClose: () => void }) {
   const trial = useNidus((s) => s.trial);
   const molt = useNidus((s) => s.moltLayer);
   const [pick, setPick] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState<string | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => setRevealed((e as CustomEvent<string>).detail);
+    window.addEventListener("nidus:bought", on);
+    return () => window.removeEventListener("nidus:bought", on);
+  }, []);
   const seats = sovereignSeats({ moltLayer: molt });
   const allOwned = shop.owned.size >= SOVEREIGNS.length;
   const hero = SOVEREIGNS.find((h) => h.id === pick) ?? null;
@@ -68,7 +75,8 @@ export function SovereignHall({ onClose }: { onClose: () => void }) {
         </button>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2" data-scroll>
+      <div className="relative min-h-0 flex-1 overflow-y-auto p-2" data-scroll>
+        {revealed && <Reveal sku={revealed} onDone={() => setRevealed(null)} onPick={setPick} />}
         {hero ? (
           <HeroDetail hero={hero} now={now} onBack={() => setPick(null)} />
         ) : (
@@ -162,7 +170,9 @@ function BuyButton({ sku, label, wide }: { sku: string; label: string; wide?: bo
       type="button"
       disabled={Boolean(shop.busy)}
       onClick={async () => {
-        if (await buy(sku)) chime("claim");
+        if (!(await buy(sku))) return;
+        chime("claim");
+        window.dispatchEvent(new CustomEvent("nidus:bought", { detail: sku }));
       }}
       className={cn("nidus-cut nidus-cut-on min-h-11 px-4 font-display text-[0.72rem] tracking-[0.16em] disabled:opacity-50", wide && "w-full")}
     >
@@ -263,5 +273,55 @@ function HeroDetail({ hero, now, onBack }: { hero: Sovereign; now: number; onBac
       )}
       <ShopFooter />
     </article>
+  );
+}
+
+function Reveal({ sku, onDone, onPick }: { sku: string; onDone: () => void; onPick: (id: string) => void }) {
+  const all = sku === BUNDLE_SKU;
+  const hero = all ? (SOVEREIGNS.find((h) => h.edict === "all") ?? SOVEREIGNS[0]) : SOVEREIGNS.find((h) => heroSku(h.id) === sku);
+  if (!hero) return null;
+  return (
+    <div className="nidus-reveal absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 p-4 text-center">
+      <span className="nidus-reveal-rays" aria-hidden />
+      <div className="nidus-sov nidus-sov-hero nidus-reveal-card relative aspect-[4/5] w-3/4 max-w-[16rem] overflow-hidden" style={{ ["--sov" as string]: hero.accent }}>
+        <Portrait hero={hero} />
+        <span className="nidus-sov-veil" />
+      </div>
+      <p className="relative font-display text-[0.7rem] tracking-[0.3em] text-gilt">{all ? "THE FULL COURT KNEELS" : "A SOVEREIGN KNEELS"}</p>
+      <p className="relative font-display text-2xl tracking-[0.24em] text-bone">{all ? "ALL 20 ARE YOURS" : hero.name}</p>
+      {!all && <p className="relative text-sm italic text-bone/85">“{hero.line}”</p>}
+      <button
+        type="button"
+        className="nidus-cut nidus-cut-on relative min-h-12 w-full max-w-xs font-display text-sm tracking-[0.24em]"
+        onClick={() => {
+          onDone();
+          if (!all) onPick(hero.id);
+        }}
+      >
+        {all ? "SEE YOUR COURT" : "TAKE HER TO THE THRONE"}
+      </button>
+    </div>
+  );
+}
+
+export function CourtStrip({ onOpen }: { onOpen: () => void }) {
+  const seated = useNidus((s) => s.sovereigns);
+  const trial = useNidus((s) => s.trial);
+  const now = useNow();
+  const trying = trial && now < trial.until ? SOVEREIGNS.find((h) => h.id === trial.id) : undefined;
+  const court = SOVEREIGNS.filter((h) => seated.includes(h.id));
+  if (court.length === 0 && !trying) return null;
+  return (
+    <button type="button" onClick={onOpen} className="pointer-events-auto mt-1 flex items-center gap-1.5 self-start border border-gilt/40 bg-void/70 px-1.5 py-1 backdrop-blur-sm" data-chrome>
+      {[...court, ...(trying ? [trying] : [])].map((h) => (
+        <span key={h.id} className="nidus-crest" style={{ ["--sov" as string]: h.accent }} title={`${h.name} · ${h.power}`}>
+          <Portrait hero={h} />
+        </span>
+      ))}
+      <span className="font-display text-[0.5rem] leading-tight tracking-[0.12em] text-gilt">
+        {court.map((h) => h.power).join(" · ")}
+        {trying && <span className="block text-venom">TRIAL {trying.power} · {clock(trial!.until - now)}</span>}
+      </span>
+    </button>
   );
 }
