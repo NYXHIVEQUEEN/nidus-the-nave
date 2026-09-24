@@ -54,8 +54,8 @@ matching reference (`hull-profiles`, `texture-design`, `shaders`, `lighting`,
 - Selectors into the 3D scene **must be primitives**
   (`s.rooms.solar.built`, `Math.round(s.charge)`). A new object every tick
   remounts the Canvas and kills mobile.
-- 3D is lazy (`StationMount` + Suspense). Title/WAKE must SSR. Do not import
-  `three` from a route module.
+- 3D is lazy (`StationMount` + Suspense). Title/WAKE must paint before the
+  3D chunk loads. Do not import `three` from a route module.
 
 ## Ship snapshot (mandatory)
 

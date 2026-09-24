@@ -2,10 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage } from "@/components/nidus/LegalPage";
 import { APP_VERSION, FAQ, SUPPORT_EMAIL, SUPPORT_ISSUES } from "@/lib/nidus/support";
 
-export const Route = createFileRoute("/support")({
-  head: () => ({ meta: [{ title: "NIDUS · Support" }] }),
-  component: Support,
-});
+export const Route = createFileRoute("/support")({ component: Support });
 
 function Support() {
   return (

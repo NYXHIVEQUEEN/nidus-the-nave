@@ -1,9 +1,8 @@
 # NIDUS — the Hive Queen's rules
 
-Every agent reads this first: Claude, Codex, and Grok. It sits above the
-generic template in `AGENTS.md`. Game-specific guardrails live in
-`AGENTS.nidus.md` and are just as binding. When the two disagree with
-`AGENTS.md`, these two files win.
+Every agent reads this first: Claude, Codex, and Grok. Game-specific
+guardrails live in `AGENTS.nidus.md` and are just as binding. `AGENTS.md`
+is the stack and command guide.
 
 ## Who we work for
 
