@@ -1,3 +1,43 @@
+# Handoff — pass 5: security, trust, platform sweep (24 Sep 2026, overnight)
+
+Rollback: `3906156` (branch before this sweep). No save wipe; save keys unchanged. New local keys:
+`nidus.acked.v1` (only when the purchase check is on) and session flag `nidus.twa`; ERASE removes both.
+
+## Security
+- Production Content-Security-Policy (same-origin only) + host headers (`public/_headers`, `vercel.json`).
+- Imported / tampered saves are cleaned: numbers clamped, unknown keys dropped, portraits must be local game art.
+- `npm audit --omit=dev`: 0 vulnerabilities. No secrets in tracked files.
+- Grok preview files (`public/__grok`, Grok logo) no longer ship on the live site.
+
+## Trust
+- **Purchase check** (Google refunds purchases not acknowledged in 3 days): built, tested, **off**
+  until the owner approves and adds her Play key (`store/PRODUCTS.md`). Privacy page discloses it only when on.
+- Privacy, terms, content rating, data safety, PLAY.md now match what the game does (offline file copy,
+  EXPORT, website link, M/17+ target, live shop, erase path).
+- Inside the Play app without Chrome, the court says NEEDS CHROME instead of a store link.
+
+## Platform
+- No-WebGL / 3D crash: painted room art + "3D OFF" / "TAP TO RETRY" chip; game fully playable.
+- INSTALL HOME: real install prompt (Chrome/Edge/Android), Safari steps on iOS, menu steps elsewhere.
+- Sound pauses when the app is hidden, resumes on return or next tap (iOS "interrupted" too).
+- Safari without StereoPanner: space ambience falls back cleanly.
+- Offline cache renamed per build, so updates drop old files from phones. Service worker registers.
+- EXPORT download works on Safari/Firefox (link no longer revoked instantly).
+- Landscape phones: side sheet sits under the resource bar.
+- Rooms darker (bone pillars and walls no longer washed out). Unused texture + 2 unused boot images dropped.
+- Hosting: root of a domain only (`store/GITHUB.md`); browser floor Chrome 111 / Safari 16.4 / Firefox 128.
+
+## Verified here (Chromium, SwiftShader — not a real phone)
+- Typecheck clean, 42/42 tests, lint 0 errors, production build.
+- Production static smoke at 390×844, 844×390, 1280×800 (+ 820×1180 and no-WebGL earlier): every tab,
+  court, settings; no page, console, or CSP errors; no sideways scroll; service worker active.
+
+## Still unverified
+- Real Android phone (TWA), iPhone Safari, and a real Play purchase (needs Play Console + license tester).
+- The purchase check against real Google (needs her service account).
+
+---
+
 # GDL handoff — pass 4: lean warship, 3D rooms, live interiors (24 Sep 2026)
 
 Rollback: `1d4775b` (main before this pass). No save wipe; new field `boost2x` defaults false via migrate().

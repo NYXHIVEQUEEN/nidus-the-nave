@@ -1,3 +1,11 @@
+# NIDUS snapshot — pass 5 overnight sweep
+
+Security (CSP, headers, hardened imports), trust (docs match behavior; Play purchase check built but OFF
+pending the owner's yes), platform (no-WebGL fallback, install button, audio pause, per-build offline cache,
+Safari export, landscape). Rollback: `3906156`. Save format unchanged. Details: `store/QUALITY.md`.
+
+---
+
 # NIDUS snapshot — pass 4
 
 Double Tithe ($2.99 permanent 2x), website link (URL pending), music rotation + space ambience, lean warship,
