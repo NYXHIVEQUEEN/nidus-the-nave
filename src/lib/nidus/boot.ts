@@ -15,10 +15,11 @@ export const BOOT_ASSETS: string[] = [
     "/nidus/tex-bone-s.jpg",
     "/nidus/tex-filigree-s.jpg",
     "/nidus/sky-arch.jpg",
-    ...Object.values(FRAMES).flatMap((f) => f.portraits),
-    ...RAIDS.map((r) => r.image),
   ]),
 ];
+
+// Warmed after WAKE so MINDS and RAID cards are ready without holding the title screen.
+export const LATE_ASSETS: string[] = [...new Set([...Object.values(FRAMES).flatMap((f) => f.portraits), ...RAIDS.map((r) => r.image)])];
 
 export type BootState = { pct: number; ready: boolean; label: string };
 
@@ -73,4 +74,11 @@ export async function runBoot(onProgress: (boot: BootState) => void): Promise<vo
     }),
   ]);
   onProgress({ pct: 100, ready: true, label: "READY" });
+  void warmLate();
+}
+
+async function warmLate() {
+  for (let i = 0; i < LATE_ASSETS.length; i += 2) {
+    await Promise.all(LATE_ASSETS.slice(i, i + 2).map(loadImage));
+  }
 }

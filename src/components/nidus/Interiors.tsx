@@ -23,6 +23,7 @@ import {
 import { useNidus } from "@/lib/nidus/store";
 import { TECH, throneCap, totalSwarm } from "@/lib/nidus/content";
 import { droneGeo, glowTexture } from "./hullKit";
+import { SOVEREIGNS } from "@/lib/nidus/heroes";
 import { merge } from "./roomKit";
 
 // Live 3D rooms for FORGE, LAB and MINDS. They share the ship's Canvas: one WebGL context.
@@ -555,6 +556,12 @@ function Minds() {
       .join("|"),
   );
   const waking = useNidus((s) => Boolean(s.waking));
+  const court = useNidus((s) => {
+    const ids = [...s.sovereigns];
+    if (s.trial && Date.now() < s.trial.until && !ids.includes(s.trial.id)) ids.push(s.trial.id);
+    return ids.slice(0, 3).join("|");
+  });
+  const courtArt = court ? court.split("|").map((id) => SOVEREIGNS.find((h) => h.id === id)?.art).filter((a): a is string => Boolean(a)) : [];
   const tex = useRoomTextures();
   const velvet = useTiled(tex.filigree, 4, 1);
   const thrones = useRef<InstancedMesh>(null);
@@ -612,6 +619,27 @@ function Minds() {
       {seats.map((s, i) => (
         <Banner key={`${i}-${portraits[i] ?? "none"}`} src={portraits[i] ?? "/nidus/warden.jpg"} on={Boolean(portraits[i])} position={[s.x, 2.75, s.z - 0.15]} />
       ))}
+      {courtArt.length > 0 && (
+        <group position={[0, 0, -5.4]}>
+          <mesh position={[0, 0.45, 0]}>
+            <cylinderGeometry args={[1.6, 1.7, 0.9, 32]} />
+            <meshStandardMaterial map={tex.rivet} color="#7a2a30" metalness={0.5} roughness={0.45} />
+          </mesh>
+          {courtArt.map((art, i) => {
+            const x = (i - (courtArt.length - 1) / 2) * 1.2;
+            return (
+              <group key={art}>
+                <Banner src={art} on position={[x, 4.15, 0.1]} />
+                <mesh position={[x, 4.15, 0.05]}>
+                  <planeGeometry args={[1.0, 1.46]} />
+                  <meshStandardMaterial color="#6e5530" emissive="#8a6a3a" emissiveIntensity={0.18} metalness={0.9} roughness={0.35} />
+                </mesh>
+              </group>
+            );
+          })}
+          <pointLight position={[0, 4.0, 1.2]} color="#ffd59a" intensity={3} distance={5} decay={1.8} />
+        </group>
+      )}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, -0.4]}>
         <ringGeometry args={[0.7, 0.8, 64]} />
         <meshStandardMaterial ref={circle} color="#2a0e10" emissive="#c45a4a" emissiveIntensity={0.15} toneMapped={false} />
