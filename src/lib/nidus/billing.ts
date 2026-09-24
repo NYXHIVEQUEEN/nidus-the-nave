@@ -23,6 +23,7 @@ export type Shop = {
   prices: Record<string, string>;
   busy: string | null;
   note: string;
+  inApp: boolean;
 };
 
 export const ALL_SKUS = [BUNDLE_SKU, BOOST_SKU, ...SOVEREIGNS.map((h) => heroSku(h.id))];
@@ -45,7 +46,25 @@ export function formatPrice(p: { currency: string; value: string }): string {
   }
 }
 
-let shop: Shop = { mode: "loading", owned: new Set(), boost: false, ready: false, prices: {}, busy: null, note: "" };
+let shop: Shop = { mode: "loading", owned: new Set(), boost: false, ready: false, prices: {}, busy: null, note: "", inApp: false };
+
+const APP_REFERRER = "android-app://com.nyxhivequeen.nidus";
+const APP_FLAG = "nidus.twa";
+
+// The Play app opens NIDUS with this referrer; remember it for reloads in the same session.
+function inAndroidApp(): boolean {
+  try {
+    if (document.referrer.startsWith(APP_REFERRER)) {
+      sessionStorage.setItem(APP_FLAG, "1");
+      return true;
+    }
+    return sessionStorage.getItem(APP_FLAG) === "1";
+  } catch {
+    return false;
+  }
+}
+
+const NEEDS_CHROME = "PURCHASES NEED GOOGLE CHROME ON THIS PHONE. INSTALL OR UPDATE CHROME, THEN REOPEN NIDUS. HEROES YOU OWN RETURN THEN.";
 let service: DigitalGoods | null = null;
 const listeners = new Set<() => void>();
 
@@ -153,15 +172,18 @@ export function initBilling(): Promise<boolean> {
   if (started) return started;
   started = (async () => {
     const w = typeof window === "undefined" ? null : (window as WithGoods);
-    if (!w?.getDigitalGoodsService || typeof PaymentRequest === "undefined") {
-      emit({ mode: "web", owned: new Set(), boost: false, ready: true });
+    const inApp = w ? inAndroidApp() : false;
+    // In the Play app without billing (another browser runs it), keep last known purchases and say why.
+    const noBilling = () => {
+      const cached = inApp ? readCache() : [];
+      emit({ mode: "web", inApp, owned: ownedFrom(cached), boost: cached.includes(BOOST_SKU), ready: true, note: inApp ? NEEDS_CHROME : "" });
       return false;
-    }
+    };
+    if (!w?.getDigitalGoodsService || typeof PaymentRequest === "undefined") return noBilling();
     try {
       service = await w.getDigitalGoodsService(PLAY);
     } catch {
-      emit({ mode: "web", owned: new Set(), boost: false, ready: true });
-      return false;
+      return noBilling();
     }
     emit({ mode: "play" });
     try {

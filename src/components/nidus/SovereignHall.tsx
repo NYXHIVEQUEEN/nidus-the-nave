@@ -177,6 +177,13 @@ function BundleCard() {
 
 function BuyButton({ sku, label, wide }: { sku: string; label: string; wide?: boolean }) {
   const shop = useShop();
+  if (shop.mode === "web" && shop.inApp) {
+    return (
+      <span className={cn("nidus-cut flex min-h-11 items-center justify-center px-3 font-display text-[0.6rem] tracking-[0.14em] text-muted", wide && "w-full")}>
+        NEEDS CHROME
+      </span>
+    );
+  }
   if (shop.mode !== "play") {
     return (
       <a
