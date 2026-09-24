@@ -1,5 +1,7 @@
 # SOVEREIGN art brief (20 heroes)
 
+Rules every image must follow (bands, failures, reject list): `Grok.Art.md` at the repo root.
+
 Generate these in Grok Imagine (or any image tool). Save each final as
 `public/nidus/heroes/<id>.webp` (or `.jpg`). The game picks it up on the next build; until then it shows a stand-in.
 
