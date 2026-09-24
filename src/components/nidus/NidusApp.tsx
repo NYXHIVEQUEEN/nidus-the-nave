@@ -37,7 +37,7 @@ import {
 } from "@/lib/nidus/content";
 import { advise } from "@/lib/nidus/advisor";
 import { markCost, markName, raidCutPayout, weaponMods } from "@/lib/nidus/fleet";
-import { chime, resumeAudio, setAmbiance, unlockAudio, type ChimeKind } from "@/lib/nidus/audio";
+import { chime, pauseAudio, resumeAudio, setAmbiance, unlockAudio, type ChimeKind } from "@/lib/nidus/audio";
 import { act } from "@/lib/nidus/feedback";
 import { WEBSITE_URL } from "@/lib/nidus/support";
 import { useGain, useRolling } from "@/lib/nidus/rolling";
@@ -134,9 +134,13 @@ export function NidusApp() {
       if (!cancelled) setBoot({ pct: 100, ready: true, label: "READY" });
     }, 14000);
     const onVis = () => {
-      resumeAudio();
-      if (document.visibilityState === "hidden") saveNow();
-      else tick(Date.now());
+      if (document.visibilityState === "hidden") {
+        pauseAudio();
+        saveNow();
+      } else {
+        resumeAudio();
+        tick(Date.now());
+      }
     };
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("pagehide", saveNow);
@@ -312,8 +316,9 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   }, [tab, prefs.hints, whispered]);
 
   useEffect(() => {
+    // Every tap re-wakes sound; iOS may refuse to resume on its own after the app was hidden.
     const on = () => unlockAudio();
-    window.addEventListener("pointerdown", on, { once: true });
+    window.addEventListener("pointerdown", on, { passive: true });
     return () => window.removeEventListener("pointerdown", on);
   }, []);
 

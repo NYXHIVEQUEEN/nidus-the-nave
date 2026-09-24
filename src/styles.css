@@ -524,7 +524,7 @@
   .nidus-root.nidus-land .nidus-sheet {
     position: absolute;
     right: 0;
-    top: 0;
+    top: calc(max(0.45rem, env(safe-area-inset-top)) + 3.7rem);
     bottom: 2.8rem;
     width: min(22rem, 44vw);
     max-height: none;

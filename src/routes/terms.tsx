@@ -14,7 +14,7 @@ function Terms() {
         <strong className="text-gilt">License.</strong> You may play the hive for yourself. Art, music, names, and code are owned by Nytheria Nyx / NYX HIVEQUEEN unless a file says otherwise. Do not sell the hive as your own.
       </p>
       <p>
-        <strong className="text-gilt">Saves.</strong> Progress is local. We are not liable if a browser wipe, OS update, or uninstall eats the nave. Use STASH if you care.
+        <strong className="text-gilt">Saves.</strong> Progress is local. We are not liable if a browser wipe, OS update, or uninstall eats the nave. Use SAVE → EXPORT to keep a copy off this device.
       </p>
       <p>
         <strong className="text-gilt">Music.</strong> Rules of Engagement is performed by Nytheria Nyx. Do not rip the file out of the hive for a separate release without her.

@@ -158,7 +158,7 @@ export function unlockAudio() {
     applyGains();
     startStation(m);
   }
-  if (m.ctx.state === "suspended") void m.ctx.resume();
+  if (m.ctx.state !== "running" && m.ctx.state !== "closed") void m.ctx.resume().catch(() => {});
   if (!m.loading) m.loading = loadBeds(m);
 }
 
@@ -327,8 +327,9 @@ function startStation(m: Mixer) {
 type SpaceEvent = (m: Mixer, out: AudioNode) => void;
 
 function spaceOut(m: Mixer): AudioNode {
-  const pan = m.ctx.createStereoPanner();
-  pan.pan.value = Math.random() * 1.6 - 0.8;
+  // Older Safari has no StereoPanner; fall back to a plain gain so the event still plays centered.
+  const pan: AudioNode & { pan?: AudioParam } = typeof m.ctx.createStereoPanner === "function" ? m.ctx.createStereoPanner() : m.ctx.createGain();
+  if (pan.pan) pan.pan.value = Math.random() * 1.6 - 0.8;
   const send = m.ctx.createGain();
   send.gain.value = 0.6;
   pan.connect(m.amb);
@@ -522,9 +523,15 @@ function noiseBurst(m: Mixer, peak: number, dur: number, hp: number) {
   src.start(t);
 }
 
+/** Leaving the app pauses every sound, so the hive never plays from a pocket. */
+export function pauseAudio() {
+  const m = hold.m;
+  if (m?.ctx.state === "running") void m.ctx.suspend().catch(() => {});
+}
+
 export function resumeAudio() {
   const m = hold.m;
-  if (m?.ctx.state === "suspended") void m.ctx.resume();
+  if (m && m.ctx.state !== "running" && m.ctx.state !== "closed") void m.ctx.resume().catch(() => {});
   applyGains();
 }
 

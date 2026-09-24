@@ -68,9 +68,8 @@ function useSpin() {
 }
 
 function useHullTextures() {
-  const [rivet, height, rough, rose, plate] = useTexture([
+  const [rivet, rough, rose, plate] = useTexture([
     "/nidus/tex-rivet.jpg",
-    "/nidus/tex-height.jpg",
     "/nidus/tex-rough.jpg",
     "/nidus/tex-rose.jpg",
     "/nidus/tex-hull.jpg",
@@ -78,14 +77,13 @@ function useHullTextures() {
   rivet.colorSpace = SRGBColorSpace;
   plate.colorSpace = SRGBColorSpace;
   rose.colorSpace = SRGBColorSpace;
-  height.colorSpace = NoColorSpace;
   rough.colorSpace = NoColorSpace;
   const ani = typeof window !== "undefined" && window.innerWidth < 500 ? 4 : 8;
-  for (const t of [rivet, height, rough, rose, plate]) {
+  for (const t of [rivet, rough, rose, plate]) {
     t.wrapS = t.wrapT = RepeatWrapping;
     t.anisotropy = ani;
   }
-  return { rivet, height, rough, rose, plate };
+  return { rivet, rough, rose, plate };
 }
 
 function tiled(t: Texture, x: number, y: number) {

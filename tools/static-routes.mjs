@@ -1,4 +1,5 @@
-import { copyFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 
 // Static hosts have no router: give each page its own index.html so deep links and reloads work.
@@ -10,3 +11,11 @@ for (const route of ["privacy", "terms", "support"]) {
 }
 copyFileSync(shell, join(dist, "404.html"));
 console.log("static routes: privacy, terms, support, 404");
+
+// One offline cache per build: the new worker drops the old cache, so phones never hoard stale builds.
+const sw = join(dist, "sw.js");
+const stamp = createHash("sha256").update(readFileSync(shell)).digest("hex").slice(0, 10);
+const src = readFileSync(sw, "utf8");
+if (!src.includes('"nidus-shell-v3"')) throw new Error("sw.js cache name not found; update tools/static-routes.mjs");
+writeFileSync(sw, src.replace('"nidus-shell-v3"', `"nidus-shell-${stamp}"`));
+console.log(`service worker cache: nidus-shell-${stamp}`);

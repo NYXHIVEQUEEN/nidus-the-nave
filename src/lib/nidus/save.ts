@@ -330,8 +330,13 @@ export function exportSave(state: GameState) {
   const a = document.createElement("a");
   a.href = url;
   a.download = "nidus-hive.json";
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  // Safari and Firefox read the blob after click returns; revoking at once can cancel the file.
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 export function importSave(raw: string): GameState | null {

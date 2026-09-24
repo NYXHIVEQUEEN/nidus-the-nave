@@ -3,13 +3,10 @@ import { FRAMES, RAIDS } from "./content";
 export const BOOT_ASSETS: string[] = [
   ...new Set([
     "/nidus/title.jpg",
-    "/nidus/keyart.jpg",
-    "/nidus/nave.jpg",
     "/nidus/tex-hull.jpg",
     "/nidus/tex-plate.jpg",
     "/nidus/tex-rivet.jpg",
     "/nidus/tex-rough.jpg",
-    "/nidus/tex-height.jpg",
     "/nidus/tex-rose.jpg",
     "/nidus/tex-grate-s.jpg",
     "/nidus/tex-bone-s.jpg",

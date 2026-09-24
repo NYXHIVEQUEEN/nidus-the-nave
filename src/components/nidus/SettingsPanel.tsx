@@ -17,6 +17,7 @@ import {
   type ViewPrefs,
 } from "@/lib/nidus/view";
 import { eraseAllData, slotStamp } from "@/lib/nidus/save";
+import { installWay, promptInstall, type InstallWay } from "@/lib/nidus/pwa";
 import { APP_VERSION, buildReport, FAQ, SUPPORT_EMAIL, WEBSITE_URL, supportIssueUrl, supportMailto } from "@/lib/nidus/support";
 import { openNyxSpotify, setMusicBed, syncAudioGains } from "@/lib/nidus/audio";
 
@@ -303,17 +304,7 @@ export function SettingsPanel({
               {importNote}
             </p>
           )}
-          <button
-            type="button"
-            className="min-h-11 border border-gilt font-display text-xs tracking-[0.2em] text-gilt"
-            onClick={() => {
-              const url = new URL(window.location.href);
-              url.searchParams.set("install", "1");
-              window.location.assign(url.toString());
-            }}
-          >
-            INSTALL HOME
-          </button>
+          <InstallHome />
           <p className="text-[0.7rem] text-muted">Rules of Engagement — Nytheria Nyx. Local only. This hive is yours.</p>
           <button
             type="button"
@@ -345,6 +336,42 @@ export function SettingsPanel({
         >
           NYX WEBSITE
         </a>
+      )}
+    </div>
+  );
+}
+
+const INSTALL_HELP: Record<Exclude<InstallWay, "prompt">, string> = {
+  installed: "NIDUS is already on your home screen.",
+  ios: "In Safari: tap Share, then Add to Home Screen.",
+  menu: "Open your browser menu and choose Install app or Add to Home screen.",
+};
+
+function InstallHome() {
+  const [note, setNote] = useState("");
+  const way = installWay();
+  if (way === "installed") return <p className="text-center text-[0.7rem] tracking-[0.12em] text-muted">{INSTALL_HELP.installed}</p>;
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        className="min-h-11 border border-gilt font-display text-xs tracking-[0.2em] text-gilt"
+        onClick={async () => {
+          if (installWay() === "prompt") {
+            const ok = await promptInstall();
+            setNote(ok ? "INSTALLED. OPEN NIDUS FROM YOUR HOME SCREEN." : "");
+            return;
+          }
+          const w = installWay();
+          setNote(w === "prompt" ? "" : INSTALL_HELP[w]);
+        }}
+      >
+        INSTALL HOME
+      </button>
+      {note && (
+        <p role="status" className="text-center text-[0.7rem] leading-snug text-gilt">
+          {note}
+        </p>
       )}
     </div>
   );

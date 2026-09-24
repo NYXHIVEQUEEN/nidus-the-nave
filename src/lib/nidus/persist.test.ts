@@ -549,7 +549,7 @@ test("a hostile save cannot inject junk, remote images, or broken numbers", () =
     JSON.stringify({
       version: 3,
       ore: "9999",
-      parts: 1e400,
+      parts: "__HUGE__",
       credits: -50,
       spark: null,
       hiveName: "X".repeat(500),
@@ -567,7 +567,7 @@ test("a hostile save cannot inject junk, remote images, or broken numbers", () =
       trial: { id: "ghost", until: 1 },
       __proto__: { polluted: true },
       extraField: "drop me",
-    }),
+    }).replace('"__HUGE__"', "1e400"),
   );
   assert.ok(evil);
   assert.equal(evil.ore, 72, "string number falls back to default");

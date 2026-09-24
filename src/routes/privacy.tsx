@@ -9,13 +9,13 @@ function Privacy() {
     <LegalPage title="PRIVACY">
       <p>NIDUS is a single-player idle hive. It does not want your name, mail, or face.</p>
       <p>
-        <strong className="text-gilt">What stays on your device.</strong> The hive (ore, rooms, commanders, song prefs) lives in this browser’s local storage under keys that start with <em>nidus.</em> We do not upload it. There is no account and no cloud save.
+        <strong className="text-gilt">What stays on your device.</strong> The hive (ore, rooms, commanders, song prefs) lives in this browser’s local storage under keys that start with <em>nidus.</em> We do not upload it. There is no account and no cloud save. To play offline, the browser also keeps a copy of the game's own files (code, art, music); that copy holds nothing about you. EXPORT writes a save file that only you keep.
       </p>
       <p>
         <strong className="text-gilt">What we do not collect.</strong> No analytics SDK. No advertising ID. No contacts, location, camera, or microphone. Audio plays on-device. SPARK, ECHO, and commanders are game numbers, not people.
       </p>
       <p>
-        <strong className="text-gilt">Music.</strong> The anthem is <em>Rules of Engagement</em> by Nytheria Nyx, played from files that ship with the hive. The Spotify button opens Spotify in your browser. Spotify’s own privacy policy applies there. We do not receive your Spotify data.
+        <strong className="text-gilt">Music.</strong> The anthem is <em>Rules of Engagement</em> by Nytheria Nyx, played from files that ship with the hive. The Spotify button opens Spotify in your browser. Spotify’s own privacy policy applies there. We do not receive your Spotify data. The NYX WEBSITE button, when shown, opens Nytheria Nyx's own site in your browser under that site's policy.
       </p>
       <p>
         <strong className="text-gilt">Purchases.</strong> Sovereign heroes and Double Tithe are one-time purchases handled entirely by Google Play. We never see your card, name, or account. The app asks Play which heroes you own and keeps that list on this device so the court works offline. Refunds and receipts follow Google Play's rules.

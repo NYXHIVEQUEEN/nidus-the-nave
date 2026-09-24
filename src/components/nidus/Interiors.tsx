@@ -169,7 +169,7 @@ function ribGeo() {
 }
 
 // Shared gothic hall: grate floor, stone columns, iron ribs, filigree walls.
-function Nave({ tone = "#d6cab6", back = true }: { tone?: string; back?: boolean }) {
+function Nave({ tone = "#a89c8a", back = true }: { tone?: string; back?: boolean }) {
   const tex = useRoomTextures();
   const floor = useTiled(tex.grate, 5, 8);
   const wall = useTiled(tex.filigree, 3, 3);
@@ -183,7 +183,7 @@ function Nave({ tone = "#d6cab6", back = true }: { tone?: string; back?: boolean
         <meshStandardMaterial map={floor} color="#8a7d72" metalness={0.6} roughness={0.5} />
       </mesh>
       <mesh geometry={cols}>
-        <meshStandardMaterial map={stone} color={tone} metalness={0.1} roughness={0.75} />
+        <meshStandardMaterial map={stone} color={tone} metalness={0.1} roughness={0.75} envMapIntensity={0.3} />
       </mesh>
       <mesh geometry={ribs}>
         <meshStandardMaterial color="#5a4e44" metalness={0.75} roughness={0.35} />
@@ -191,13 +191,13 @@ function Nave({ tone = "#d6cab6", back = true }: { tone?: string; back?: boolean
       {[-1, 1].map((s) => (
         <mesh key={s} position={[s * 2.7, 3, -1]} rotation={[0, -s * (Math.PI / 2), 0]}>
           <planeGeometry args={[14, 7]} />
-          <meshStandardMaterial map={wall} color="#8c7c68" metalness={0.4} roughness={0.55} />
+          <meshStandardMaterial map={wall} color="#8c7c68" metalness={0.4} roughness={0.55} envMapIntensity={0.45} />
         </mesh>
       ))}
       {back && (
         <mesh position={[0, 3, -6.2]}>
           <planeGeometry args={[6, 7]} />
-          <meshStandardMaterial map={wall} color="#8c7c68" metalness={0.4} roughness={0.55} />
+          <meshStandardMaterial map={wall} color="#8c7c68" metalness={0.4} roughness={0.55} envMapIntensity={0.45} />
         </mesh>
       )}
     </group>
@@ -321,7 +321,7 @@ function Forge() {
 
   return (
     <group>
-      <Nave tone="#b8a894" back />
+      <Nave tone="#8f8270" back />
       <group position={[0, 0, -6.1]}>
         <mesh geometry={frame}>
           <meshStandardMaterial color="#3e3a37" metalness={0.8} roughness={0.35} />
@@ -442,7 +442,7 @@ function Lab() {
   });
   return (
     <group>
-      <Nave tone="#cfc2ad" />
+      <Nave tone="#a09382" />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -2.4]}>
         <circleGeometry args={[2.1, 48]} />
         <meshStandardMaterial map={floorTex} color="#b8a88c" metalness={0.7} roughness={0.35} />
@@ -458,7 +458,7 @@ function Lab() {
         </mesh>
       )}
       <mesh geometry={altar} position={[0, 0, -2.4]}>
-        <meshStandardMaterial map={tex.bone} color="#d8cbb8" metalness={0.2} roughness={0.6} />
+        <meshStandardMaterial map={tex.bone} color="#a89a86" metalness={0.2} roughness={0.6} envMapIntensity={0.4} />
       </mesh>
       <mesh ref={relic} position={[0, 2.25, -2.4]}>
         <icosahedronGeometry args={[0.36, 1]} />
@@ -608,7 +608,7 @@ function Minds() {
   });
   return (
     <group>
-      <Nave tone="#c2b49e" />
+      <Nave tone="#978a76" />
       <mesh position={[0, 0.17, -3.6]}>
         <cylinderGeometry args={[2.3, 2.45, 0.34, 40]} />
         <meshStandardMaterial map={velvet} color="#6a2a30" metalness={0.3} roughness={0.6} />
