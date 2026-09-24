@@ -303,6 +303,8 @@ export function defaultState(now = Date.now()): GameState {
     trial: null,
     trialsUsed: [],
     boost2x: false,
+    storyStep: 0,
+    storyQuiet: false,
   };
 }
 

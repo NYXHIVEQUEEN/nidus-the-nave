@@ -1,3 +1,11 @@
+# NIDUS snapshot — pass 6
+
+Studio splash (fire and ash logo intro/outro), the Queen's welcome, a seven-beat story opening that gets new
+players to their first officer in about a minute, build countdowns, softer sheet edge. New save fields
+`storyStep`/`storyQuiet` (old hives start done). Details: `store/QUALITY.md`.
+
+---
+
 # NIDUS snapshot — pass 5 overnight sweep
 
 Security (CSP, headers, hardened imports), trust (docs match behavior; Play purchase check built but OFF

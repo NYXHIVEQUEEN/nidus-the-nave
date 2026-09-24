@@ -475,6 +475,13 @@
   touch-action: pan-y;
 }
 
+/* A soft fade on the sheet's lower edge says "scroll for more" instead of looking cut off. */
+.nidus-sheet:not(.nidus-sheet-hide) {
+  padding-bottom: 14px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent);
+}
+
 .nidus-vignette {
   background:
     radial-gradient(ellipse at 18% 8%, rgba(255, 210, 170, 0.1), transparent 32%),
@@ -534,6 +541,38 @@
   .nidus-root.nidus-land .nidus-rail {
     max-height: calc(100dvh - 3.2rem);
   }
+}
+
+/* Story beats slide in; the narration caret blinks while it types. */
+@keyframes nidus-story-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.nidus-story-in {
+  animation: nidus-story-in 0.35s ease-out both;
+}
+
+@keyframes nidus-caret {
+  50% { opacity: 0; }
+}
+
+.nidus-caret {
+  margin-left: 1px;
+  color: var(--color-gilt);
+  animation: nidus-caret 0.9s steps(1) infinite;
+}
+
+/* Studio splash without WebGL: the logo forges in hot, then cools and falls to ash. */
+@keyframes nidus-splash-forge {
+  0% { opacity: 0; filter: blur(10px) brightness(2.6) sepia(1) saturate(4); transform: scale(0.96); }
+  40% { opacity: 1; filter: blur(0) brightness(1.35) sepia(0.4) saturate(1.6); transform: scale(1); }
+  68% { opacity: 1; filter: none; transform: scale(1); }
+  100% { opacity: 0; filter: blur(6px) brightness(0.25) grayscale(1); transform: translateY(4%) scale(1.02); }
+}
+
+.nidus-splash-logo {
+  animation: nidus-splash-forge 3.9s ease-in-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {

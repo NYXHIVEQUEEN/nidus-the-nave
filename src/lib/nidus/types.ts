@@ -248,4 +248,6 @@ export type GameState = {
   trial: { id: string; until: number } | null;
   trialsUsed: string[];
   boost2x: boolean;
+  storyStep: number;
+  storyQuiet: boolean;
 };

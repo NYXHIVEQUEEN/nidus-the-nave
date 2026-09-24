@@ -2,6 +2,7 @@ import { FRAMES, RAIDS } from "./content";
 
 export const BOOT_ASSETS: string[] = [
   ...new Set([
+    "/nidus/studio-logo.webp",
     "/nidus/title.jpg",
     "/nidus/tex-hull.jpg",
     "/nidus/tex-plate.jpg",

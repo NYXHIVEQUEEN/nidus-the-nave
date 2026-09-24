@@ -26,6 +26,7 @@ export type ViewPrefs = {
   density: Density;
   uiScale: number;
   musicBed: MusicBed;
+  splashSeen: boolean;
   prefsGen: number;
 };
 
@@ -65,6 +66,7 @@ let prefs: ViewPrefs = {
   density: "compact" as Density,
   uiScale: 0.58,
   musicBed: "rotate" as MusicBed,
+  splashSeen: false,
   prefsGen: 11,
 };
 
@@ -109,6 +111,7 @@ function read() {
           : parsed.musicBed === "anthem" && (parsed.prefsGen ?? 0) >= 11
             ? "anthem"
             : "rotate",
+      splashSeen: parsed.splashSeen === true,
       prefsGen: 11,
     };
   } catch {
