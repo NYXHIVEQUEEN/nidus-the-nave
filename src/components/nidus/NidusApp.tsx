@@ -37,7 +37,8 @@ import {
 } from "@/lib/nidus/content";
 import { advise } from "@/lib/nidus/advisor";
 import { markCost, markName, raidCutPayout, weaponMods } from "@/lib/nidus/fleet";
-import { chime, resumeAudio, setAmbiance, unlockAudio } from "@/lib/nidus/audio";
+import { chime, resumeAudio, setAmbiance, unlockAudio, type ChimeKind } from "@/lib/nidus/audio";
+import { act } from "@/lib/nidus/feedback";
 import { registerNidusPwa } from "@/lib/nidus/pwa";
 import { SAVE_KEY } from "@/lib/nidus/save";
 import { BOOT_IDLE, runBoot, type BootState } from "@/lib/nidus/boot";
@@ -68,6 +69,10 @@ const rarityColor: Record<Rarity, string> = {
   gold: "text-gilt",
   relic: "text-venom",
 };
+
+function tap(run: () => void, kind: ChimeKind) {
+  return act(() => useNidus.getState(), run, kind, chime);
+}
 
 function pulse(on: boolean) {
   return on ? "nidus-pulse" : "";
@@ -280,10 +285,6 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
 
   useEffect(() => {
     if (!prefs.hints) return;
-    if (!helpSeen("flow")) {
-      setGuide("flow");
-      return;
-    }
     if (whispered.has(tab)) return;
     whispered.add(tab);
     if (!helpSeen(tab)) setWhisper(firstWhisper(tab));
@@ -299,24 +300,22 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
       if (e.code === "Digit1") setTab("hull");
       if (e.code === "Digit2") setTab("forge");
       if (e.code === "Digit3") setTab("lab");
       if (e.code === "Digit4") setTab("raid");
       if (e.code === "Digit5") setTab("minds");
       if (e.code === "KeyS") {
-        useNidus.getState().surge();
-        chime("surge");
+        tap(() => useNidus.getState().surge(), "surge");
       }
       if (e.code === "KeyP") {
-        useNidus.getState().print();
-        chime("print");
+        tap(() => useNidus.getState().print(), "print");
       }
       if (e.code === "KeyC") {
         const st = useNidus.getState();
         if (st.pendingGift) {
-          st.claimIdle();
-          chime("wake");
+          tap(() => st.claimIdle(), "wake");
         }
       }
       if (e.code === "KeyW") {
@@ -448,8 +447,7 @@ function ResourceBar({ compact }: { compact: boolean }) {
             className="nidus-pulse min-w-[3.2rem] text-left"
             title="Idle cut waiting"
             onClick={() => {
-              claim();
-              chime("wake");
+              tap(() => claim(), "wake");
             }}
           >
             <p className="text-[0.55rem] tracking-[0.18em] text-gilt">CLAIM</p>
@@ -514,7 +512,7 @@ function RaidRail() {
           <button type="button" className={cn("nidus-cut mb-1 min-h-9 w-full font-display text-[0.52rem] tracking-[0.12em]", watching && "nidus-cut-venom")} onClick={() => watchWell(!watching)}>
             {watching ? "WATCHING" : "WATCH"}
           </button>
-          <button type="button" disabled={boosted || s.spark < 6} title="Spend 6 SPARK. 20s command." className={cn("nidus-cut min-h-8 w-full font-display text-[0.48rem] tracking-[0.12em]", boosted && "nidus-cut-gilt")} onClick={() => { boostWell(); chime("surge"); }}>
+          <button type="button" disabled={boosted || s.spark < 6} title="Spend 6 SPARK. 20s command." className={cn("nidus-cut min-h-8 w-full font-display text-[0.48rem] tracking-[0.12em]", boosted && "nidus-cut-gilt")} onClick={() => tap(() => boostWell(), "surge")}>
             {boosted ? "FIRE" : "BOOST"}
           </button>
         </div>
@@ -533,7 +531,7 @@ function RaidRail() {
             type="button"
             disabled={!open}
             title={node.blurb}
-            onClick={() => { send(node.id); chime("raid"); }}
+            onClick={() => tap(() => send(node.id), "raid")}
             className={cn("nidus-cut min-h-9 w-full px-1 text-left font-display text-[0.48rem] tracking-[0.1em]", open && "nidus-cut-gilt")}
           >
             <span className="block truncate">{node.label}</span>
@@ -654,8 +652,7 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
                   disabled={zr >= RANK_MAX || (s.credits ?? 0) < zc}
                   title={`${z.hint} ${zc} CUT`}
                   onClick={() => {
-                    zoneUp(z.id);
-                    chime("snap");
+                    tap(() => zoneUp(z.id), "snap");
                   }}
                   className="nidus-cut min-h-7 px-1.5 font-display text-[0.48rem] tracking-[0.12em] text-gilt disabled:opacity-40"
                 >
@@ -682,8 +679,7 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
                       onClick={() => {
                         lookAtRoom(r.id);
                         setWhy(`${r.label} · ${r.bonus}`);
-                        queue(r.id);
-                        chime("snap");
+                        tap(() => queue(r.id), "snap");
                       }}
                       className={cn("nidus-vbar nidus-cut shrink-0", st.built && "nidus-cut-on", lock && "opacity-40", pulse(nextRoom?.id === r.id && verb === "BUILD"))}
                     >
@@ -706,8 +702,7 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
           type="button"
           disabled={surging || s.spark < 8}
           onClick={() => {
-            surge();
-            chime("surge");
+            tap(() => surge(), "surge");
           }}
           className={cn("nidus-cut min-h-9 flex-1 font-display text-[0.62rem] tracking-[0.24em]", surging ? "nidus-cut-venom" : "nidus-cut-on", pulse(verb === "SURGE" || (mercy && !surging)))}
           title={s.spark < 8 ? "Need 8 SPARK." : mercy && !surging ? "Spend 8 SPARK. Longer sprint." : "Spend 8 SPARK. Swarm sprints ~30s."}
@@ -719,8 +714,7 @@ function HullTab({ verb, compact }: { verb: string; compact: boolean }) {
           disabled={!slagReady}
           title="Spare ore and a lick of spark. Packed ore cooks to parts."
           onClick={() => {
-            slag();
-            chime("print");
+            tap(() => slag(), "print");
           }}
           className={cn("nidus-cut nidus-iconbtn", slagReady ? "nidus-cut-gilt" : "text-muted")}
         >
@@ -813,8 +807,7 @@ function ForgeTab({ verb, compact }: { verb: string; compact: boolean }) {
             disabled={(s.credits ?? 0) < pop.credits}
             title="Buys berths with CUT."
             onClick={() => {
-              expandPop();
-              chime("snap");
+              tap(() => expandPop(), "snap");
             }}
             className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.6rem] tracking-[0.12em] disabled:opacity-40", pulse(full))}
           >
@@ -831,10 +824,10 @@ function ForgeTab({ verb, compact }: { verb: string; compact: boolean }) {
           </button>
         </div>
         <div className="mt-1 grid grid-cols-2 gap-1">
-          <button type="button" className="nidus-cut min-h-9 font-display text-[0.5rem] tracking-[0.12em]" onClick={() => { sell("ore", Math.max(8, s.ore * 0.2)); chime("cook"); }}>
+          <button type="button" className="nidus-cut min-h-9 font-display text-[0.5rem] tracking-[0.12em]" onClick={() => tap(() => sell("ore", Math.max(8, s.ore * 0.2)), "cook")}>
             SELL ORE
           </button>
-          <button type="button" className="nidus-cut min-h-9 font-display text-[0.5rem] tracking-[0.12em]" onClick={() => { sell("parts", Math.max(6, s.parts * 0.2)); chime("cook"); }}>
+          <button type="button" className="nidus-cut min-h-9 font-display text-[0.5rem] tracking-[0.12em]" onClick={() => tap(() => sell("parts", Math.max(6, s.parts * 0.2)), "cook")}>
             SELL BOTS
           </button>
           <button type="button" className={cn("nidus-cut min-h-9 font-display text-[0.5rem] tracking-[0.1em]", autoSell !== false ? "nidus-cut-venom" : "text-muted")} onClick={toggleAutoSell}>
@@ -846,7 +839,7 @@ function ForgeTab({ verb, compact }: { verb: string; compact: boolean }) {
         </div>
       </div>
       <div className="nidus-actions">
-        <button type="button" title={jammed ? "Packed. Stamp still feeds SPARK and caste XP." : `${cost.ore} ore · ${cost.parts} parts.`} onClick={() => { print(); chime("print"); }} className={cn("nidus-cut nidus-cut-on min-h-11 flex-1 font-display tracking-[0.28em]", pulse(verb === "PRINT" || jammed))}>
+        <button type="button" title={jammed ? "Packed. Stamp still feeds SPARK and caste XP." : `${cost.ore} ore · ${cost.parts} parts.`} onClick={() => tap(() => print(), "print")} className={cn("nidus-cut nidus-cut-on min-h-11 flex-1 font-display tracking-[0.28em]", pulse(verb === "PRINT" || jammed))}>
           <span className="block text-[0.8rem]">{jammed ? "PRINT SPARK" : "PRINT"}</span>
           <span className="block font-sans text-[0.55rem] tabular-nums tracking-[0.08em] text-bone/80">{cost.ore}o · {cost.parts}p</span>
         </button>
@@ -899,8 +892,7 @@ function LabTab({ compact }: { compact: boolean }) {
               title={t.blurb}
               onClick={() => {
                 try {
-                  research(t.id);
-                  chime("snap");
+                  tap(() => research(t.id), "snap");
                 } catch {
                   /* rite optional */
                 }
@@ -991,7 +983,7 @@ function RaidTab({ verb, compact }: { verb: string; compact: boolean }) {
               <button type="button" title={watching ? "Leave — fleet still fights at 18% bonus." : "Watching cuts 18% faster."} className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.7rem] tracking-[0.16em]", watching ? "nidus-cut-venom" : "", pulse(verb === "RAID" && !watching))} onClick={() => watchWell(!watching)}>
                 {watching ? "WATCHING" : "WATCH"}
               </button>
-              <button type="button" disabled={boosted || s.spark < 6} title="Spend 6 SPARK. 20s command." className={cn("nidus-cut min-h-9 flex-1 font-display text-[0.62rem] tracking-[0.16em]", boosted ? "nidus-cut-gilt" : "text-gilt", pulse(verb === "BOOST"))} onClick={() => { boostWell(); chime("surge"); }}>
+              <button type="button" disabled={boosted || s.spark < 6} title="Spend 6 SPARK. 20s command." className={cn("nidus-cut min-h-9 flex-1 font-display text-[0.62rem] tracking-[0.16em]", boosted ? "nidus-cut-gilt" : "text-gilt", pulse(verb === "BOOST"))} onClick={() => tap(() => boostWell(), "surge")}>
                 {boosted ? "COMMAND" : "BOOST"}
               </button>
             </div>
@@ -1014,8 +1006,7 @@ function RaidTab({ verb, compact }: { verb: string; compact: boolean }) {
                   disabled={!open}
                   title={spec.line}
                   onClick={() => {
-                    useNidus.getState().cook(k);
-                    chime("cook");
+                    tap(() => useNidus.getState().cook(k), "cook");
                   }}
                   className={cn("nidus-cut min-h-9 px-2 font-display text-[0.52rem] tracking-[0.12em]", open ? "nidus-cut-gilt nidus-pulse" : "text-iron")}
                 >
@@ -1037,7 +1028,7 @@ function RaidTab({ verb, compact }: { verb: string; compact: boolean }) {
         const chipKind = open ? (firstIce ? "open" : done ? "lit" : "next") : "lock";
         const chip = open ? (firstIce ? "FIRST" : done ? (times > 0 ? `FARM ×${times}` : "AGAIN") : "OPEN") : shortLock(why);
         return (
-          <button key={node.id} type="button" disabled={!open || Boolean(raidNode) || strikers < need} title={why || node.blurb} onClick={() => { send(node.id); chime("raid"); }} className={cn("nidus-card relative w-full overflow-hidden text-left", compact ? "min-h-[3.6rem]" : "min-h-[4.4rem]", !open && "nidus-card-lock", pulse(open && verb === "RAID" && node.id === "ice" && !raidNode))}>
+          <button key={node.id} type="button" disabled={!open || Boolean(raidNode) || strikers < need} title={why || node.blurb} onClick={() => tap(() => send(node.id), "raid")} className={cn("nidus-card relative w-full overflow-hidden text-left", compact ? "min-h-[3.6rem]" : "min-h-[4.4rem]", !open && "nidus-card-lock", pulse(open && verb === "RAID" && node.id === "ice" && !raidNode))}>
             <img src={node.image} alt="" className="nidus-card-art" crossOrigin="anonymous" />
             <div className="nidus-card-veil" />
             <div className="relative z-10 flex h-full items-end justify-between gap-2 p-2">
@@ -1106,8 +1097,7 @@ function MindsTab({ compact }: { compact: boolean }) {
             disabled={!ready}
             className={cn("nidus-cut mt-2 min-h-11 w-full font-display tracking-[0.2em]", ready && "nidus-cut-on nidus-pulse")}
             onClick={() => {
-              useNidus.getState().callOfficer();
-              chime("wake");
+              tap(() => useNidus.getState().callOfficer(), "wake");
             }}
           >
             CALL {need}
@@ -1155,8 +1145,7 @@ function MindsTab({ compact }: { compact: boolean }) {
           disabled={spark < callNeed(s)}
           className="nidus-cut min-h-9 w-full font-display text-[0.58rem] tracking-[0.16em] disabled:opacity-40"
           onClick={() => {
-            useNidus.getState().callOfficer();
-            chime("wake");
+            tap(() => useNidus.getState().callOfficer(), "wake");
           }}
         >
           CALL {callNeed(s)} SPARK
@@ -1180,7 +1169,7 @@ function MindsTab({ compact }: { compact: boolean }) {
         })}
       </div>
       <div className="nidus-actions">
-        <button type="button" title={mind.seated ? "Half post while pacing." : `SEAT for +${postBoostPct({ ...mind, seated: true })}% ${post.label}.`} className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.62rem] tracking-[0.12em]", mind.seated && "nidus-cut-venom", !mind.seated && "nidus-pulse")} onClick={() => { seat(mind.id); chime("seat"); }}>
+        <button type="button" title={mind.seated ? "Half post while pacing." : `SEAT for +${postBoostPct({ ...mind, seated: true })}% ${post.label}.`} className={cn("nidus-cut min-h-11 flex-1 font-display text-[0.62rem] tracking-[0.12em]", mind.seated && "nidus-cut-venom", !mind.seated && "nidus-pulse")} onClick={() => tap(() => seat(mind.id), "seat")}>
           {mind.seated ? "UNSEAT" : `SEAT +${postBoostPct({ ...mind, seated: true })}%`}
         </button>
         <button
@@ -1189,8 +1178,7 @@ function MindsTab({ compact }: { compact: boolean }) {
           title="Spend SPARK. Clears the wound."
           className="nidus-cut nidus-iconbtn text-venom disabled:opacity-40"
           onClick={() => {
-            useNidus.getState().heal(mind.id);
-            chime("wake");
+            tap(() => useNidus.getState().heal(mind.id), "wake");
           }}
         >
           <span className="font-display text-[0.42rem] tracking-[0.12em]">HEAL</span>
@@ -1236,10 +1224,10 @@ function WakeOverlay() {
         </div>
       </div>
       <div className="mt-2 flex w-full max-w-xs gap-2">
-        <button type="button" className="nidus-cut nidus-cut-on min-h-11 flex-1 font-display tracking-[0.2em]" onClick={() => { pick(0); chime("wake"); }}>
+        <button type="button" className="nidus-cut nidus-cut-on min-h-11 flex-1 font-display tracking-[0.2em]" onClick={() => tap(() => pick(0), "wake")}>
           TAKE
         </button>
-        <button type="button" className="nidus-cut min-h-11 flex-1 font-display tracking-[0.2em] text-muted" onClick={() => { pass(); chime("snap"); }}>
+        <button type="button" className="nidus-cut min-h-11 flex-1 font-display tracking-[0.2em] text-muted" onClick={() => tap(() => pass(), "snap")}>
           PASS · +{Math.floor(paid * 0.3)}
         </button>
       </div>
@@ -1267,7 +1255,7 @@ function GiftOverlay() {
           {fmt(gift.ore)} ORE · {fmt(gift.parts)} PARTS · +{gift.spark} SPARK
         </p>
         {mercy && <p className="mt-1 text-[0.62rem] text-muted">CLAIM banks a mercy SURGE and a lick of SPARK.</p>}
-        <button type="button" className="nidus-cut nidus-cut-on mt-3 min-h-11 w-full font-display tracking-[0.28em] text-bone" onClick={() => { claim(); chime("claim"); }}>
+        <button type="button" className="nidus-cut nidus-cut-on mt-3 min-h-11 w-full font-display tracking-[0.28em] text-bone" onClick={() => tap(() => claim(), "claim")}>
           CLAIM
         </button>
       </div>

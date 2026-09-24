@@ -471,3 +471,13 @@ test("support report carries no hive name and names the version", async () => {
   assert.ok(!r.includes("SECRET-NAVE"));
   assert.ok(supportIssueUrl(r).startsWith("https://github.com/NYXHIVEQUEEN/nidus-the-nave/issues/new?"));
 });
+
+test("act reports a refused tap as deny and a real one as ok", async () => {
+  const { act } = await import("./feedback.ts");
+  let st = { ...defaultState(), ore: 0, parts: 0 };
+  const heard: string[] = [];
+  const get = () => st;
+  assert.equal(act(get, () => { st = { ...st }; }, "print", (k) => heard.push(k)), false);
+  assert.equal(act(get, () => { st = { ...st, ore: 5 }; }, "print", (k) => heard.push(k)), true);
+  assert.deepEqual(heard, ["deny", "print"]);
+});

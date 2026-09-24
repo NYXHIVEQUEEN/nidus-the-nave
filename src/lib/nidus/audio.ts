@@ -4,7 +4,7 @@ import { getPrefs, patchPrefs, type MusicBed } from "./view";
 export const NYX_SPOTIFY = "https://open.spotify.com/artist/0h7eXQHwChoJ0FkFqrMQSA";
 export const NYX_ANTHEM_SPOTIFY = "https://open.spotify.com/track/5B0hF5OoWMG6AWsASSRtyr";
 
-export type ChimeKind = "print" | "wake" | "surge" | "snap" | "raid" | "dead" | "seat" | "cook" | "claim" | "hit" | "rail" | "cannon" | "ping";
+export type ChimeKind = "print" | "wake" | "surge" | "snap" | "raid" | "dead" | "seat" | "cook" | "claim" | "hit" | "rail" | "cannon" | "ping" | "deny";
 export type AmbKind = "idle" | "raid" | "surge" | "wake";
 
 type Slot = { gain: GainNode; src: AudioBufferSourceNode | null; voidGain: GainNode | null };
@@ -52,10 +52,6 @@ const hold = root();
 
 function curve(v: number) {
   return Math.max(0, Math.min(1, v)) ** 2;
-}
-
-function now() {
-  return hold.m?.ctx.currentTime ?? 0;
 }
 
 function applyGains() {
@@ -396,6 +392,7 @@ export function chime(kind: ChimeKind) {
     rail: { f: 62, peak: 0.14, dur: 0.18, noise: 0.22, hp: 180, type: "sawtooth" },
     cannon: { f: 140, peak: 0.09, dur: 0.08, noise: 0.14, hp: 520, type: "square" },
     ping: { f: 740, peak: 0.06, dur: 0.07, hp: 1400 },
+    deny: { f: 104, peak: 0.07, dur: 0.09, type: "square" },
   };
   const spec = table[kind];
   ping(m, spec.f, spec.peak, spec.dur, m.sfx, spec.type ?? "triangle");

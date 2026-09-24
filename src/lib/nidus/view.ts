@@ -182,7 +182,7 @@ export function subscribeSpin(fn: () => void) {
   };
 }
 
-export function resolveDensity(p = prefs, w = 390, h = 844, landscape = false): DensityResolved {
+export function resolveDensity(p = prefs, _w = 390, h = 844, landscape = false): DensityResolved {
   if (p.density === "watch") return "compact";
   if (p.density === "compact" || p.density === "comfort") return p.density;
   if (landscape && h < 480) return "compact";

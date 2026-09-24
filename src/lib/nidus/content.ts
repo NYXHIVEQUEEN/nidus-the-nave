@@ -10,7 +10,6 @@ import type {
   RoomId,
   RoomSpec,
   SalvageId,
-  TechId,
   TechSpec,
   ZoneId,
 } from "./types";

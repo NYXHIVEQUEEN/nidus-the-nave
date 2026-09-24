@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
+import { Component, lazy, memo, Suspense, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
 import { useNidus } from "@/lib/nidus/store";
 
 const Scene = lazy(() => import("./StationScene").then((m) => ({ default: m.StationScene })));
@@ -59,7 +59,7 @@ const INTERIOR: Record<string, string> = {
 };
 
 /** 3D canvas stays mounted so RAID never cold-starts WebGL. Interiors overlay it. */
-export function StationMount() {
+export const StationMount = memo(function StationMount() {
   const [on, setOn] = useState(false);
   const tab = useNidus((s) => s.tab);
   const showShip = tab === "raid" || tab === "hull";
@@ -76,7 +76,9 @@ export function StationMount() {
         aria-hidden={!showShip}
       >
         <HullBound>
-          <Suspense fallback={<div className="absolute inset-0 bg-void" />}>
+          <Suspense
+            fallback={<img src="/nidus/nave.jpg" alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" />}
+          >
             <Scene />
           </Suspense>
         </HullBound>
@@ -91,4 +93,4 @@ export function StationMount() {
       )}
     </>
   );
-}
+});
