@@ -309,6 +309,7 @@ export function GoalDock({
   verb,
   why,
   pct,
+  eta,
 }: {
   goal: string;
   stage: { n: number; of: number; name: string };
@@ -317,6 +318,7 @@ export function GoalDock({
   verb?: string;
   why?: string;
   pct?: number;
+  eta?: string;
 }) {
   return (
     <button
@@ -335,7 +337,9 @@ export function GoalDock({
       </span>
       <span className="min-w-0 flex-1 text-center font-display text-[0.7rem] tracking-[0.14em] text-gilt">{goal}</span>
       {typeof pct === "number" && pct > 0 && pct < 100 && (
-        <span className="font-display text-[0.62rem] tabular-nums text-venom">{pct}%</span>
+        <span className="font-display text-[0.62rem] tabular-nums text-venom">
+          {pct}%{eta && <span className="ml-1 text-muted">≈{eta}</span>}
+        </span>
       )}
       {verb && <StatusChip kind="open">{verb}</StatusChip>}
       {collapsed && <ChevronUp className="size-3 shrink-0 text-muted" />}

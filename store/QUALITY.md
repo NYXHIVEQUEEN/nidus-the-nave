@@ -1,3 +1,53 @@
+# Pass 7 — store & platform audit, desktop layout, Windows billing (24 Sep 2026)
+
+- Audited Android phones (360×740, 412×915), Fire tablets (800×1280, 1280×800), Windows (1366×768, 1920×1080) on the
+  production build: no errors or sideways scroll anywhere. Desktop looked like a stretched phone (1,800px SURGE bar,
+  tiny text).
+- Fixed: the HUD, settings, and court stay a readable column on wide screens; type is larger on tablets and desktops;
+  4 heroes per row on desktop; bottom sheet hides behind the court on phones; officer cards frame the face;
+  3D sharpness adapts to measured frame rate (sharper on smooth phones, never slower than before).
+- Windows: Microsoft Store billing via the Digital Goods API with the same SKUs (trusted only when the Store answers).
+  Privacy/terms now name Google Play or the Microsoft Store.
+- Store assets: fresh 1080×1920 phone (JPEG) and 1920×1080 desktop (PNG) screenshots from a grown showcase hive in
+  `store/screenshots/`; small WebP copies wired into the web manifest (narrow + wide).
+- `store/DISTRIBUTION.md`: every store, its fees, its payment rules, and the order to ship in.
+
+---
+
+# Pass 6 — studio splash, story opening, faster first minutes (24 Sep 2026)
+
+Owner asks: animated studio logo with a fire and ash intro/outro; a simple story tutorial with a welcome and
+thank-you; less dead time before the first officer; anticipation.
+
+## Implemented
+- **Studio splash** (`StudioSplash.tsx`): the Nytheria Nyx logo forges out of embers (white-hot edges),
+  holds with flickering red glints, then burns from the base up, melts, and falls to ash while flames rise.
+  One WebGL1 quad and one 163 KB WebP (`public/nidus/studio-logo.webp`), rendered at ≤1.5× pixel ratio,
+  context released after. Plays over the loading title (adds no wait), ~5 s the first time and ~3.3 s after,
+  tap to skip. Falls back to a CSS burn without WebGL and to a still logo with reduced motion. Gives up if the
+  logo is not loaded in 2.5 s.
+- **Story opening** (`story.ts`, `StoryCard.tsx`): the Queen's welcome card (text in `WELCOME`, edit freely),
+  then seven short beats (THE HUSK WAKES → THE HIVE NEVER SLEEPS). Each teaches one action, types its line
+  out, shows EARNED rewards, a GO button to the right screen, and a live meter with time left.
+  Folds to a slim strip after reading. SKIP/HIDE keeps the rewards. First-visit tips stay quiet for screens
+  the story already covered.
+- **Pacing**: story rewards rush the Solar Spine and the Lab and pay SPARK at the right moments. A scripted
+  new player now lights Solar at 45 s and takes the first officer at 46 s (was ~6 min); in the browser run
+  the officer arrived at ~74 s. Existing hives are never taught again (saves without `storyStep` start done).
+- **Anticipation everywhere**: the goal banner shows time left on the room being raised (e.g. `61% ≈1:25`).
+- **Phone seam**: the scrolling bottom sheet fades at its lower edge instead of looking cut by the tab bar.
+
+## Verified
+- Typecheck clean, 48/48 tests (5 new story tests: welcome gate, sub-2-minute first officer, skip keeps
+  rewards, veterans skip, hostile step clamp), lint 0 errors, production build.
+- Browser: the full story played start to finish at 390×844 with no errors; splash frames checked through
+  forge, hold, burn, ash; production build at 390×844 and 1280×800 plus reduced motion: no CSP or console errors.
+
+## Still unverified
+- Splash smoothness on a low-end Android phone (SwiftShader here is software rendering).
+
+---
+
 # Pre-merge self-audit (24 Sep 2026)
 
 Full read of this PR's diff before merging. Fixed:

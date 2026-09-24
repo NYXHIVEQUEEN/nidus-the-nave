@@ -89,7 +89,7 @@ export function SovereignHall({ onClose }: { onClose: () => void }) {
                 TRIAL · {SOVEREIGNS.find((h) => h.id === trial.id)?.name} · {clock(trial.until - now)}
               </p>
             )}
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {SOVEREIGNS.map((h) => {
                 const owned = shop.owned.has(h.id);
                 const on = seated.includes(h.id);

@@ -44,6 +44,12 @@ Create each as a **one-time product** (Monetize → Products → In-app products
 
 The web wrapper settings for billing live in `store/twa-manifest.json` (`features.playBilling`).
 
+## Microsoft Store (Windows)
+
+The Windows build sells through the Microsoft Store automatically when installed from it. In Partner Center,
+create each product as a **Durable add-on** whose **Product ID** is exactly the SKU in the table above
+(`boost_x2`, `sovereign_all`, `hero_vesper` …), with the same prices. No acknowledgement server is needed on Windows.
+
 ## Purchase check (required before selling — needs your yes)
 
 Google Play refunds and takes back every purchase that is not **acknowledged** within three days.

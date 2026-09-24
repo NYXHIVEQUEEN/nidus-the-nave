@@ -1,5 +1,6 @@
 import { CASTES, FRAMES, RAIDS, defaultState } from "./content";
 import { SOVEREIGNS } from "./heroes";
+import { STORY_DONE } from "./story";
 import type { GameState } from "./types";
 
 export const SAVE_KEY = "nidus.save.v3";
@@ -100,6 +101,8 @@ function migrate(raw: GameState): GameState {
   if (!merged.trial || typeof merged.trial.id !== "string" || typeof merged.trial.until !== "number") merged.trial = null;
   merged.trialsUsed = Array.isArray(merged.trialsUsed) ? merged.trialsUsed.filter((x) => typeof x === "string") : [];
   merged.boost2x = merged.boost2x === true;
+  // Hives from before the story already know the nave; only brand-new hives hear it.
+  if (typeof (raw as Partial<GameState>).storyStep !== "number") merged.storyStep = raw.started ? STORY_DONE : 0;
   for (const id of Object.keys(merged.rooms) as (keyof typeof merged.rooms)[]) {
     const room = merged.rooms[id];
     if (typeof room.rank !== "number") room.rank = room.built ? 1 : 0;
@@ -292,6 +295,7 @@ export function harden(m: GameState, base: GameState): GameState {
   m.trialsUsed = [...new Set(m.trialsUsed.filter((id) => heroIds.includes(id)))];
   if (m.trial && !heroIds.includes(m.trial.id)) m.trial = null;
   if (m.trial) m.trial = { id: m.trial.id, until: num(m.trial.until, 0) };
+  m.storyStep = Math.min(STORY_DONE, Math.floor(m.storyStep));
   return m;
 }
 

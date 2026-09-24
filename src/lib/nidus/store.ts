@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { ackStory, advanceStory, quietStory } from "./story";
 import type { Caste, Job, RaidId, RoomId, SalvageId, Tab, TechId, ZoneId } from "./types";
 import { defaultState } from "./content";
 import {
@@ -81,6 +82,8 @@ type Store = GameState & {
   tryHero: (id: string) => void;
   keepOwnedHeroes: (owned: ReadonlySet<string>) => void;
   setBoost: (on: boolean) => void;
+  storyAck: () => void;
+  storySkip: () => void;
 };
 
 let lastWrite = 0;
@@ -110,7 +113,7 @@ export const useNidus = create<Store>((set, get) => ({
       const live = get();
       const tab = live.tab;
       const selectedMind = live.selectedMind;
-      const next = applyTick(pickGame(live), now);
+      const next = advanceStory(applyTick(pickGame(live), now), now);
       next.tab = tab;
       next.selectedMind = selectedMind;
       if (!live.started) {
@@ -333,6 +336,14 @@ export const useNidus = create<Store>((set, get) => ({
   },
   tryHero: (id) => {
     set(startTrial(pickGame(get()), id, Date.now()));
+    writeSave(pickGame(get()));
+  },
+  storyAck: () => {
+    set(advanceStory(ackStory(pickGame(get())), Date.now()));
+    writeSave(pickGame(get()));
+  },
+  storySkip: () => {
+    set(quietStory(pickGame(get()), Date.now()));
     writeSave(pickGame(get()));
   },
   setBoost: (on) => {

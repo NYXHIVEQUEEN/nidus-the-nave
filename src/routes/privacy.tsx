@@ -19,7 +19,7 @@ function Privacy() {
         <strong className="text-gilt">Music.</strong> The anthem is <em>Rules of Engagement</em> by Nytheria Nyx, played from files that ship with the hive. The Spotify button opens Spotify in your browser. Spotify’s own privacy policy applies there. We do not receive your Spotify data. The NYX WEBSITE button, when shown, opens Nytheria Nyx's own site in your browser under that site's policy.
       </p>
       <p>
-        <strong className="text-gilt">Purchases.</strong> Sovereign heroes and Double Tithe are one-time purchases handled entirely by Google Play. We never see your card, name, or account. The app asks Play which heroes you own and keeps that list on this device so the court works offline. Refunds and receipts follow Google Play's rules.
+        <strong className="text-gilt">Purchases.</strong> Sovereign heroes and Double Tithe are one-time purchases handled entirely by Google Play on Android or the Microsoft Store on Windows. We never see your card, name, or account. The app asks the store which heroes you own and keeps that list on this device so the court works offline. Refunds and receipts follow that store's rules.
       </p>
       {ACK_URL && (
         <p>

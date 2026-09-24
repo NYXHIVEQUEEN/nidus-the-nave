@@ -42,6 +42,9 @@ import { act } from "@/lib/nidus/feedback";
 import { WEBSITE_URL } from "@/lib/nidus/support";
 import { useGain, useRolling } from "@/lib/nidus/rolling";
 import { TapJuice } from "./TapJuice";
+import { StudioSplash } from "./StudioSplash";
+import { StoryCard, StoryWelcome } from "./StoryCard";
+import { STORY_DONE } from "@/lib/nidus/story";
 import { registerNidusPwa } from "@/lib/nidus/pwa";
 import { SAVE_KEY } from "@/lib/nidus/save";
 import { BOOT_IDLE, runBoot, type BootState } from "@/lib/nidus/boot";
@@ -65,7 +68,7 @@ import { SettingsPanel, type RitePane } from "./SettingsPanel";
 import { CourtStrip, SovereignHall } from "./SovereignHall";
 import { initBilling, getShop, subscribeShop } from "@/lib/nidus/billing";
 import { GoalDock, GuideSheet, LeftRail, StatusChip, Whisper, muteToggle, useDensity, useIdleChrome, useSyncPrefs, useViewport } from "./HiveChrome";
-import { cycleDensity, getPrefs, getSpinPaused, helpSeen, lookAtRoom, subscribeSpin } from "@/lib/nidus/view";
+import { cycleDensity, getPrefs, getSpinPaused, helpSeen, lookAtRoom, markHelp, subscribeSpin } from "@/lib/nidus/view";
 import type { Caste, Rarity, Tab } from "@/lib/nidus/types";
 
 const rarityColor: Record<Rarity, string> = {
@@ -112,6 +115,7 @@ export function NidusApp() {
   const [boot, setBoot] = useState<BootState>(BOOT_IDLE);
   const [held, setHeld] = useState({ started: false, name: "" });
   const [session, setSession] = useState(false);
+  const [splash, setSplash] = useState(true);
 
   useEffect(() => {
     setHeld(peekHive());
@@ -184,24 +188,32 @@ export function NidusApp() {
     }
   }, [boot.ready, held.started, started, start]);
 
+  const studio = splash ? <StudioSplash onDone={() => setSplash(false)} /> : null;
+
   if (!boot.ready || !session) {
     return (
-      <TitleScreen
-        boot={boot}
-        returning={held.started}
-        hiveName={held.name}
-        onWake={() => {
-          unlockAudio();
-          chime("wake");
-          if (!started) start();
-          setSession(true);
-        }}
-      />
+      <>
+        <TitleScreen
+          boot={boot}
+          returning={held.started}
+          hiveName={held.name}
+          onWake={() => {
+            unlockAudio();
+            chime("wake");
+            if (!started) start();
+            setSession(true);
+          }}
+        />
+        {studio}
+      </>
     );
   }
 
   return (
-    <LiveHive waking={Boolean(waking)} gift={Boolean(gift)} showBrief={showBrief} />
+    <>
+      <LiveHive waking={Boolean(waking)} gift={Boolean(gift)} showBrief={showBrief} />
+      {studio}
+    </>
   );
 }
 
@@ -276,6 +288,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   const [whisper, setWhisper] = useState<string | null>(null);
   const [muted, setMuted] = useState(() => getPrefs().muted);
   const prefs = useSyncPrefs();
+  const storyOn = useNidus((s) => !s.storyQuiet && s.storyStep < STORY_DONE);
   const spinPaused = useSyncExternalStore(subscribeSpin, getSpinPaused, getSpinPaused);
   const locked = waking || gift;
   const { collapsed, bump, showChrome, toggleHide } = useIdleChrome(locked || riteOpen || court || Boolean(guide));
@@ -307,13 +320,30 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
     if (!spec || !st || spec.work <= 0) return undefined;
     return Math.min(99, Math.floor((st.progress / spec.work) * 100));
   })();
+  // Time left on the room being raised: a little anticipation on every build.
+  const buildEta = (() => {
+    const id = s.queuedRoom;
+    const spec = id ? ROOMS.find((r) => r.id === id) : null;
+    const st = id ? s.rooms[id] : null;
+    if (!spec || !st || st.built) return undefined;
+    const rate = rates(s, Date.now()).buildPerSec;
+    if (!(rate > 0)) return undefined;
+    const left = Math.max(0, Math.ceil((spec.work - st.progress) / rate));
+    if (left > 5 * 3600) return undefined;
+    return left >= 3600 ? `${Math.floor(left / 3600)}h${String(Math.floor((left % 3600) / 60)).padStart(2, "0")}` : left >= 60 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` : `${left}s`;
+  })();
 
   useEffect(() => {
     if (!prefs.hints) return;
     if (whispered.has(tab)) return;
     whispered.add(tab);
+    // The story already walked this screen; its first-visit tip would only repeat it.
+    if (storyOn) {
+      markHelp(tab);
+      return;
+    }
     if (!helpSeen(tab)) setWhisper(firstWhisper(tab));
-  }, [tab, prefs.hints, whispered]);
+  }, [tab, prefs.hints, whispered, storyOn]);
 
   useEffect(() => {
     // Every tap re-wakes sound; iOS may refuse to resume on its own after the app was hidden.
@@ -389,16 +419,17 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
           setCourt(true);
         }}
       />}
-      <div className="pointer-events-none relative z-10 flex h-full flex-col">
+      <div className="nidus-wide pointer-events-none relative z-10 flex h-full flex-col">
         <ResourceBar compact />
         {tab !== "raid" && (
           <div className="px-3">
-            <GoalDock goal={goal} stage={stage} collapsed={collapsed} onExpand={showChrome} verb={s.queuedRoom ? "BUILD" : tip.verb} why={tip.why} pct={buildPct} />
+            <GoalDock goal={goal} stage={stage} collapsed={collapsed} onExpand={showChrome} verb={s.queuedRoom ? "BUILD" : tip.verb} why={tip.why} pct={buildPct} eta={buildEta} />
             {!court && (
               <div className="flex pl-12">
                 <CourtStrip onOpen={() => setCourt(true)} />
               </div>
             )}
+            <StoryCard hidden={court || riteOpen || Boolean(guide) || collapsed || waking || gift || showBrief} />
           </div>
         )}
         {tab === "raid" && (
@@ -408,7 +439,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
         )}
         <div className="min-h-0 flex-1" />
         {tab !== "raid" && (
-          <div data-chrome data-scroll className={cn("nidus-sheet", watchChrome && "nidus-sheet-hide")}>
+          <div data-chrome data-scroll className={cn("nidus-sheet", (watchChrome || court) && "nidus-sheet-hide")}>
             <p className="px-2 pt-1 text-center text-[0.62rem] tracking-[0.06em] text-muted">{tip.why}</p>
             <main className="min-h-0">
               <ActiveTab verb={tip.verb} compact />
@@ -428,18 +459,19 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
       {guide && <GuideSheet screen={guide} onClose={() => setGuide(null)} />}
       {riteOpen && (
         <div
-          className="pointer-events-auto absolute inset-x-2 bottom-[3.5rem] z-40 max-h-[42dvh] overflow-y-auto"
+          className="nidus-wide pointer-events-auto absolute inset-x-2 bottom-[3.5rem] z-40 max-h-[42dvh] overflow-y-auto"
           data-chrome
         >
           <SettingsPanel start={riteStart} onClose={() => setRiteOpen(false)} />
         </div>
       )}
       {court && (
-        <div className="pointer-events-auto absolute inset-x-2 bottom-[3.5rem] top-[max(4.6rem,calc(env(safe-area-inset-top)+4rem))] z-50 flex flex-col justify-end">
+        <div className="nidus-wide pointer-events-auto absolute inset-x-2 bottom-[3.5rem] top-[max(4.6rem,calc(env(safe-area-inset-top)+4rem))] z-50 flex flex-col justify-end">
           <SovereignHall onClose={() => setCourt(false)} />
         </div>
       )}
       <TapJuice />
+      <StoryWelcome />
       {waking && <WakeOverlay />}
       {gift && !waking && <GiftOverlay />}
       {showBrief && !waking && !gift && <BriefOverlay />}
@@ -1159,7 +1191,7 @@ function MindsTab({ compact }: { compact: boolean }) {
   return (
     <div className="pointer-events-auto flex flex-col justify-end gap-1.5 p-2" data-chrome>
       <div className="nidus-card relative overflow-hidden">
-        <img src={mind.portrait} alt="" className={cn("w-full object-cover object-top", compact ? "h-20" : "h-28")} crossOrigin="anonymous" />
+        <img src={mind.portrait} alt="" className={cn("w-full object-cover object-[center_18%]", compact ? "h-20" : "h-28")} crossOrigin="anonymous" />
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-void to-transparent p-2">
           <div className="mb-0.5 flex items-center gap-1.5">
             <StatusChip kind={mind.seated ? "next" : "open"}>{mind.seated ? "SEATED" : "PACING"}</StatusChip>
