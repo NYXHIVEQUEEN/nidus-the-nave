@@ -5,7 +5,7 @@
   "data_shared": false,
   "data_encrypted_in_transit": true,
   "users_can_request_deletion": true,
-  "deletion_how": "In-app NEW HIVE (RITE \u2192 SAVE), or uninstall, or clear app storage.",
+  "deletion_how": "In-app SETTINGS \u2192 SAVE \u2192 ERASE MY DATA (also on the /privacy page), NEW HIVE for the live hive only, or uninstall / clear app storage.",
   "independent_security_review": false,
   "committed_to_play_families": false,
   "data_types": {
@@ -24,5 +24,10 @@
     "app_info": false,
     "device_ids": false
   },
-  "notes": "Save game is localStorage / app private storage only. Not uploaded. No ads, no analytics SDK. In-app purchases are processed by Google Play Billing; the app only asks Play which heroes the player owns and caches that list on the device (nidus.owned.v1). Nothing is sent to the developer."
+  "notes": "Save game is localStorage / app private storage only. Not uploaded. No ads, no analytics SDK. In-app purchases are processed by Google Play Billing; the app asks Play which heroes the player owns and caches that list on the device (nidus.owned.v1). With the purchase check off (default) nothing is sent to the developer. With it on, see if_purchase_check_on.",
+  "if_purchase_check_on": {
+    "when": "Only after ACK_URL is set in src/lib/nidus/support.ts (off by default).",
+    "declare": "Financial info \u2192 Purchase history: collected, not shared, processed ephemerally, required, purpose App functionality.",
+    "why": "The Google Play purchase token is sent to the game's own /api/ack endpoint so Google Play records the purchase as acknowledged. Nothing is stored."
+  }
 }

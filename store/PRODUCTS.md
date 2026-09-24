@@ -4,6 +4,7 @@ Create each as a **one-time product** (Monetize → Products → In-app products
 
 | Product ID | Name | Price | Power |
 | --- | --- | --- | --- |
+| `boost_x2` | Double Tithe (permanent) | $2.99 | 2× ore, parts, spark, cut, offline and raid cut. Not part of the bundle. |
 | `sovereign_all` | The Full Court (all 20) | $9.99 | every hero below |
 | `hero_vesper` | VESPER — Saint of the Ice Ring | $0.99 | +60% ORE |
 | `hero_mora` | MORA — Furnace Abbess | $0.99 | +60% PARTS |
@@ -37,8 +38,39 @@ Create each as a **one-time product** (Monetize → Products → In-app products
 
 1. Add your Google account as a **license tester** (Play Console → Settings → License testing).
 2. Buy one hero and the bundle with the test card. Confirm the court shows OWNED and ENTHRONE works.
-3. Wait 3 days, then check Order management: the test orders must **not** be auto-refunded. Google refunds purchases that are never acknowledged. The Android wrapper is expected to acknowledge them; if orders get refunded, the wrapper needs a Play Billing library update before launch.
+3. Wait 3 days, then check Order management: the test orders must **not** be auto-refunded. They will be unless the purchase check below is on.
 4. Refund one order in the Console, relaunch the app, and confirm that hero leaves the throne.
 5. Uninstall, reinstall, and confirm heroes return without buying again.
 
 The web wrapper settings for billing live in `store/twa-manifest.json` (`features.playBilling`).
+
+## Purchase check (required before selling — needs your yes)
+
+Google Play refunds and takes back every purchase that is not **acknowledged** within three days.
+The web billing API the game uses has no in-app acknowledge, and the Android wrapper does not do it
+either, so a small server step is needed. It is built and **off**:
+
+- `src/server/playAck.ts` — checks the purchase with Google and acknowledges it. Stores nothing.
+- `api/ack.ts` (Vercel) and `functions/api/ack.ts` (Cloudflare Pages) — the `/api/ack` address.
+- `ACK_URL` in `src/lib/nidus/support.ts` — empty means the game sends nothing.
+
+What turning it on means: after a purchase, the game sends Google's purchase code (not the player's
+name, email, or card) to your own site, once. The privacy page adds a "Purchase check" paragraph by
+itself when it is on. In Play Console Data safety, declare *Purchase history: collected, processed
+ephemerally, not shared, app functionality* (`store/data-safety.json` → `if_purchase_check_on`).
+
+To turn it on (host must be Vercel or Cloudflare Pages; GitHub Pages and Netlify cannot run it):
+
+1. Google Cloud Console → create a project → enable **Google Play Android Developer API**.
+2. IAM → Service accounts → create one (no roles needed there) → Keys → Add key → JSON. Keep the file
+   off GitHub.
+3. Play Console → Users and permissions → Invite the service account email → app `NIDUS` →
+   permissions **View financial data** and **Manage orders and subscriptions**.
+4. On the host, add encrypted environment variables:
+   `PLAY_SA_EMAIL` = `client_email` from the JSON, `PLAY_SA_KEY` = `private_key` from the JSON.
+   (`PLAY_PACKAGE` is optional; it defaults to `com.nyxhivequeen.nidus`.)
+5. Set `ACK_URL = "/api/ack"` in `src/lib/nidus/support.ts`, merge, deploy.
+6. Run the Internal testing purchase test above and confirm step 3 (no refund after 3 days).
+
+The key lives only in the host's secret settings. Never paste it into the repo, a chat, or an issue.
+

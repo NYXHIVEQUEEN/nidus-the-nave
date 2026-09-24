@@ -1,4 +1,5 @@
-import { defaultState } from "./content";
+import { CASTES, FRAMES, RAIDS, defaultState } from "./content";
+import { SOVEREIGNS } from "./heroes";
 import type { GameState } from "./types";
 
 export const SAVE_KEY = "nidus.save.v3";
@@ -98,6 +99,7 @@ function migrate(raw: GameState): GameState {
   merged.sovereigns = Array.isArray(merged.sovereigns) ? merged.sovereigns.filter((x) => typeof x === "string").slice(0, 3) : [];
   if (!merged.trial || typeof merged.trial.id !== "string" || typeof merged.trial.until !== "number") merged.trial = null;
   merged.trialsUsed = Array.isArray(merged.trialsUsed) ? merged.trialsUsed.filter((x) => typeof x === "string") : [];
+  merged.boost2x = merged.boost2x === true;
   for (const id of Object.keys(merged.rooms) as (keyof typeof merged.rooms)[]) {
     const room = merged.rooms[id];
     if (typeof room.rank !== "number") room.rank = room.built ? 1 : 0;
@@ -116,7 +118,181 @@ function migrate(raw: GameState): GameState {
       hullMax: r.hullMax ?? 40,
     };
   }
-  return merged;
+  return harden(merged, base);
+}
+
+// Imported and stored saves are untrusted: force every field back into its expected shape.
+const MAX = 1e15;
+const PORTRAIT = /^\/nidus\/(heroes\/)?[a-z0-9-]+\.(jpg|webp)$/;
+const JOBS = ["mine", "forge", "build", "lab", "raid"] as const;
+const RARITIES = ["iron", "bone", "gold", "relic"] as const;
+const TABS = ["hull", "forge", "lab", "raid", "minds"] as const;
+
+type Loose = Record<string, unknown>;
+const isObj = (v: unknown): v is Loose => typeof v === "object" && v !== null && !Array.isArray(v);
+const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(MAX, Math.max(0, v)) : d);
+const str = (v: unknown, d: string, max: number) => (typeof v === "string" ? v.slice(0, max) : d);
+const oneOf = <T extends string>(v: unknown, list: readonly T[], d: T): T => (list.includes(v as T) ? (v as T) : d);
+const portrait = (v: unknown, d: string) => (typeof v === "string" && PORTRAIT.test(v) ? v : d);
+
+function numRecord<K extends string>(v: unknown, base: Record<K, number>): Record<K, number> {
+  const src = isObj(v) ? v : {};
+  const out = {} as Record<K, number>;
+  for (const k of Object.keys(base) as K[]) out[k] = num(src[k], base[k]);
+  return out;
+}
+
+function frameOf(v: unknown): keyof typeof FRAMES | null {
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(FRAMES, v) ? (v as keyof typeof FRAMES) : null;
+}
+
+function cleanCandidate(v: unknown) {
+  if (!isObj(v)) return null;
+  const frame = frameOf(v.frame);
+  if (!frame) return null;
+  const stats = numRecord(v.stats, { mine: 0, forge: 0, build: 0, raid: 0, lab: 0 });
+  return {
+    name: str(v.name, "MIND", 24),
+    frame,
+    portrait: portrait(v.portrait, FRAMES[frame].portraits[0]),
+    line: str(v.line, "", 160),
+    rarity: oneOf(v.rarity, RARITIES, FRAMES[frame].rarity),
+    stats,
+    fracture: str(v.fracture, "", 120),
+  };
+}
+
+export function harden(m: GameState, base: GameState): GameState {
+  const o = m as unknown as Loose;
+  const b = base as unknown as Loose;
+  for (const k of Object.keys(b)) {
+    const bv = b[k];
+    if (typeof bv === "number") o[k] = num(o[k], bv);
+    else if (typeof bv === "boolean") o[k] = typeof o[k] === "boolean" ? o[k] : bv;
+  }
+  for (const k of Object.keys(o)) if (!Object.prototype.hasOwnProperty.call(b, k)) delete o[k];
+  m.hiveName = str(m.hiveName, "NAVE-1", 16) || "NAVE-1";
+  m.eventKind = str(m.eventKind, "", 24);
+  m.tab = oneOf(m.tab, TABS, "hull");
+  const casteIds = CASTES.map((c) => c.id);
+  m.printCaste = oneOf(m.printCaste, casteIds, "miner");
+  m.swarm = numRecord(m.swarm, base.swarm);
+  m.casteLevel = numRecord(m.casteLevel, base.casteLevel);
+  m.casteXp = numRecord(m.casteXp, base.casteXp);
+  m.hullMark = numRecord(m.hullMark, base.hullMark);
+  m.salvage = numRecord(m.salvage, base.salvage);
+  m.zoneRank = numRecord(m.zoneRank, base.zoneRank);
+  const rooms = {} as GameState["rooms"];
+  for (const id of Object.keys(base.rooms) as (keyof GameState["rooms"])[]) {
+    const r = isObj(m.rooms?.[id]) ? (m.rooms[id] as unknown as Loose) : {};
+    rooms[id] = { built: r.built === true, progress: num(r.progress, 0), rank: Math.min(99, num(r.rank, 0)), rankWork: num(r.rankWork, 0) };
+  }
+  m.rooms = rooms;
+  const tech = {} as GameState["tech"];
+  for (const id of Object.keys(base.tech) as (keyof GameState["tech"])[]) {
+    const t = isObj(m.tech?.[id]) ? (m.tech[id] as unknown as Loose) : {};
+    tech[id] = { done: t.done === true, progress: num(t.progress, 0) };
+  }
+  m.tech = tech;
+  // Pointers into rooms/tech must name a real entry, never an inherited key like "__proto__".
+  const own = (o: object, k: unknown) => typeof k === "string" && Object.prototype.hasOwnProperty.call(o, k);
+  if (!own(rooms, m.queuedRoom)) m.queuedRoom = null;
+  if (!own(rooms, m.rankingRoom)) m.rankingRoom = null;
+  if (!own(tech, m.activeTech)) m.activeTech = null;
+  const raidIds = RAIDS.map((r) => r.id);
+  m.raidCleared = Array.isArray(m.raidCleared) ? m.raidCleared.filter((id) => raidIds.includes(id)) : [];
+  const count: GameState["raidCount"] = {};
+  for (const id of raidIds) if (isObj(m.raidCount) && typeof m.raidCount[id] === "number") count[id] = num(m.raidCount[id], 0);
+  m.raidCount = count;
+  if (m.raid && (!isObj(m.raid) || !raidIds.includes(m.raid.node))) m.raid = null;
+  if (m.raid) {
+    const r = m.raid as unknown as Loose;
+    m.raid = {
+      node: m.raid.node,
+      startedAt: num(r.startedAt, 0),
+      endsAt: num(r.endsAt, 0),
+      strikers: num(r.strikers, 0),
+      mindId: typeof r.mindId === "string" ? r.mindId.slice(0, 64) : null,
+      hp: num(r.hp, 40),
+      hpMax: Math.max(1, num(r.hpMax, 40)),
+      hull: num(r.hull, 40),
+      hullMax: Math.max(1, num(r.hullMax, 40)),
+      watching: r.watching === true,
+      boostUntil: num(r.boostUntil, 0),
+      beat: str(r.beat, "", 40),
+    };
+  }
+  m.minds = (Array.isArray(m.minds) ? m.minds : [])
+    .slice(0, 64)
+    .map((v) => {
+      const c = cleanCandidate(v);
+      if (!c) return null;
+      const x = v as unknown as Loose;
+      return {
+        ...c,
+        id: str(x.id, `m${Math.random().toString(36).slice(2, 8)}`, 64),
+        job: oneOf(x.job, JOBS, FRAMES[c.frame].job),
+        seated: x.seated === true,
+        xp: num(x.xp, 0),
+        level: Math.min(999, num(x.level, 1)),
+        wounded: x.wounded === true,
+        alive: x.alive !== false,
+      };
+    })
+    .filter((x): x is GameState["minds"][number] => x !== null);
+  const seenIds = new Set<string>();
+  for (const mind of m.minds) {
+    while (seenIds.has(mind.id)) mind.id = `m${Math.random().toString(36).slice(2, 8)}`;
+    seenIds.add(mind.id);
+  }
+  if (m.waking !== null) {
+    const w = Array.isArray(m.waking) ? m.waking.slice(0, 3).map(cleanCandidate).filter((x): x is NonNullable<ReturnType<typeof cleanCandidate>> => x !== null) : [];
+    m.waking = w.length ? w : null;
+  }
+  m.selectedMind = typeof m.selectedMind === "string" ? m.selectedMind.slice(0, 64) : null;
+  if (m.pendingGift !== null) {
+    const g: Loose = isObj(m.pendingGift) ? m.pendingGift : {};
+    m.pendingGift = isObj(m.pendingGift)
+      ? { ore: num(g.ore, 0), parts: num(g.parts, 0), spark: num(g.spark, 0), seconds: num(g.seconds, 0), credits: num(g.credits, 0) }
+      : null;
+  }
+  m.printFocus = isObj(m.printFocus)
+    ? { caste: oneOf(m.printFocus.caste, casteIds, m.printCaste), n: num(m.printFocus.n, 0) }
+    : { caste: m.printCaste, n: 0 };
+  m.orders = (Array.isArray(m.orders) ? m.orders : [])
+    .filter(isObj)
+    .slice(0, 10)
+    .map((x) => {
+      const r: Loose = isObj(x.reward) ? x.reward : {};
+      return {
+        ...(x as unknown as GameState["orders"][number]),
+        id: str(x.id, "o", 64),
+        label: str(x.label, "", 40),
+        hint: str(x.hint, "", 80),
+        target: str(x.target, "", 40),
+        need: Math.max(1, num(x.need, 1)),
+        have: num(x.have, 0),
+        reward: { ore: num(r.ore, 0), parts: num(r.parts, 0), spark: num(r.spark, 0), echo: num(r.echo, 0) },
+      };
+    });
+  m.log = (Array.isArray(m.log) ? m.log : []).filter(isObj).slice(-60).map((x) => ({ t: num(x.t, 0), line: str(x.line, "", 200) }));
+  m.briefing = (Array.isArray(m.briefing) ? m.briefing : [])
+    .filter(isObj)
+    .slice(0, 12)
+    .map((x) => ({
+      ...(x as unknown as GameState["briefing"][number]),
+      id: str(x.id, "b", 64),
+      headline: str(x.headline, "", 80),
+      line: str(x.line, "", 200),
+      portrait: x.portrait === undefined ? undefined : portrait(x.portrait, "/nidus/warden.jpg"),
+      stamp: x.stamp === undefined ? undefined : str(x.stamp, "", 40),
+    }));
+  const heroIds = SOVEREIGNS.map((h) => h.id);
+  m.sovereigns = [...new Set(m.sovereigns.filter((id) => heroIds.includes(id)))];
+  m.trialsUsed = [...new Set(m.trialsUsed.filter((id) => heroIds.includes(id)))];
+  if (m.trial && !heroIds.includes(m.trial.id)) m.trial = null;
+  if (m.trial) m.trial = { id: m.trial.id, until: num(m.trial.until, 0) };
+  return m;
 }
 
 export function loadSave(): GameState {
@@ -164,8 +340,13 @@ export function exportSave(state: GameState) {
   const a = document.createElement("a");
   a.href = url;
   a.download = "nidus-hive.json";
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  // Safari and Firefox read the blob after click returns; revoking at once can cancel the file.
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 export function importSave(raw: string): GameState | null {

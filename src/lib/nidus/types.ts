@@ -247,4 +247,5 @@ export type GameState = {
   sovereigns: string[];
   trial: { id: string; until: number } | null;
   trialsUsed: string[];
+  boost2x: boolean;
 };

@@ -1,4 +1,5 @@
 import { getPrefs, patchPrefs, type MusicBed } from "./view";
+import { hallImpulse, startScore, type ScoreHandle, type ScoreName } from "./score";
 
 /** Nytheria Nyx on Spotify — in-hive player cannot stream Spotify, so this is a real door. */
 export const NYX_SPOTIFY = "https://open.spotify.com/artist/0h7eXQHwChoJ0FkFqrMQSA";
@@ -7,7 +8,7 @@ export const NYX_ANTHEM_SPOTIFY = "https://open.spotify.com/track/5B0hF5OoWMG6AW
 export type ChimeKind = "print" | "wake" | "surge" | "snap" | "raid" | "dead" | "seat" | "cook" | "claim" | "hit" | "rail" | "cannon" | "ping" | "deny";
 export type AmbKind = "idle" | "raid" | "surge" | "wake";
 
-type Slot = { gain: GainNode; src: AudioBufferSourceNode | null; voidGain: GainNode | null };
+type Slot = { gain: GainNode; src: AudioBufferSourceNode | null; score: ScoreHandle | null };
 type Mixer = {
   ctx: AudioContext;
   master: GainNode;
@@ -27,12 +28,16 @@ type Mixer = {
   rumbleGain: GainNode | null;
   air: OscillatorNode | null;
   airGain: GainNode | null;
-  voidOsc: OscillatorNode[];
-  voidGain: GainNode | null;
+  hall: ConvolverNode;
   ambKind: AmbKind;
   tickTimer: number;
   duckUntil: number;
+  rot: { phase: "anthem" | "void"; until: number; last: ScoreName | undefined };
 };
+
+// ROTATE: the anthem plays once, then a generative piece for a few minutes, then the anthem again.
+const AMBIENT_MIN = 150;
+const AMBIENT_MAX = 260;
 
 const FADE = 0.9;
 
@@ -78,7 +83,24 @@ export function syncAudioGains() {
 function wantedBed(pref: MusicBed): string {
   const m = hold.m;
   if (m?.ambKind === "raid" && m.buffers.coda) return "coda";
-  return pref === "void" ? "void" : "anthem";
+  if (pref === "void") return "void";
+  if (pref === "anthem") return "anthem";
+  return m?.rot.phase ?? "anthem";
+}
+
+function rotateTick() {
+  const m = hold.m;
+  if (!m || getPrefs().musicBed !== "rotate" || m.ambKind === "raid") return;
+  const t = m.ctx.currentTime;
+  if (t < m.rot.until) return;
+  if (m.rot.phase === "anthem") {
+    m.rot.phase = "void";
+    m.rot.until = t + AMBIENT_MIN + Math.random() * (AMBIENT_MAX - AMBIENT_MIN);
+  } else {
+    m.rot.phase = "anthem";
+    m.rot.until = t + (m.buffers.anthem?.duration ?? 180) - FADE;
+  }
+  void fadeTo(m.rot.phase);
 }
 
 export function unlockAudio() {
@@ -99,8 +121,14 @@ export function unlockAudio() {
       const gain = ctx.createGain();
       gain.gain.value = 0;
       gain.connect(music);
-      return { gain, src: null, voidGain: null };
+      return { gain, src: null, score: null };
     };
+    const hall = ctx.createConvolver();
+    hall.buffer = hallImpulse(ctx);
+    const hallOut = ctx.createGain();
+    hallOut.gain.value = 0.5;
+    hall.connect(hallOut);
+    hallOut.connect(music);
     m = {
       ctx,
       master,
@@ -120,17 +148,17 @@ export function unlockAudio() {
       rumbleGain: null,
       air: null,
       airGain: null,
-      voidOsc: [],
-      voidGain: null,
+      hall,
       ambKind: "idle",
       tickTimer: 0,
       duckUntil: 0,
+      rot: { phase: "anthem", until: Number.POSITIVE_INFINITY, last: undefined },
     };
     hold.m = m;
     applyGains();
     startStation(m);
   }
-  if (m.ctx.state === "suspended") void m.ctx.resume();
+  if (m.ctx.state !== "running" && m.ctx.state !== "closed") void m.ctx.resume().catch(() => {});
   if (!m.loading) m.loading = loadBeds(m);
 }
 
@@ -139,6 +167,7 @@ async function loadBeds(m: Mixer) {
     anthem: "/nidus/rules.mp3",
     coda: "/nidus/loop-coda.mp3",
     brk: "/nidus/loop-break.mp3",
+    hum: "/nidus/loop-hum.mp3",
   };
   await Promise.all(
     Object.entries(names).map(async ([k, src]) => {
@@ -170,9 +199,11 @@ function stopSlot(slot: Slot, when: number) {
     }, (FADE + 0.05) * 1000);
   }
   slot.src = null;
+  slot.score?.stop(when);
+  slot.score = null;
 }
 
-function playBuffer(slot: Slot, buf: AudioBuffer, when: number) {
+function playBuffer(slot: Slot, buf: AudioBuffer, when: number, loop = true) {
   const m = hold.m;
   if (!m) return;
   if (slot.src) {
@@ -184,53 +215,10 @@ function playBuffer(slot: Slot, buf: AudioBuffer, when: number) {
   }
   const src = m.ctx.createBufferSource();
   src.buffer = buf;
-  src.loop = true;
+  src.loop = loop;
   src.connect(slot.gain);
   src.start(when);
   slot.src = src;
-}
-
-function attachVoid(slot: Slot) {
-  const m = hold.m;
-  if (!m) return;
-  if (!m.voidGain) {
-    const g = m.ctx.createGain();
-    g.gain.value = 1;
-    const o1 = m.ctx.createOscillator();
-    const o2 = m.ctx.createOscillator();
-    const o3 = m.ctx.createOscillator();
-    o1.type = "sine";
-    o2.type = "triangle";
-    o3.type = "sine";
-    o1.frequency.value = 55;
-    o2.frequency.value = 82.4;
-    o3.frequency.value = 110;
-    o1.detune.value = -6;
-    o2.detune.value = 9;
-    const f = m.ctx.createBiquadFilter();
-    f.type = "lowpass";
-    f.frequency.value = 420;
-    f.Q.value = 0.7;
-    const og = m.ctx.createGain();
-    og.gain.value = 0.22;
-    o1.connect(og);
-    o2.connect(og);
-    o3.connect(og);
-    og.connect(f);
-    f.connect(g);
-    o1.start();
-    o2.start();
-    o3.start();
-    m.voidOsc = [o1, o2, o3];
-    m.voidGain = g;
-  }
-  try {
-    m.voidGain.disconnect();
-  } catch {
-    /* not connected */
-  }
-  m.voidGain.connect(slot.gain);
-  slot.voidGain = m.voidGain;
 }
 
 async function fadeTo(bed: string) {
@@ -244,7 +232,7 @@ async function fadeTo(bed: string) {
   stopSlot(outgoing, t);
   incoming.gain.gain.cancelScheduledValues(t);
   incoming.gain.gain.setValueAtTime(0, t);
-  if (bed === "void") {
+  const ambient = () => {
     if (incoming.src) {
       try {
         incoming.src.stop();
@@ -253,14 +241,24 @@ async function fadeTo(bed: string) {
       }
       incoming.src = null;
     }
-    attachVoid(incoming);
+    incoming.score?.stop(t);
+    incoming.score = startScore(m.ctx, incoming.gain, m.hall, { avoid: m.rot.last, hum: m.buffers.hum });
+    m.rot.last = incoming.score.name;
+  };
+  if (bed === "void") {
+    ambient();
   } else {
     const buf = bed === "coda" ? m.buffers.coda : m.buffers.anthem;
     if (!buf) {
-      attachVoid(incoming);
+      ambient();
       bed = "void";
     } else {
-      playBuffer(incoming, buf, t);
+      const once = bed === "anthem" && getPrefs().musicBed === "rotate";
+      playBuffer(incoming, buf, t, !once);
+      if (once) {
+        m.rot.phase = "anthem";
+        m.rot.until = t + buf.duration - FADE;
+      }
     }
   }
   incoming.gain.gain.linearRampToValueAtTime(1, t + FADE);
@@ -322,14 +320,171 @@ function startStation(m: Mixer) {
   m.air = air;
   m.airGain = ag;
 
-  if (!m.tickTimer) m.tickTimer = window.setInterval(() => hullTick(), 3800);
+  if (!m.tickTimer) m.tickTimer = window.setInterval(() => rotateTick(), 1000);
+  scheduleSpace(m);
 }
 
-function hullTick() {
-  const m = hold.m;
-  if (!m || getPrefs().muted) return;
-  if (m.ambKind === "surge") return;
-  ping(m, 880 + Math.random() * 420, 0.035, 0.09, m.amb);
+type SpaceEvent = (m: Mixer, out: AudioNode) => void;
+
+function spaceOut(m: Mixer): AudioNode {
+  // Older Safari has no StereoPanner; fall back to a plain gain so the event still plays centered.
+  const pan: AudioNode & { pan?: AudioParam } = typeof m.ctx.createStereoPanner === "function" ? m.ctx.createStereoPanner() : m.ctx.createGain();
+  if (pan.pan) pan.pan.value = Math.random() * 1.6 - 0.8;
+  const send = m.ctx.createGain();
+  send.gain.value = 0.6;
+  pan.connect(m.amb);
+  pan.connect(send);
+  send.connect(m.hall);
+  window.setTimeout(() => {
+    pan.disconnect();
+    send.disconnect();
+  }, 9000);
+  return pan;
+}
+
+function noiseSrc(m: Mixer, seconds: number) {
+  const buf = m.ctx.createBuffer(1, Math.floor(m.ctx.sampleRate * seconds), m.ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = m.ctx.createBufferSource();
+  src.buffer = buf;
+  return src;
+}
+
+// Hull under strain: a resonant band sliding through filtered noise.
+const creak: SpaceEvent = (m, out) => {
+  const t = m.ctx.currentTime;
+  const dur = 1.6 + Math.random() * 1.6;
+  const src = noiseSrc(m, dur);
+  const bp = m.ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.Q.value = 18;
+  bp.frequency.setValueAtTime(160 + Math.random() * 120, t);
+  bp.frequency.exponentialRampToValueAtTime(70 + Math.random() * 40, t + dur);
+  const g = m.ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.55, t + 0.4);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(bp);
+  bp.connect(g);
+  g.connect(out);
+  src.start(t);
+};
+
+// Far comms: a few band-limited chirps, like a voice you cannot read.
+const comms: SpaceEvent = (m, out) => {
+  const bp = m.ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = 1600;
+  bp.Q.value = 3;
+  bp.connect(out);
+  const n = 3 + Math.floor(Math.random() * 5);
+  for (let i = 0; i < n; i++) {
+    const t = m.ctx.currentTime + i * (0.09 + Math.random() * 0.12);
+    const o = m.ctx.createOscillator();
+    o.type = "square";
+    o.frequency.setValueAtTime(700 + Math.random() * 900, t);
+    const g = m.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.018, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    o.connect(g);
+    g.connect(bp);
+    o.start(t);
+    o.stop(t + 0.1);
+  }
+};
+
+// The deep: a slow low groan that swells and falls.
+const groan: SpaceEvent = (m, out) => {
+  const t = m.ctx.currentTime;
+  const dur = 4 + Math.random() * 3;
+  const o = m.ctx.createOscillator();
+  o.type = "sine";
+  o.frequency.setValueAtTime(58 + Math.random() * 20, t);
+  o.frequency.exponentialRampToValueAtTime(34 + Math.random() * 8, t + dur);
+  const g = m.ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.3, t + dur * 0.4);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g);
+  g.connect(out);
+  o.start(t);
+  o.stop(t + dur + 0.1);
+};
+
+// Debris: a scatter of tiny metal ticks.
+const debris: SpaceEvent = (m, out) => {
+  const n = 2 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < n; i++) {
+    const t = m.ctx.currentTime + Math.random() * 0.9;
+    const o = m.ctx.createOscillator();
+    o.type = "triangle";
+    o.frequency.setValueAtTime(1800 + Math.random() * 2600, t);
+    const g = m.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.03, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g);
+    g.connect(out);
+    o.start(t);
+    o.stop(t + 0.15);
+  }
+};
+
+// Solar wind: a noise swell with a moving lowpass.
+const gust: SpaceEvent = (m, out) => {
+  const t = m.ctx.currentTime;
+  const dur = 3 + Math.random() * 3;
+  const src = noiseSrc(m, dur);
+  const lp = m.ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.setValueAtTime(300, t);
+  lp.frequency.exponentialRampToValueAtTime(1400 + Math.random() * 1200, t + dur * 0.5);
+  lp.frequency.exponentialRampToValueAtTime(260, t + dur);
+  const g = m.ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.16, t + dur * 0.5);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(lp);
+  lp.connect(g);
+  g.connect(out);
+  src.start(t);
+};
+
+// A lone hull ping, kept from the old station loop.
+const hullPing: SpaceEvent = (m, out) => ping(m, 880 + Math.random() * 420, 0.03, 0.09, out as GainNode);
+
+const SPACE: [SpaceEvent, number][] = [
+  [creak, 3],
+  [comms, 2],
+  [groan, 2],
+  [debris, 3],
+  [gust, 2],
+  [hullPing, 1],
+];
+
+function scheduleSpace(m: Mixer) {
+  const next = 4500 + Math.random() * 9500;
+  window.setTimeout(() => {
+    const live = hold.m;
+    if (live && !getPrefs().muted && live.ctx.state === "running" && live.ambKind !== "surge") {
+      const total = SPACE.reduce((n, [, w]) => n + w, 0);
+      let r = Math.random() * total;
+      for (const [ev, w] of SPACE) {
+        r -= w;
+        if (r <= 0) {
+          try {
+            ev(live, spaceOut(live));
+          } catch {
+            /* audio optional */
+          }
+          break;
+        }
+      }
+    }
+    scheduleSpace(m);
+  }, next);
 }
 
 function ping(m: Mixer, freq: number, peak: number, dur: number, bus: GainNode, type: OscillatorType = "triangle") {
@@ -368,9 +523,15 @@ function noiseBurst(m: Mixer, peak: number, dur: number, hp: number) {
   src.start(t);
 }
 
+/** Leaving the app pauses every sound, so the hive never plays from a pocket. */
+export function pauseAudio() {
+  const m = hold.m;
+  if (m?.ctx.state === "running") void m.ctx.suspend().catch(() => {});
+}
+
 export function resumeAudio() {
   const m = hold.m;
-  if (m?.ctx.state === "suspended") void m.ctx.resume();
+  if (m && m.ctx.state !== "running" && m.ctx.state !== "closed") void m.ctx.resume().catch(() => {});
   applyGains();
 }
 

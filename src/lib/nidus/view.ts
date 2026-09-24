@@ -4,7 +4,7 @@ const KEY = "nidus.prefs.v1";
 export type HelpId = "hull" | "forge" | "lab" | "raid" | "minds" | "view" | "wake" | "idle" | "flow";
 export type Density = "auto" | "compact" | "comfort" | "watch";
 export type DensityResolved = "compact" | "comfort" | "watch";
-export type MusicBed = "anthem" | "void";
+export type MusicBed = "rotate" | "anthem" | "void";
 
 export type ViewPrefs = {
   spinPaused: boolean;
@@ -64,8 +64,8 @@ let prefs: ViewPrefs = {
   seenHelp: {},
   density: "compact" as Density,
   uiScale: 0.58,
-  musicBed: "anthem" as MusicBed,
-  prefsGen: 10,
+  musicBed: "rotate" as MusicBed,
+  prefsGen: 11,
 };
 
 function clamp(n: number, a: number, b: number) {
@@ -103,8 +103,13 @@ function read() {
           ? parsed.density
           : "compact",
       uiScale: (parsed.prefsGen ?? 0) >= 8 && typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.5, 1) : 0.58,
-      musicBed: parsed.musicBed === "void" ? "void" : "anthem",
-      prefsGen: 10,
+      musicBed:
+        parsed.musicBed === "void"
+          ? "void"
+          : parsed.musicBed === "anthem" && (parsed.prefsGen ?? 0) >= 11
+            ? "anthem"
+            : "rotate",
+      prefsGen: 11,
     };
   } catch {
     /* keep */

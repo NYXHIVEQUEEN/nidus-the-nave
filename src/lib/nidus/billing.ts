@@ -1,8 +1,11 @@
 import { BUNDLE_SKU, SOVEREIGNS, heroSku } from "./heroes";
 import { storageSealed } from "./save";
+import { BOOST_SKU } from "./boost";
+import { ACK_URL } from "./support";
 
 const PLAY = "https://play.google.com/billing";
 const CACHE = "nidus.owned.v1";
+const ACKED = "nidus.acked.v1";
 
 type ItemDetails = { itemId: string; title?: string; price: { currency: string; value: string } };
 type PurchaseDetails = { itemId: string; purchaseToken: string };
@@ -15,12 +18,15 @@ type WithGoods = Window & { getDigitalGoodsService?: (provider: string) => Promi
 export type Shop = {
   mode: "loading" | "play" | "web";
   owned: ReadonlySet<string>;
+  boost: boolean;
+  ready: boolean;
   prices: Record<string, string>;
   busy: string | null;
   note: string;
+  inApp: boolean;
 };
 
-export const ALL_SKUS = [BUNDLE_SKU, ...SOVEREIGNS.map((h) => heroSku(h.id))];
+export const ALL_SKUS = [BUNDLE_SKU, BOOST_SKU, ...SOVEREIGNS.map((h) => heroSku(h.id))];
 
 export function ownedFrom(skus: readonly string[]): Set<string> {
   if (skus.includes(BUNDLE_SKU)) return new Set(SOVEREIGNS.map((h) => h.id));
@@ -40,7 +46,25 @@ export function formatPrice(p: { currency: string; value: string }): string {
   }
 }
 
-let shop: Shop = { mode: "loading", owned: new Set(), prices: {}, busy: null, note: "" };
+let shop: Shop = { mode: "loading", owned: new Set(), boost: false, ready: false, prices: {}, busy: null, note: "", inApp: false };
+
+const APP_REFERRER = "android-app://com.nyxhivequeen.nidus";
+const APP_FLAG = "nidus.twa";
+
+// The Play app opens NIDUS with this referrer; remember it for reloads in the same session.
+function inAndroidApp(): boolean {
+  try {
+    if (document.referrer.startsWith(APP_REFERRER)) {
+      sessionStorage.setItem(APP_FLAG, "1");
+      return true;
+    }
+    return sessionStorage.getItem(APP_FLAG) === "1";
+  } catch {
+    return false;
+  }
+}
+
+const NEEDS_CHROME = "PURCHASES NEED GOOGLE CHROME ON THIS PHONE. INSTALL OR UPDATE CHROME, THEN REOPEN NIDUS. HEROES YOU OWN RETURN THEN.";
 let service: DigitalGoods | null = null;
 const listeners = new Set<() => void>();
 
@@ -75,15 +99,68 @@ function writeCache(skus: string[]) {
   }
 }
 
+// Same-origin only, so the CSP and the privacy page both stay true.
+export function ackTarget(url: string): string | null {
+  return url.startsWith("/") && !url.startsWith("//") ? url : null;
+}
+
+const ackKey = (p: PurchaseDetails) => `${p.itemId}:${p.purchaseToken.slice(-24)}`;
+const inflight = new Set<string>();
+
+function readAcked(): Set<string> {
+  try {
+    const list = JSON.parse(localStorage.getItem(ACKED) ?? "[]") as unknown;
+    return new Set(Array.isArray(list) ? list.filter((x): x is string => typeof x === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+// Google refunds unconfirmed purchases after three days. Retried every launch until the server says done.
+async function confirmPurchases(list: PurchaseDetails[]): Promise<void> {
+  const target = ackTarget(ACK_URL);
+  if (!target) return;
+  const done = readAcked();
+  const todo = list.filter((p) => p.purchaseToken && !done.has(ackKey(p)) && !inflight.has(ackKey(p))).slice(0, 25);
+  if (!todo.length) return;
+  for (const p of todo) inflight.add(ackKey(p));
+  const ctrl = new AbortController();
+  const timer = window.setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch(target, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ items: todo.map((p) => ({ sku: p.itemId, token: p.purchaseToken })) }),
+      credentials: "omit",
+      cache: "no-store",
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return;
+    const data = (await res.json()) as { results?: { ok?: unknown }[] };
+    todo.forEach((p, i) => {
+      if (data.results?.[i]?.ok === true) done.add(ackKey(p));
+    });
+    if (!storageSealed()) localStorage.setItem(ACKED, JSON.stringify([...done].slice(-60)));
+  } catch {
+    /* offline or off: next launch tries again */
+  } finally {
+    window.clearTimeout(timer);
+    for (const p of todo) inflight.delete(ackKey(p));
+  }
+}
+
 async function syncPurchases(): Promise<boolean> {
   if (!service) return false;
   try {
-    const skus = (await service.listPurchases()).map((p) => p.itemId);
+    const list = await service.listPurchases();
+    void confirmPurchases(list);
+    const skus = list.map((p) => p.itemId);
     writeCache(skus);
-    emit({ owned: ownedFrom(skus) });
+    emit({ owned: ownedFrom(skus), boost: skus.includes(BOOST_SKU), ready: true });
     return true;
   } catch {
-    emit({ owned: ownedFrom(readCache()), note: "OFFLINE. SHOWING YOUR LAST KNOWN HEROES." });
+    const cached = readCache();
+    emit({ owned: ownedFrom(cached), boost: cached.includes(BOOST_SKU), ready: true, note: "OFFLINE. SHOWING YOUR LAST KNOWN PURCHASES." });
     return false;
   }
 }
@@ -95,15 +172,18 @@ export function initBilling(): Promise<boolean> {
   if (started) return started;
   started = (async () => {
     const w = typeof window === "undefined" ? null : (window as WithGoods);
-    if (!w?.getDigitalGoodsService || typeof PaymentRequest === "undefined") {
-      emit({ mode: "web", owned: new Set() });
+    const inApp = w ? inAndroidApp() : false;
+    // In the Play app without billing (another browser runs it), keep last known purchases and say why.
+    const noBilling = () => {
+      const cached = inApp ? readCache() : [];
+      emit({ mode: "web", inApp, owned: ownedFrom(cached), boost: cached.includes(BOOST_SKU), ready: true, note: inApp ? NEEDS_CHROME : "" });
       return false;
-    }
+    };
+    if (!w?.getDigitalGoodsService || typeof PaymentRequest === "undefined") return noBilling();
     try {
       service = await w.getDigitalGoodsService(PLAY);
     } catch {
-      emit({ mode: "web", owned: new Set() });
-      return false;
+      return noBilling();
     }
     emit({ mode: "play" });
     try {
@@ -125,7 +205,9 @@ export async function buy(sku: string): Promise<boolean> {
       total: { label: "Total", amount: { currency: "USD", value: "0" } },
     });
     const response = await request.show();
+    const token = (response.details as { purchaseToken?: unknown } | null)?.purchaseToken;
     await response.complete("success");
+    if (typeof token === "string") void confirmPurchases([{ itemId: sku, purchaseToken: token }]);
     await syncPurchases();
     return true;
   } catch (e) {

@@ -15,6 +15,7 @@ import type {
 } from "./types";
 import { idFrom, pick, rand } from "./rng";
 import { edict, edictHours, printDiscount } from "./heroes";
+import { boostMul } from "./boost";
 
 export const CASTES: { id: Caste; label: string; verb: string }[] = [
   { id: "miner", label: "MINE", verb: "Chip" },
@@ -301,6 +302,7 @@ export function defaultState(now = Date.now()): GameState {
     sovereigns: [],
     trial: null,
     trialsUsed: [],
+    boost2x: false,
   };
 }
 
@@ -542,16 +544,17 @@ export function rates(s: GameState, now: number) {
       (s.rooms.foundry?.rank ?? 0) * 0.012) *
     zHold *
     slow *
-    edict(s, "credits", now);
-  const oreOut = orePerSec * zHold * slow * edict(s, "ore", now);
-  const partsOut = partsPerSec * zSpine * slow * edict(s, "parts", now);
+    edict(s, "credits", now) *
+    boostMul(s);
+  const oreOut = orePerSec * zHold * slow * edict(s, "ore", now) * boostMul(s);
+  const partsOut = partsPerSec * zSpine * slow * edict(s, "parts", now) * boostMul(s);
   return {
     orePerSec: oreOut,
     partsPerSec: partsOut,
     oreSpendPerSec: partsOut * ORE_PER_PART,
     buildPerSec: buildPerSec * zNave * slow * edict(s, "build", now),
     labPerSec: labPerSec * zNave * slow * edict(s, "lab", now),
-    sparkPerSec: sparkPerSec * slow * edict(s, "spark", now),
+    sparkPerSec: sparkPerSec * slow * edict(s, "spark", now) * boostMul(s),
     sparkDrain,
     chargeGen,
     chargeDrain,

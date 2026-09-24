@@ -1,3 +1,86 @@
+# Pre-merge self-audit (24 Sep 2026)
+
+Full read of this PR's diff before merging. Fixed:
+- Saves: an own `"__proto__"` key in an imported file survived cleaning (the key filter used `in`);
+  now dropped. Room/research pointers must name a real entry; duplicate commander ids are split;
+  duplicate hero entries collapse. New regression test (43 tests).
+- Offline worker: on slow networks it gave up after 2.8 s with an error even when nothing was cached;
+  now it waits for the network unless a cached copy exists. `/api/` and media range requests bypass it.
+- Updates: if a release lands while the game is open, missing old code files trigger one saved reload
+  (at most once a minute) instead of a broken screen.
+- Website button accepts only an `https://` address (`WEBSITE` in `support.ts`).
+
+Verified: typecheck, 43/43 tests, lint 0 errors, production build; delayed-server test (uncached file
+served after 4.5 s, 404 stays 404), stale-code reload fires once only, saves intact; production smoke
+at 390×844, 844×390, 1280×800 with no page, console, or CSP errors.
+
+---
+
+# Handoff — pass 5: security, trust, platform sweep (24 Sep 2026, overnight)
+
+Rollback: `3906156` (branch before this sweep). No save wipe; save keys unchanged. New local keys:
+`nidus.acked.v1` (only when the purchase check is on) and session flag `nidus.twa`; ERASE removes both.
+
+## Security
+- Production Content-Security-Policy (same-origin only) + host headers (`public/_headers`, `vercel.json`).
+- Imported / tampered saves are cleaned: numbers clamped, unknown keys dropped, portraits must be local game art.
+- `npm audit --omit=dev`: 0 vulnerabilities. No secrets in tracked files.
+- Grok preview files (`public/__grok`, Grok logo) no longer ship on the live site.
+
+## Trust
+- **Purchase check** (Google refunds purchases not acknowledged in 3 days): built, tested, **off**
+  until the owner approves and adds her Play key (`store/PRODUCTS.md`). Privacy page discloses it only when on.
+- Privacy, terms, content rating, data safety, PLAY.md now match what the game does (offline file copy,
+  EXPORT, website link, M/17+ target, live shop, erase path).
+- Inside the Play app without Chrome, the court says NEEDS CHROME instead of a store link.
+
+## Platform
+- No-WebGL / 3D crash: painted room art + "3D OFF" / "TAP TO RETRY" chip; game fully playable.
+- INSTALL HOME: real install prompt (Chrome/Edge/Android), Safari steps on iOS, menu steps elsewhere.
+- Sound pauses when the app is hidden, resumes on return or next tap (iOS "interrupted" too).
+- Safari without StereoPanner: space ambience falls back cleanly.
+- Offline cache renamed per build, so updates drop old files from phones. Service worker registers.
+- EXPORT download works on Safari/Firefox (link no longer revoked instantly).
+- Landscape phones: side sheet sits under the resource bar.
+- Rooms darker (bone pillars and walls no longer washed out). Unused texture + 2 unused boot images dropped.
+- Hosting: root of a domain only (`store/GITHUB.md`); browser floor Chrome 111 / Safari 16.4 / Firefox 128.
+
+## Verified here (Chromium, SwiftShader — not a real phone)
+- Typecheck clean, 42/42 tests, lint 0 errors, production build.
+- Production static smoke at 390×844, 844×390, 1280×800 (+ 820×1180 and no-WebGL earlier): every tab,
+  court, settings; no page, console, or CSP errors; no sideways scroll; service worker active.
+
+## Still unverified
+- Real Android phone (TWA), iPhone Safari, and a real Play purchase (needs Play Console + license tester).
+- The purchase check against real Google (needs her service account).
+
+---
+
+# GDL handoff — pass 4: lean warship, 3D rooms, live interiors (24 Sep 2026)
+
+Rollback: `1d4775b` (main before this pass). No save wipe; new field `boost2x` defaults false via migrate().
+
+## Owner feedback addressed
+- "Ship looks dorky; off textures and animations": longer, narrower nave with a needle ram; tall lead-slate
+  pointed roof with ridge pinnacles; thin gilt bands; long swept wings + canards; smaller engine bells with
+  additive plumes; baked belly/spine grime; blinking nav lights and spire beacon; patrol weave with bank.
+- "Replaced my 3D animated rooms with static art": 22 room modules grow onto the hull (grow-in, rank collars,
+  build scaffold, animated sails/wheel/dish/bell), and FORGE / LAB / MINDS are live 3D scenes in the ship's Canvas.
+
+## Verified (Chromium 390×844, SwiftShader, not a phone)
+- Draw calls: HULL 35 (≈48 with every room built, 65k tris), RAID 35, FORGE 17, LAB 34, MINDS 11.
+- No page or console errors on any tab, dev and static production build.
+- Typecheck clean, 36/36 tests, lint 0 errors.
+
+## Still unverified
+- Physical-device FPS / heat. Owner approval of the new look.
+
+## Defects remaining
+- Throne hall is dim on some screens; throne models are simple.
+- Remaining `tex-*` originals keep the blurred cross seam; `-s` copies and `tex-hull.jpg` are mirrored clean crops.
+
+---
+
 # GDL handoff — cathedral hull rebuild (pass 3)
 
 Directive: `.grok/skills/space-hull-3d/references/gdl-acceptance.md`. Rollback: git `49dfe77`

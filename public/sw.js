@@ -43,45 +43,61 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-function tryNet(req, ms) {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), ms);
-  return fetch(req, { signal: ctrl.signal }).finally(() => clearTimeout(t));
+const SLOW_MS = 2800;
+
+function cacheable(path) {
+  return (
+    path.startsWith("/nidus/") ||
+    path.startsWith("/fonts/") ||
+    path.startsWith("/icons/") ||
+    path.startsWith("/assets/") ||
+    KEEP.includes(path)
+  );
+}
+
+async function fromCache(req) {
+  const hit = await caches.match(req);
+  if (hit) return hit;
+  if (req.mode === "navigate") return caches.match("/");
+  return undefined;
+}
+
+// Network first. If the network is slow and a copy is cached, use the copy; with no copy, keep waiting
+// for the network instead of failing (first visits on slow phones).
+async function serve(req, url) {
+  const net = fetch(req).then((res) => {
+    if (res.ok && cacheable(url.pathname)) {
+      const copy = res.clone();
+      caches.open(SHELL).then((c) => c.put(req, copy)).catch(() => {});
+    }
+    return res;
+  });
+  net.catch(() => {});
+  let timer;
+  const slow = new Promise((resolve) => {
+    timer = setTimeout(() => resolve("slow"), SLOW_MS);
+  });
+  try {
+    const first = await Promise.race([net, slow]);
+    if (first !== "slow" && first.ok) return first;
+    const hit = await fromCache(req);
+    if (hit) return hit;
+    return first === "slow" ? await net : first;
+  } catch {
+    const hit = await fromCache(req);
+    if (hit) return hit;
+    return new Response("NIDUS", { status: 504, headers: { "content-type": "text/plain" } });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
+  if (req.headers.has("range")) return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  event.respondWith(
-    (async () => {
-      try {
-        const res = await tryNet(req, 2800);
-        if (res && res.ok) {
-          const copy = res.clone();
-          const path = url.pathname;
-          if (
-            path.startsWith("/nidus/") ||
-            path.startsWith("/fonts/") ||
-            path.startsWith("/icons/") ||
-            path.startsWith("/assets/") ||
-            KEEP.includes(path)
-          ) {
-            caches.open(SHELL).then((c) => c.put(req, copy)).catch(() => {});
-          }
-          return res;
-        }
-      } catch {
-        /* fall through */
-      }
-      const hit = await caches.match(req);
-      if (hit) return hit;
-      if (req.mode === "navigate") {
-        const index = await caches.match("/");
-        if (index) return index;
-      }
-      return new Response("NIDUS", { status: 504, headers: { "content-type": "text/plain" } });
-    })(),
-  );
+  if (url.pathname.startsWith("/api/")) return;
+  event.respondWith(serve(req, url));
 });

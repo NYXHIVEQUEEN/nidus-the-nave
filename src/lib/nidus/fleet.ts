@@ -2,6 +2,7 @@ import type { Caste, GameState, RaidId } from "./types";
 import { RAIDS } from "./content";
 import { rand } from "./rng";
 import { edict } from "./heroes";
+import { boostMul } from "./boost";
 
 export const MARKS = ["DART", "STING", "CORVETTE", "FRIGATE", "RELIQUARY", "CROWN"] as const;
 
@@ -19,7 +20,7 @@ export function raidCutPayout(s: GameState, id: RaidId): number {
   const times = s.raidCount?.[id] ?? 0;
   const base = 14 + node.need * 7;
   const farm = Math.max(0.4, 1 - times * 0.15);
-  return Math.max(4, Math.round(base * farm * edict(s, "raid", Date.now())));
+  return Math.max(4, Math.round(base * farm * edict(s, "raid", Date.now()) * boostMul(s)));
 }
 
 export function weaponMods(s: GameState) {

@@ -37,8 +37,9 @@ import {
 } from "@/lib/nidus/content";
 import { advise } from "@/lib/nidus/advisor";
 import { markCost, markName, raidCutPayout, weaponMods } from "@/lib/nidus/fleet";
-import { chime, resumeAudio, setAmbiance, unlockAudio, type ChimeKind } from "@/lib/nidus/audio";
+import { chime, pauseAudio, resumeAudio, setAmbiance, unlockAudio, type ChimeKind } from "@/lib/nidus/audio";
 import { act } from "@/lib/nidus/feedback";
+import { WEBSITE_URL } from "@/lib/nidus/support";
 import { useGain, useRolling } from "@/lib/nidus/rolling";
 import { TapJuice } from "./TapJuice";
 import { registerNidusPwa } from "@/lib/nidus/pwa";
@@ -62,7 +63,7 @@ import { cookUnlocked, hiveTitle, MARK_MAX, moltCost, mindTalent, RANK_MAX, SALV
 import { ChromeBound, StationMount } from "./StationMount";
 import { SettingsPanel, type RitePane } from "./SettingsPanel";
 import { CourtStrip, SovereignHall } from "./SovereignHall";
-import { initBilling, getShop } from "@/lib/nidus/billing";
+import { initBilling, getShop, subscribeShop } from "@/lib/nidus/billing";
 import { GoalDock, GuideSheet, LeftRail, StatusChip, Whisper, muteToggle, useDensity, useIdleChrome, useSyncPrefs, useViewport } from "./HiveChrome";
 import { cycleDensity, getPrefs, getSpinPaused, helpSeen, lookAtRoom, subscribeSpin } from "@/lib/nidus/view";
 import type { Caste, Rarity, Tab } from "@/lib/nidus/types";
@@ -116,8 +117,14 @@ export function NidusApp() {
     setHeld(peekHive());
     hydrate();
     registerNidusPwa();
+    const syncBoost = () => {
+      const shop = getShop();
+      if (shop.ready) useNidus.getState().setBoost(shop.boost);
+    };
+    const unShop = subscribeShop(syncBoost);
     void initBilling().then((confirmed) => {
       if (confirmed) useNidus.getState().keepOwnedHeroes(getShop().owned);
+      syncBoost();
     });
     let cancelled = false;
     void runBoot((next) => {
@@ -127,9 +134,13 @@ export function NidusApp() {
       if (!cancelled) setBoot({ pct: 100, ready: true, label: "READY" });
     }, 14000);
     const onVis = () => {
-      resumeAudio();
-      if (document.visibilityState === "hidden") saveNow();
-      else tick(Date.now());
+      if (document.visibilityState === "hidden") {
+        pauseAudio();
+        saveNow();
+      } else {
+        resumeAudio();
+        tick(Date.now());
+      }
     };
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("pagehide", saveNow);
@@ -162,6 +173,7 @@ export function NidusApp() {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("pagehide", saveNow);
       document.removeEventListener("touchmove", lockMove);
+      unShop();
     };
   }, [hydrate, tick, saveNow]);
 
@@ -232,6 +244,11 @@ function TitleScreen({
           {returning ? "THE NAVE HELD. YOU NEVER LEFT." : "LIGHTBRINGER. NIGHTQUEEN. UNYIELDING."}
         </p>
         <p className="font-display text-[0.58rem] tracking-[0.22em] text-gilt-dim">LOCAL SAVE · THIS DEVICE</p>
+        {WEBSITE_URL && (
+          <a href={WEBSITE_URL} target="_blank" rel="noopener noreferrer" className="font-display text-[0.58rem] tracking-[0.22em] text-gilt underline-offset-4 hover:underline">
+            NYTHERIA NYX · WEBSITE
+          </a>
+        )}
         <div className="mt-3 w-full max-w-xs">
           <div className="mb-1 flex items-center justify-between font-display text-[0.6rem] tracking-[0.28em] text-gilt">
             <span>{returning ? "RETURNING" : boot.label}</span>
@@ -299,8 +316,9 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
   }, [tab, prefs.hints, whispered]);
 
   useEffect(() => {
+    // Every tap re-wakes sound; iOS may refuse to resume on its own after the app was hidden.
     const on = () => unlockAudio();
-    window.addEventListener("pointerdown", on, { once: true });
+    window.addEventListener("pointerdown", on, { passive: true });
     return () => window.removeEventListener("pointerdown", on);
   }, []);
 
@@ -478,6 +496,7 @@ function ResourceBar({ compact }: { compact: boolean }) {
             <p className="font-display text-[0.62rem] tabular-nums text-bone">{fmt(gift.ore)}</p>
           </button>
         )}
+        {s.boost2x && <span className="shrink-0 border border-gilt/60 px-1 font-display text-[0.55rem] text-gilt" title="Double tithe active">2×</span>}
         <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", fresh ? "bg-venom" : "bg-iron")} title={fresh ? "held" : "autosave"} />
         <button type="button" className="text-left" title="No cloud" onClick={() => setOpen(open === "LOCAL" ? null : "LOCAL")}>
           <p className="text-[0.5rem] tracking-[0.16em] text-muted">SAVE</p>

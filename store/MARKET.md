@@ -23,6 +23,10 @@ decisions only Nytheria Nyx can make.
 - [x] Every button reports refused taps (deny tone + shake) instead of a false success sound.
 - [x] 20 Sovereign heroes with real edicts, free 10-minute trials, Play Billing ($0.99 each / $9.99 all), restore, purchase reveal. Product list: `store/PRODUCTS.md`.
 - [x] Rolling counters, gain pops, tap sparks, court strip on the HUD.
+- [x] Double Tithe ($2.99, permanent 2x resources) on Play.
+- [x] Music rotation (anthem ↔ three procedural ambient pieces) and a varied space-ambience layer.
+- [x] Leaner hero ship, rooms grow onto the hull in 3D, and live 3D FORGE / LAB / MINDS.
+- [ ] **QUEEN — website URL** for the NYX WEBSITE button (`WEBSITE` in `src/lib/nidus/support.ts`, must start with `https://`).
 
 ## Must before launch
 
@@ -45,7 +49,7 @@ decisions only Nytheria Nyx can make.
 - [ ] `.vercel/output/` build files (88) are committed. Untrack and ignore them.
 - [ ] Live https host + `assetlinks.json` SHA-256 (see `store/PLAY.md`).
 - [ ] **QUEEN — 20 hero portraits** from `docs/ART-BRIEF.md` into `public/nidus/heroes/`. The court ships stand-ins until then.
-- [ ] Create the 21 products in Play Console exactly as `store/PRODUCTS.md` lists, then run its 5-step purchase test on the Internal track.
+- [ ] Create the 22 products in Play Console exactly as `store/PRODUCTS.md` lists, then run its 5-step purchase test on the Internal track.
 - [ ] **QUEEN — delete the leftover Grok/platform files** (safety check blocked it for agents; see PR notes).
 - [ ] Test on a real mid-range Android phone: 30+ FPS, no heat, save survives
       force-close and reboot. `store/QUALITY.md` lists this as unverified.

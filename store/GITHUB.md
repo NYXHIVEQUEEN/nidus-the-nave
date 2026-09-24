@@ -12,15 +12,40 @@ Public package checklist: `store/RELEASE.md`.
 
 ## 1. Host the hive on https
 
-Play will not wrap a grok preview. Put AOS (or a static export) on a host you own.
+The game must sit at the **root** of its address: `https://nidus.example.com/` or
+`https://nidus-the-nave.pages.dev/`. A subfolder such as
+`https://nyxhivequeen.github.io/nidus-the-nave/` **will not work**: the art, music,
+and offline cache all load from `/nidus/...` and `/assets/...` at the root.
 
-GitHub Pages (static nidus tree):
+Easiest (free, connects straight to this repo):
 
-1. Repo Settings → Pages → Deploy from branch `main` / `/ (root)` or `/docs`.
-2. Wait for `https://nyxhivequeen.github.io/nidus/` (or the custom domain).
-3. Privacy must open at `/privacy` or `/privacy.html`.
+| Host | Build command | Output folder | Security headers come from |
+| --- | --- | --- | --- |
+| Cloudflare Pages | `npm run build` | `dist` | `public/_headers` |
+| Netlify | `npm run build` | `dist` | `public/_headers` |
+| Vercel | `npm run build` | `dist` | `vercel.json` |
 
-Custom domain: add a CNAME, then turn on HTTPS.
+Set Node to **22** in the host's build settings. Deploy from `main` only after the PR is merged.
+
+Selling heroes on Play? Pick **Cloudflare Pages or Vercel**: they also run the purchase check
+that stops Google from auto-refunding sales (`store/PRODUCTS.md` → Purchase check).
+
+GitHub Pages works only with a **custom domain** (Settings → Pages → Custom domain,
+then Enforce HTTPS) or from a repo named `nyxhivequeen.github.io`. Pages also ignores
+`_headers`, so the page falls back to the built-in Content-Security-Policy only.
+
+After it is live, check:
+
+1. `/` plays, `/privacy`, `/terms`, `/support` each open on their own (reload them too).
+2. RITE → SAVE → EXPORT downloads a file; IMPORT puts it back.
+3. On a phone: SETTINGS → INSTALL HOME adds it to the home screen.
+
+### Browsers that run NIDUS
+
+Chrome / Edge / Android WebView **111+**, Safari / iOS **16.4+**, Firefox **128+**,
+Samsung Internet **22+**. Older browsers show a broken layout. Devices without 3D
+graphics (WebGL) still play: the rooms show painted art and a "3D OFF" chip instead of
+the live scenes.
 
 ## 2. Wrap for Play (no Android Studio required)
 

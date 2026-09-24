@@ -1,3 +1,19 @@
+# NIDUS snapshot — pass 5 overnight sweep
+
+Security (CSP, headers, hardened imports), trust (docs match behavior; Play purchase check built but OFF
+pending the owner's yes), platform (no-WebGL fallback, install button, audio pause, per-build offline cache,
+Safari export, landscape). Rollback: `3906156`. Save format unchanged. Details: `store/QUALITY.md`.
+
+---
+
+# NIDUS snapshot — pass 4
+
+Double Tithe ($2.99 permanent 2x), website link (URL pending), music rotation + space ambience, lean warship,
+3D room modules on the hull, live 3D FORGE / LAB / MINDS, trimmed boot preload. Rollback: `1d4775b`.
+Save keys unchanged; `boost2x` added with a false default. Details: `store/QUALITY.md`.
+
+---
+
 # NIDUS snapshot — cathedral hull rebuild
 
 `claude/lucid-archimedes-b4sfpo` → PR to `main`. Rollback: `49dfe77`. No hive wipe; save format unchanged.

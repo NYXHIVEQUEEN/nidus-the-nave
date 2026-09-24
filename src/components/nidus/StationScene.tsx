@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, useTexture } from "@react-three/drei";
-import type { BufferGeometry as BufferGeometryT, Group, InstancedMesh, MeshBasicMaterial, MeshStandardMaterial, Points, SpriteMaterial, Texture } from "three";
+import type { BufferGeometry as BufferGeometryT, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial, Points, SpriteMaterial, Texture } from "three";
 import {
   ACESFilmicToneMapping,
   AdditiveBlending,
@@ -21,11 +21,15 @@ import {
   Vector3,
 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { RoomModules } from "./RoomModules";
+import { INTERIOR_CAM, INTERIOR_LOOK, INTERIOR_TABS, Interior, ROOM_CAMS } from "./Interiors";
+import { ROOM_SOCKETS } from "./roomKit";
 import { useNidus } from "@/lib/nidus/store";
 import { chime } from "@/lib/nidus/audio";
 import { CAM_DEFAULT, CAM_MAX, CAM_MIN, CAM_POLAR, applyCamPreset, camPosition, getPrefs, patchPrefs, subscribeSpin } from "@/lib/nidus/view";
 import {
   ENGINES,
+  NAV_LIGHTS,
   ROSE,
   bandsGeo,
   buttressGeo,
@@ -54,42 +58,18 @@ const REDUCE =
   typeof window.matchMedia === "function" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const SOCKETS: Record<string, [number, number, number]> = {
-  solar: [0, 0.9, 0],
-  orebay: [0.76, -0.12, -0.52],
-  silo: [0.7, 0.46, -0.14],
-  barracks: [-0.76, 0.08, 0.3],
-  hangar: [0, -0.5, -1.12],
-  railgun: [0.62, 0.14, -0.28],
-  cannon: [-0.62, 0.14, 0.32],
-  gundeck: [0, -0.2, -1.72],
-  lab: [0.64, 0.4, 0.64],
-  nerve: [0, 0.76, 0.16],
-  reliquary: [0, 1.02, 0],
-  cloister: [0.68, 0.5, 0.68],
-  choir: [-0.26, 0.88, 0.4],
-  vault: [0.78, 0.54, -0.4],
-  crypt: [0.54, -0.34, -0.86],
-  apse: [0, 1.12, 0.36],
-  spire: [0, 0.58, -2.02],
-  crucible: [0.4, -0.26, 0.54],
-  mill: [0.48, -0.22, 0.18],
-  refinery: [0.88, -0.2, -0.18],
-  sensor: [0.22, 0.62, -1.35],
-  armory: [-0.48, 0.1, -1.38],
-  dock: [0.52, -0.44, -0.92],
-  gallery: [-0.58, 0.7, 0.12],
-  prow: [0, 0.04, 2.15],
-};
+// Camera look-at targets: room sockets in ship space, scaled roughly to the on-screen ship.
+const SOCKETS: Record<string, [number, number, number]> = Object.fromEntries(
+  Object.entries(ROOM_SOCKETS).map(([id, k]) => [id, [k.p[0] * 1.25, k.p[1] * 1.25, k.p[2] * 1.25]]),
+);
 
 function useSpin() {
   return useSyncExternalStore(subscribeSpin, getPrefs, getPrefs);
 }
 
 function useHullTextures() {
-  const [rivet, height, rough, rose, plate] = useTexture([
+  const [rivet, rough, rose, plate] = useTexture([
     "/nidus/tex-rivet.jpg",
-    "/nidus/tex-height.jpg",
     "/nidus/tex-rough.jpg",
     "/nidus/tex-rose.jpg",
     "/nidus/tex-hull.jpg",
@@ -97,14 +77,13 @@ function useHullTextures() {
   rivet.colorSpace = SRGBColorSpace;
   plate.colorSpace = SRGBColorSpace;
   rose.colorSpace = SRGBColorSpace;
-  height.colorSpace = NoColorSpace;
   rough.colorSpace = NoColorSpace;
   const ani = typeof window !== "undefined" && window.innerWidth < 500 ? 4 : 8;
-  for (const t of [rivet, height, rough, rose, plate]) {
+  for (const t of [rivet, rough, rose, plate]) {
     t.wrapS = t.wrapT = RepeatWrapping;
     t.anisotropy = ani;
   }
-  return { rivet, height, rough, rose, plate };
+  return { rivet, rough, rose, plate };
 }
 
 function tiled(t: Texture, x: number, y: number) {
@@ -119,7 +98,7 @@ function Hardpoints({ railgun, cannon, railRank = 0, canRank = 0 }: { railgun: b
   return (
     <group>
       {railgun && (
-        <group position={[0.62, 0.02, 0.36]}>
+        <group position={[0.44, 0.0, 0.2]}>
           <mesh rotation={[Math.PI / 2, 0, 0]}>
             <capsuleGeometry args={[0.06, 0.18, 6, 16]} />
             <meshStandardMaterial color={IRON} metalness={0.6} roughness={0.42} dithering />
@@ -131,7 +110,7 @@ function Hardpoints({ railgun, cannon, railRank = 0, canRank = 0 }: { railgun: b
         </group>
       )}
       {cannon && (
-        <group position={[-0.62, 0.02, 0.36]}>
+        <group position={[-0.44, 0.0, 0.2]}>
           <mesh rotation={[Math.PI / 2, 0, 0]}>
             <capsuleGeometry args={[0.065, 0.14, 6, 16]} />
             <meshStandardMaterial color={IRON} metalness={0.6} roughness={0.42} dithering />
@@ -152,9 +131,14 @@ function EngineGlow({ glow, surging }: { glow: number; surging: boolean }) {
   const tex = useMemo(() => glowTexture(), []);
   const cores = useRef<(SpriteMaterial | null)[]>([]);
   const halos = useRef<(SpriteMaterial | null)[]>([]);
+  const plumes = useRef<(Mesh | null)[]>([]);
+  const plumeU = useMemo(() => ({ uHeat: { value: 0.6 }, uTime: { value: 0 } }), []);
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     const heat = 0.55 + glow * 0.3 + (surging ? 0.25 : 0);
+    plumeU.uHeat.value = heat;
+    plumeU.uTime.value = REDUCE ? 0 : t;
+    for (const m of plumes.current) if (m) m.scale.set(1, 0.75 + heat * 0.45 + (surging ? 0.3 : 0), 1);
     ENGINES.forEach((_, i) => {
       const flick = REDUCE ? 0 : Math.sin(t * 23 + i * 1.7) * 0.05 + Math.sin(t * 7.1 + i) * 0.04;
       const c = cores.current[i];
@@ -174,12 +158,49 @@ function EngineGlow({ glow, surging }: { glow: number; surging: boolean }) {
           <sprite scale={[r * 3.2, r * 3.2, 1]}>
             <spriteMaterial ref={(m) => { cores.current[i] = m; }} map={tex} color="#ffd9b0" blending={AdditiveBlending} depthWrite={false} transparent toneMapped={false} />
           </sprite>
-          <sprite scale={[r * 9, r * 9, 1]}>
+          <sprite scale={[r * 7, r * 7, 1]}>
             <spriteMaterial ref={(m) => { halos.current[i] = m; }} map={tex} color="#c45a4a" blending={AdditiveBlending} depthWrite={false} transparent toneMapped={false} />
           </sprite>
+          <mesh ref={(m) => { plumes.current[i] = m; }} position={[0, 0, -r * 5]} rotation={[-Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[r * 0.35, r * 0.9, r * 10, 16, 1, true]} />
+            <shaderMaterial vertexShader={PLUME_VERT} fragmentShader={PLUME_FRAG} uniforms={plumeU} transparent depthWrite={false} blending={AdditiveBlending} side={DoubleSide} />
+          </mesh>
         </group>
       ))}
-      <pointLight position={[0, 0, -3.1]} color="#ff9a6a" intensity={surging ? 3 : 1.6} distance={3.2} decay={2} />
+      <pointLight position={[0, 0, -3.3]} color="#ff9a6a" intensity={surging ? 3 : 1.6} distance={3.2} decay={2} />
+    </group>
+  );
+}
+
+const PLUME_VERT = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`;
+const PLUME_FRAG = `uniform float uHeat; uniform float uTime; varying vec2 vUv;
+void main(){
+  float along = 1.0 - vUv.y;
+  float core = pow(along, 2.2);
+  float flick = 0.85 + 0.15 * sin(uTime * 31.0 + along * 18.0);
+  vec3 hot = mix(vec3(0.77, 0.21, 0.16), vec3(1.0, 0.85, 0.6), core);
+  gl_FragColor = vec4(hot * core * flick * uHeat * 0.55, core * uHeat * 0.7);
+}`;
+
+function NavLights() {
+  const tex = useMemo(() => glowTexture(), []);
+  const mats = useRef<(SpriteMaterial | null)[]>([]);
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    NAV_LIGHTS.forEach((l, i) => {
+      const m = mats.current[i];
+      if (!m) return;
+      const cycle = (t / 1.6 + l.phase) % 1;
+      m.opacity = REDUCE ? 0.7 : cycle < 0.08 ? 1 : 0.18 + 0.12 * Math.max(0, 1 - cycle * 4);
+    });
+  });
+  return (
+    <group>
+      {NAV_LIGHTS.map((l, i) => (
+        <sprite key={`nav-${i}`} position={l.p} scale={[0.16, 0.16, 1]}>
+          <spriteMaterial ref={(m) => { mats.current[i] = m; }} map={tex} color={l.color} blending={AdditiveBlending} depthWrite={false} transparent toneMapped={false} />
+        </sprite>
+      ))}
     </group>
   );
 }
@@ -225,11 +246,12 @@ function Hull() {
   const { rivet, rough, rose, plate } = useHullTextures();
   const tex = useMemo(
     () => ({
-      nave: tiled(plate, 2, 3),
-      naveRough: tiled(rough, 2, 3),
-      roof: tiled(plate, 1.6, 1.6),
-      wing: tiled(plate, 1.2, 1.2),
+      nave: tiled(plate, 3, 5),
+      naveRough: tiled(rough, 3, 5),
+      roof: tiled(plate, 2.4, 2.4),
+      wing: tiled(plate, 1.6, 1.6),
       iron: tiled(rivet, 3, 3),
+      lead: tiled(rivet, 2, 3),
       glass: tiled(rose, 4, 4),
     }),
     [rivet, rough, rose, plate],
@@ -269,10 +291,14 @@ function Hull() {
     const ship = stationRef.current;
     if (ship) {
       ship.visible = !watching;
-      ship.scale.setScalar((1.5 + roomsLit * 0.01 + molt * 0.018) * fit);
-      ship.rotation.z = REDUCE ? 0 : Math.sin(t * 0.21) * 0.035;
-      ship.rotation.x = REDUCE ? 0 : Math.sin(t * 0.17 + 1.3) * 0.012;
-      ship.position.y = REDUCE ? 0 : Math.sin(t * 0.33) * 0.05;
+      ship.scale.setScalar((1.34 + roomsLit * 0.008 + molt * 0.016) * fit);
+      // A slow patrol weave: yaw leads, the bank follows the turn, the nose dips into it.
+      const yaw = REDUCE ? 0 : Math.sin(t * 0.075) * 0.07;
+      const turn = REDUCE ? 0 : Math.cos(t * 0.075) * 0.075 * 0.07;
+      ship.rotation.y = yaw;
+      ship.rotation.z = -turn * 9 + (REDUCE ? 0 : Math.sin(t * 0.43) * 0.006);
+      ship.rotation.x = REDUCE ? 0 : Math.sin(t * 0.11 + 1.3) * 0.01;
+      ship.position.y = REDUCE ? 0 : Math.sin(t * 0.21) * 0.04;
     }
     if (glass.current) glass.current.emissiveIntensity = 0.9 + glow * 0.4 + (surging ? 0.35 : 0);
     const now = Date.now();
@@ -315,16 +341,16 @@ function Hull() {
     <group>
       <group ref={stationRef}>
         <mesh geometry={geo.nave}>
-          <meshStandardMaterial map={tex.nave} bumpMap={tex.nave} bumpScale={1.2} roughnessMap={tex.naveRough} color={BONE_IRON} metalness={0.45} roughness={0.56} envMapIntensity={0.65} dithering />
+          <meshStandardMaterial map={tex.nave} bumpMap={tex.nave} bumpScale={1.1} roughnessMap={tex.naveRough} color={BONE_IRON} vertexColors metalness={0.5} roughness={0.52} envMapIntensity={0.7} dithering />
         </mesh>
         <mesh geometry={geo.roof}>
-          <meshStandardMaterial map={tex.roof} bumpMap={tex.roof} bumpScale={0.8} color="#f0e6d6" metalness={0.15} roughness={0.7} envMapIntensity={0.45} dithering />
+          <meshStandardMaterial map={tex.lead} bumpMap={tex.lead} bumpScale={0.5} color="#6f6862" vertexColors metalness={0.55} roughness={0.5} envMapIntensity={0.6} dithering />
         </mesh>
         <mesh geometry={geo.wing}>
-          <meshStandardMaterial map={tex.wing} bumpMap={tex.wing} bumpScale={0.8} color="#b8ad9e" metalness={0.5} roughness={0.5} envMapIntensity={0.6} dithering />
+          <meshStandardMaterial map={tex.wing} bumpMap={tex.wing} bumpScale={0.7} color="#a79c8e" vertexColors metalness={0.55} roughness={0.46} envMapIntensity={0.65} dithering />
         </mesh>
         <mesh geometry={geo.machine}>
-          <meshStandardMaterial map={tex.iron} color="#8a8078" metalness={0.72} roughness={0.4} envMapIntensity={0.7} side={DoubleSide} dithering />
+          <meshStandardMaterial map={tex.iron} color="#8a8078" vertexColors metalness={0.72} roughness={0.4} envMapIntensity={0.7} side={DoubleSide} dithering />
         </mesh>
         <mesh geometry={geo.buttress}>
           <meshStandardMaterial color="#9a8e80" metalness={0.65} roughness={0.4} envMapIntensity={0.8} dithering />
@@ -348,9 +374,11 @@ function Hull() {
         </mesh>
         <RoseWindow rose={rose} />
         <EngineGlow glow={glow} surging={surging} />
+        <NavLights />
+        <RoomModules plate={tex.roof} glass={tex.glass} />
         <Hardpoints railgun={railgun} cannon={cannon} railRank={railgunRank} canRank={cannonRank} />
       </group>
-      <Harvest dart={geo.dart} shipScale={1.5 * fit} />
+      <Harvest dart={geo.dart} shipScale={1.34 * fit} />
       <instancedMesh ref={fighters} args={[geo.dart, undefined, 8]} visible={false}>
         <meshStandardMaterial color="#9a9186" metalness={0.5} roughness={0.5} emissive={bloodC} emissiveIntensity={0.35} />
       </instancedMesh>
@@ -667,11 +695,31 @@ function Rig() {
   const raiding = useNidus((s) => Boolean(s.raid));
   const watching = useNidus((s) => Boolean(s.raid?.watching));
   const showShip = useNidus((s) => s.tab === "raid" || s.tab === "hull");
+  const tab = useNidus((s) => s.tab);
+  const inside = INTERIOR_TABS.has(tab);
+  const wasInside = useRef(false);
   const extent = 1 + roomsLit * 0.55 + molt * 0.85;
   const touched = useRef(0);
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.1);
     const cam = state.camera;
+    if (inside) {
+      // A slow breathing dolly inside the room; no orbit.
+      const t = state.clock.elapsedTime;
+      const k = wasInside.current ? 1 - Math.exp(-dt * 2.2) : 1;
+      wasInside.current = true;
+      const pose = ROOM_CAMS[tab] ?? { cam: INTERIOR_CAM, look: INTERIOR_LOOK };
+      _look.set(pose.cam.x + (REDUCE ? 0 : Math.sin(t * 0.13) * 0.25), pose.cam.y + (REDUCE ? 0 : Math.sin(t * 0.21) * 0.06), pose.cam.z);
+      cam.position.lerp(_look, k);
+      cam.lookAt(pose.look);
+      return;
+    }
+    if (wasInside.current) {
+      wasInside.current = false;
+      const [x, y, z] = camPosition(prefs.camDist);
+      cam.position.set(x, y, z);
+      touched.current = performance.now();
+    }
     if ("fov" in cam && Math.abs((cam.fov as number) - prefs.camFov) > 0.04) {
       cam.fov = prefs.camFov;
       cam.updateProjectionMatrix();
@@ -742,13 +790,14 @@ function Rig() {
 
 function Mood() {
   const kind = useNidus((s) => s.eventKind);
+  const inside = useNidus((s) => INTERIOR_TABS.has(s.tab));
   const { gl, scene } = useThree();
   useFrame(() => {
     const fog = scene.fog as { color: Color; near: number; far: number } | null;
     if (!fog) return;
     fog.color.set("#0c0a09");
-    fog.near = 70;
-    fog.far = 200;
+    fog.near = inside ? 7 : 70;
+    fog.far = inside ? 24 : 200;
     gl.toneMappingExposure = kind === "ECLIPSE" ? 1.0 : kind === "PULSAR" ? 1.3 : 1.15;
   });
   return null;
@@ -759,6 +808,8 @@ export function StationScene() {
   const start = camPosition(CAM_DEFAULT);
   const [paused, setPaused] = useState(false);
   const showShip = useNidus((s) => s.tab === "raid" || s.tab === "hull");
+  const tab = useNidus((s) => s.tab);
+  const inside = INTERIOR_TABS.has(tab);
   useEffect(() => {
     const on = () => setPaused(typeof document !== "undefined" && document.hidden);
     on();
@@ -790,14 +841,21 @@ export function StationScene() {
       <directionalLight position={[7, 6, 8]} intensity={2.3} color="#ffcdb0" />
       <directionalLight position={[-7, 4, 5]} intensity={1.3} color="#d8b884" />
       <directionalLight position={[8, 1.5, -7]} intensity={0.45} color="#6c5a78" />
-      <Stars radius={110} depth={50} count={mobile ? 80 : 160} factor={2.8} saturation={0.08} fade speed={REDUCE ? 0 : 0.12} />
       <Mood />
-      <Backdrop />
-      <Planet />
-      <BlackWell />
-      <Dust />
-      <Hull />
-      <BattleField />
+      <group visible={!inside}>
+        <Stars radius={110} depth={50} count={mobile ? 80 : 160} factor={2.8} saturation={0.08} fade speed={REDUCE ? 0 : 0.12} />
+        <Backdrop />
+        <Planet />
+        <BlackWell />
+        <Dust />
+        <Hull />
+        <BattleField />
+      </group>
+      {inside && (
+        <Suspense fallback={null}>
+          <Interior tab={tab} />
+        </Suspense>
+      )}
       <Rig />
     </Canvas>
   );
