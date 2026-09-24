@@ -392,7 +392,7 @@ export function EraseData() {
     <div className="nidus-card p-2">
       <p className="font-display text-[0.7rem] tracking-[0.18em] text-gilt">YOUR DATA</p>
       <p className="mt-1 text-[0.75rem] leading-snug text-muted">
-        Erases every hive, backup, pew, setting, and offline file NIDUS keeps on this device. Nothing is stored anywhere else. Hero purchases return from Google Play.
+        Erases every hive, backup, pew, setting, and offline file NIDUS keeps on this device. Nothing is stored anywhere else. Hero purchases return from your app store.
       </p>
       <button
         type="button"

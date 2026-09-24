@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Stars, useTexture } from "@react-three/drei";
+import { OrbitControls, PerformanceMonitor, Stars, useTexture } from "@react-three/drei";
 import type { BufferGeometry as BufferGeometryT, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial, Points, SpriteMaterial, Texture } from "three";
 import {
   ACESFilmicToneMapping,
@@ -810,6 +810,9 @@ export function StationScene() {
   const showShip = useNidus((s) => s.tab === "raid" || s.tab === "hull");
   const tab = useNidus((s) => s.tab);
   const inside = INTERIOR_TABS.has(tab);
+  // Sharpness follows the phone: start light, sharpen while frames stay smooth, back off when they drop.
+  const dprCap = Math.min(typeof window === "undefined" ? 1 : window.devicePixelRatio || 1, mobile ? 1.75 : 1.5);
+  const [dpr, setDpr] = useState(mobile ? 1 : Math.min(1.25, dprCap));
   useEffect(() => {
     const on = () => setPaused(typeof document !== "undefined" && document.hidden);
     on();
@@ -820,7 +823,7 @@ export function StationScene() {
     <Canvas
       frameloop={paused ? "never" : "always"}
       camera={{ position: start, fov: 46, near: 0.8, far: 220 }}
-      dpr={mobile ? [1, 1] : [1, 1.4]}
+      dpr={dpr}
       gl={{ antialias: !mobile, alpha: false, powerPreference: "high-performance" }}
       style={{ touchAction: "none", pointerEvents: showShip ? "auto" : "none", position: "absolute", inset: 0 }}
       onDoubleClick={() => applyCamPreset("nave")}
@@ -836,6 +839,13 @@ export function StationScene() {
         scene.environmentIntensity = 0.5;
       }}
     >
+      <PerformanceMonitor
+        bounds={(hz) => (hz > 100 ? [55, 90] : [38, 55])}
+        flipflops={3}
+        onIncline={() => setDpr((d) => Math.min(dprCap, d + 0.25))}
+        onDecline={() => setDpr((d) => Math.max(1, d - 0.25))}
+        onFallback={() => setDpr(1)}
+      />
       <fog attach="fog" args={["#0c0a09", 70, 200]} />
       <hemisphereLight args={["#2e2434", "#0c0a09", 0.55]} />
       <directionalLight position={[7, 6, 8]} intensity={2.3} color="#ffcdb0" />

@@ -419,7 +419,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
           setCourt(true);
         }}
       />}
-      <div className="pointer-events-none relative z-10 flex h-full flex-col">
+      <div className="nidus-wide pointer-events-none relative z-10 flex h-full flex-col">
         <ResourceBar compact />
         {tab !== "raid" && (
           <div className="px-3">
@@ -439,7 +439,7 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
         )}
         <div className="min-h-0 flex-1" />
         {tab !== "raid" && (
-          <div data-chrome data-scroll className={cn("nidus-sheet", watchChrome && "nidus-sheet-hide")}>
+          <div data-chrome data-scroll className={cn("nidus-sheet", (watchChrome || court) && "nidus-sheet-hide")}>
             <p className="px-2 pt-1 text-center text-[0.62rem] tracking-[0.06em] text-muted">{tip.why}</p>
             <main className="min-h-0">
               <ActiveTab verb={tip.verb} compact />
@@ -459,14 +459,14 @@ function LiveHive({ waking, gift, showBrief }: { waking: boolean; gift: boolean;
       {guide && <GuideSheet screen={guide} onClose={() => setGuide(null)} />}
       {riteOpen && (
         <div
-          className="pointer-events-auto absolute inset-x-2 bottom-[3.5rem] z-40 max-h-[42dvh] overflow-y-auto"
+          className="nidus-wide pointer-events-auto absolute inset-x-2 bottom-[3.5rem] z-40 max-h-[42dvh] overflow-y-auto"
           data-chrome
         >
           <SettingsPanel start={riteStart} onClose={() => setRiteOpen(false)} />
         </div>
       )}
       {court && (
-        <div className="pointer-events-auto absolute inset-x-2 bottom-[3.5rem] top-[max(4.6rem,calc(env(safe-area-inset-top)+4rem))] z-50 flex flex-col justify-end">
+        <div className="nidus-wide pointer-events-auto absolute inset-x-2 bottom-[3.5rem] top-[max(4.6rem,calc(env(safe-area-inset-top)+4rem))] z-50 flex flex-col justify-end">
           <SovereignHall onClose={() => setCourt(false)} />
         </div>
       )}
@@ -1191,7 +1191,7 @@ function MindsTab({ compact }: { compact: boolean }) {
   return (
     <div className="pointer-events-auto flex flex-col justify-end gap-1.5 p-2" data-chrome>
       <div className="nidus-card relative overflow-hidden">
-        <img src={mind.portrait} alt="" className={cn("w-full object-cover object-top", compact ? "h-20" : "h-28")} crossOrigin="anonymous" />
+        <img src={mind.portrait} alt="" className={cn("w-full object-cover object-[center_18%]", compact ? "h-20" : "h-28")} crossOrigin="anonymous" />
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-void to-transparent p-2">
           <div className="mb-0.5 flex items-center gap-1.5">
             <StatusChip kind={mind.seated ? "next" : "open"}>{mind.seated ? "SEATED" : "PACING"}</StatusChip>

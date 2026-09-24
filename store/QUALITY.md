@@ -1,3 +1,19 @@
+# Pass 7 — store & platform audit, desktop layout, Windows billing (24 Sep 2026)
+
+- Audited Android phones (360×740, 412×915), Fire tablets (800×1280, 1280×800), Windows (1366×768, 1920×1080) on the
+  production build: no errors or sideways scroll anywhere. Desktop looked like a stretched phone (1,800px SURGE bar,
+  tiny text).
+- Fixed: the HUD, settings, and court stay a readable column on wide screens; type is larger on tablets and desktops;
+  4 heroes per row on desktop; bottom sheet hides behind the court on phones; officer cards frame the face;
+  3D sharpness adapts to measured frame rate (sharper on smooth phones, never slower than before).
+- Windows: Microsoft Store billing via the Digital Goods API with the same SKUs (trusted only when the Store answers).
+  Privacy/terms now name Google Play or the Microsoft Store.
+- Store assets: fresh 1080×1920 phone (JPEG) and 1920×1080 desktop (PNG) screenshots from a grown showcase hive in
+  `store/screenshots/`; small WebP copies wired into the web manifest (narrow + wide).
+- `store/DISTRIBUTION.md`: every store, its fees, its payment rules, and the order to ship in.
+
+---
+
 # Pass 6 — studio splash, story opening, faster first minutes (24 Sep 2026)
 
 Owner asks: animated studio logo with a fire and ash intro/outro; a simple story tutorial with a welcome and

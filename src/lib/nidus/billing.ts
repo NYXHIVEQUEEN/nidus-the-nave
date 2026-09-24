@@ -4,6 +4,10 @@ import { BOOST_SKU } from "./boost";
 import { ACK_URL } from "./support";
 
 const PLAY = "https://play.google.com/billing";
+// Windows: the same product IDs, sold as Microsoft Store durable add-ons (their Product ID = our SKU).
+const MICROSOFT = "https://store.microsoft.com/billing";
+export type StoreName = "google" | "microsoft";
+let method = PLAY;
 const CACHE = "nidus.owned.v1";
 const ACKED = "nidus.acked.v1";
 
@@ -24,6 +28,7 @@ export type Shop = {
   busy: string | null;
   note: string;
   inApp: boolean;
+  store: StoreName | null;
 };
 
 export const ALL_SKUS = [BUNDLE_SKU, BOOST_SKU, ...SOVEREIGNS.map((h) => heroSku(h.id))];
@@ -46,7 +51,7 @@ export function formatPrice(p: { currency: string; value: string }): string {
   }
 }
 
-let shop: Shop = { mode: "loading", owned: new Set(), boost: false, ready: false, prices: {}, busy: null, note: "", inApp: false };
+let shop: Shop = { mode: "loading", owned: new Set(), boost: false, ready: false, prices: {}, busy: null, note: "", inApp: false, store: null };
 
 const APP_REFERRER = "android-app://com.nyxhivequeen.nidus";
 const APP_FLAG = "nidus.twa";
@@ -119,7 +124,7 @@ function readAcked(): Set<string> {
 // Google refunds unconfirmed purchases after three days. Retried every launch until the server says done.
 async function confirmPurchases(list: PurchaseDetails[]): Promise<void> {
   const target = ackTarget(ACK_URL);
-  if (!target) return;
+  if (!target || method !== PLAY) return;
   const done = readAcked();
   const todo = list.filter((p) => p.purchaseToken && !done.has(ackKey(p)) && !inflight.has(ackKey(p))).slice(0, 25);
   if (!todo.length) return;
@@ -180,18 +185,25 @@ export function initBilling(): Promise<boolean> {
       return false;
     };
     if (!w?.getDigitalGoodsService || typeof PaymentRequest === "undefined") return noBilling();
-    try {
-      service = await w.getDigitalGoodsService(PLAY);
-    } catch {
-      return noBilling();
+    // Google Play inside the Android app, the Microsoft Store inside the Windows app; neither on the open web.
+    for (const [url, store] of [
+      [PLAY, "google"],
+      [MICROSOFT, "microsoft"],
+    ] as const) {
+      try {
+        const svc = await w.getDigitalGoodsService(url);
+        const details = await svc.getDetails(ALL_SKUS).catch(() => [] as ItemDetails[]);
+        // Edge can expose the Microsoft service outside a Store install; only trust it when the Store answers.
+        if (store === "microsoft" && details.length === 0) continue;
+        service = svc;
+        method = url;
+        emit({ mode: "play", store, prices: Object.fromEntries(details.map((d) => [d.itemId, formatPrice(d.price)])) });
+        break;
+      } catch {
+        service = null;
+      }
     }
-    emit({ mode: "play" });
-    try {
-      const details = await service.getDetails(ALL_SKUS);
-      emit({ prices: Object.fromEntries(details.map((d) => [d.itemId, formatPrice(d.price)])) });
-    } catch {
-      /* fall back to list prices */
-    }
+    if (!service) return noBilling();
     return syncPurchases();
   })();
   return started;
@@ -201,7 +213,7 @@ export async function buy(sku: string): Promise<boolean> {
   if (!service || shop.busy) return false;
   emit({ busy: sku, note: "" });
   try {
-    const request = new PaymentRequest([{ supportedMethods: PLAY, data: { sku } }], {
+    const request = new PaymentRequest([{ supportedMethods: method, data: { sku } }], {
       total: { label: "Total", amount: { currency: "USD", value: "0" } },
     });
     const response = await request.show();

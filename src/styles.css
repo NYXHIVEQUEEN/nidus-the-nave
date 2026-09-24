@@ -543,6 +543,27 @@
   }
 }
 
+/* Big screens (Fire tablets, Windows, Steam Deck): larger type, and the HUD stays a readable column
+   over the full-bleed nave instead of stretching edge to edge. */
+@media (min-width: 768px) and (min-height: 700px) {
+  html {
+    font-size: 17px;
+  }
+}
+
+@media (min-width: 1280px) and (min-height: 760px) {
+  html {
+    font-size: 18.5px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .nidus-wide {
+    max-width: 52rem;
+    margin-inline: auto;
+  }
+}
+
 /* Story beats slide in; the narration caret blinks while it types. */
 @keyframes nidus-story-in {
   from { opacity: 0; transform: translateY(-6px); }
