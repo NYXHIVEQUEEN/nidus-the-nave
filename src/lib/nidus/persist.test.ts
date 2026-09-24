@@ -543,3 +543,50 @@ test("double tithe doubles resource income and raid cut, and old saves default t
   assert.equal(importSave(JSON.stringify({ version: 3, ore: 5, rooms: {}, boost2x: "yes" }))?.boost2x, false);
   assert.equal(ownedFrom(["boost_x2"]).size, 0, "boost is not a hero");
 });
+
+test("a hostile save cannot inject junk, remote images, or broken numbers", () => {
+  const evil = importSave(
+    JSON.stringify({
+      version: 3,
+      ore: "9999",
+      parts: 1e400,
+      credits: -50,
+      spark: null,
+      hiveName: "X".repeat(500),
+      tab: "admin",
+      rooms: { solar: { built: "yes", progress: "NaN", rank: 1e9 }, hacked: { built: true } },
+      swarm: { miner: "12", ghost: 99 },
+      minds: [
+        { id: "a", frame: "warden", portrait: "https://evil.example/pixel.gif", name: "<img src=x>", alive: true, seated: true, level: 2, stats: {} },
+        { id: "b", frame: "nope", portrait: "/nidus/warden.jpg" },
+        "string-mind",
+      ],
+      raid: { node: "moon", hp: 5 },
+      briefing: [{ id: "x", headline: "hi", line: "ok", portrait: "javascript:alert(1)" }],
+      sovereigns: ["vesper", "not-a-hero"],
+      trial: { id: "ghost", until: 1 },
+      __proto__: { polluted: true },
+      extraField: "drop me",
+    }),
+  );
+  assert.ok(evil);
+  assert.equal(evil.ore, 72, "string number falls back to default");
+  assert.equal(evil.parts, 36, "infinity falls back");
+  assert.equal(evil.credits, 0, "negative clamps to 0");
+  assert.equal(evil.hiveName.length, 16);
+  assert.equal(evil.tab, "hull");
+  assert.equal(typeof evil.rooms.solar.built, "boolean");
+  assert.equal(evil.rooms.solar.progress, 0);
+  assert.ok(evil.rooms.solar.rank <= 99);
+  assert.equal("hacked" in evil.rooms, false);
+  assert.equal(evil.swarm.miner, defaultState().swarm.miner, "string count falls back to default");
+  assert.equal("ghost" in evil.swarm, false);
+  assert.equal(evil.minds.length, 1, "unknown frames and non-objects are dropped");
+  assert.equal(evil.minds[0].portrait, "/nidus/warden.jpg", "remote portrait replaced");
+  assert.equal(evil.raid, null);
+  assert.equal(evil.briefing[0].portrait, "/nidus/warden.jpg");
+  assert.deepEqual(evil.sovereigns, ["vesper"]);
+  assert.equal(evil.trial, null);
+  assert.equal("extraField" in evil, false);
+  assert.equal(({} as Record<string, unknown>).polluted, undefined, "no prototype pollution");
+});
