@@ -4,7 +4,7 @@ const KEY = "nidus.prefs.v1";
 export type HelpId = "hull" | "forge" | "lab" | "raid" | "minds" | "view" | "wake" | "idle" | "flow";
 export type Density = "auto" | "compact" | "comfort" | "watch";
 export type DensityResolved = "compact" | "comfort" | "watch";
-export type MusicBed = "rotate" | "anthem" | "void";
+export type MusicBed = "rotate" | "anthem" | "rancid" | "hellfire" | "void";
 
 export type ViewPrefs = {
   spinPaused: boolean;
@@ -106,8 +106,8 @@ function read() {
           : "compact",
       uiScale: (parsed.prefsGen ?? 0) >= 8 && typeof parsed.uiScale === "number" ? clamp(parsed.uiScale, 0.5, 1) : 0.58,
       musicBed:
-        parsed.musicBed === "void"
-          ? "void"
+        parsed.musicBed === "void" || parsed.musicBed === "rancid" || parsed.musicBed === "hellfire"
+          ? parsed.musicBed
           : parsed.musicBed === "anthem" && (parsed.prefsGen ?? 0) >= 11
             ? "anthem"
             : "rotate",

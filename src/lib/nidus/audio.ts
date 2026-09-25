@@ -32,12 +32,14 @@ type Mixer = {
   ambKind: AmbKind;
   tickTimer: number;
   duckUntil: number;
-  rot: { phase: "anthem" | "void"; until: number; last: ScoreName | undefined };
+  rot: { phase: "anthem" | "rancid" | "hellfire" | "void"; until: number; last: ScoreName | undefined };
 };
 
-// ROTATE: the anthem plays once, then a generative piece for a few minutes, then the anthem again.
-const AMBIENT_MIN = 150;
-const AMBIENT_MAX = 260;
+// ROTATE: anthem once, then My Rancid Divine, then A Heart of Hellfire, then a short void, then the anthem again.
+const SONGS = ["anthem", "rancid", "hellfire"] as const;
+const ROTATION = ["anthem", "rancid", "hellfire", "void"] as const;
+const AMBIENT_MIN = 80;
+const AMBIENT_MAX = 120;
 
 const FADE = 0.9;
 
@@ -83,8 +85,7 @@ export function syncAudioGains() {
 function wantedBed(pref: MusicBed): string {
   const m = hold.m;
   if (m?.ambKind === "raid" && m.buffers.coda) return "coda";
-  if (pref === "void") return "void";
-  if (pref === "anthem") return "anthem";
+  if (pref === "void" || pref === "anthem" || pref === "rancid" || pref === "hellfire") return pref;
   return m?.rot.phase ?? "anthem";
 }
 
@@ -93,14 +94,19 @@ function rotateTick() {
   if (!m || getPrefs().musicBed !== "rotate" || m.ambKind === "raid") return;
   const t = m.ctx.currentTime;
   if (t < m.rot.until) return;
-  if (m.rot.phase === "anthem") {
-    m.rot.phase = "void";
-    m.rot.until = t + AMBIENT_MIN + Math.random() * (AMBIENT_MAX - AMBIENT_MIN);
-  } else {
-    m.rot.phase = "anthem";
-    m.rot.until = t + (m.buffers.anthem?.duration ?? 180) - FADE;
+  const i = ROTATION.indexOf(m.rot.phase as (typeof ROTATION)[number]);
+  for (let n = 1; n <= ROTATION.length; n++) {
+    const next = ROTATION[(i + n) % ROTATION.length] ?? "anthem";
+    if (next !== "void" && !m.buffers[next]) continue;
+    if (next === "void") {
+      m.rot.phase = "void";
+      m.rot.until = t + AMBIENT_MIN + Math.random() * (AMBIENT_MAX - AMBIENT_MIN);
+      void fadeTo("void");
+      return;
+    }
+    void fadeTo(next);
+    return;
   }
-  void fadeTo(m.rot.phase);
 }
 
 export function unlockAudio() {
@@ -165,6 +171,8 @@ export function unlockAudio() {
 async function loadBeds(m: Mixer) {
   const names: Record<string, string> = {
     anthem: "/nidus/rules.mp3",
+    rancid: "/nidus/rancid-divine.mp3",
+    hellfire: "/nidus/heart-of-hellfire.mp3",
     coda: "/nidus/loop-coda.mp3",
     brk: "/nidus/loop-break.mp3",
     hum: "/nidus/loop-hum.mp3",
@@ -248,15 +256,15 @@ async function fadeTo(bed: string) {
   if (bed === "void") {
     ambient();
   } else {
-    const buf = bed === "coda" ? m.buffers.coda : m.buffers.anthem;
+    const buf = bed === "coda" ? m.buffers.coda : m.buffers[bed];
     if (!buf) {
       ambient();
       bed = "void";
     } else {
-      const once = bed === "anthem" && getPrefs().musicBed === "rotate";
+      const once = (SONGS as readonly string[]).includes(bed) && getPrefs().musicBed === "rotate";
       playBuffer(incoming, buf, t, !once);
       if (once) {
-        m.rot.phase = "anthem";
+        m.rot.phase = bed as "anthem" | "rancid" | "hellfire";
         m.rot.until = t + buf.duration - FADE;
       }
     }

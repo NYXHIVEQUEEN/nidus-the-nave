@@ -156,7 +156,7 @@ const GLOSS: Record<string, string> = {
   CUT: "Foundry drips. Mill/Refinery raise it. RANK, MARK, EXPAND spend it.",
   KILN: "ON: ore becomes parts. OFF: ore banks. Toggle on FORGE.",
   FLOW: "ORE → kiln → PARTS. Spare → CUT. SPARK is the spend. Tap ?.",
-  SONG: "One bed. ANTHEM is Nyx. VOID is space.",
+  SONG: "ROTATE plays her three songs, then the void. ANTHEM, RANCID, or HELLFIRE lock one. VOID is space.",
 };
 
 export function gloss(label: string): string {

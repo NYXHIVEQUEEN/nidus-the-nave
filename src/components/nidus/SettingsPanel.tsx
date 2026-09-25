@@ -30,7 +30,7 @@ const CODEX: { id: string; title: string; body: string }[] = [
   { id: "flow", title: "FLOW", body: "ORE miners raise, kiln drinks, PRINT spends. PARTS from the kiln, rooms and stamps spend. CUT from mill, sells, raids — RANK MARK EXPAND spend it. SPARK from Solar — SURGE CALL HEAL spend it." },
   { id: "parts", title: "PARTS", body: "Fabs chew ore into parts. Rooms and prints eat parts." },
   { id: "spark", title: "SPARK", body: "Hive will. SURGE, BOOST, HEAL, CALL, PRINT sip it. Empty swarm crawls. Raise Solar." },
-  { id: "song", title: "SONG", body: "One bed at a time. ROTATE plays Rules of Engagement — Nytheria Nyx — then the nave's own ambient pieces (NAVE, DRIFT, HUM), then the anthem again. ANTHEM loops her song. VOID is ambient only. The hive never stacks the anthem on itself. NYX ON SPOTIFY opens her catalog." },
+  { id: "song", title: "SONG", body: "One bed at a time. ROTATE plays Rules of Engagement, then My Rancid Divine, then A Heart of Hellfire, then a short void, then the anthem again. ANTHEM, RANCID, and HELLFIRE each loop one song. VOID is ambient only. The hive never stacks two songs. NYX ON SPOTIFY opens her catalog." },
   { id: "echo", title: "ECHO", body: "Residue of unmade or fallen minds. Fuel for Molt." },
   { id: "print", title: "PRINT", body: "Stamp a caste. AUTO keeps stamping while you are gone." },
   { id: "surge", title: "SURGE", body: "A short scream. All rates spike. Idle return mercy lasts longer." },
@@ -155,20 +155,14 @@ export function SettingsPanel({
           />
           <p className="font-display text-xs tracking-[0.2em] text-gilt">BED</p>
           <p className="text-[0.7rem] text-muted">
-            ROTATE plays Rules of Engagement, then the nave&apos;s own ambient pieces, then the anthem again. ANTHEM loops her song. VOID is ambient only.
+            ROTATE plays Rules of Engagement, then My Rancid Divine, then A Heart of Hellfire, then a short void. ANTHEM, RANCID, and HELLFIRE each loop one song. VOID is ambient only.
           </p>
           <div className="grid grid-cols-3 gap-2">
             <Toggle on={prefs.musicBed === "rotate"} label="ROTATE" onClick={() => setMusicBed("rotate")} />
-            <Toggle
-              on={prefs.musicBed === "anthem"}
-              label="ANTHEM"
-              onClick={() => setMusicBed("anthem")}
-            />
-            <Toggle
-              on={prefs.musicBed === "void"}
-              label="VOID"
-              onClick={() => setMusicBed("void")}
-            />
+            <Toggle on={prefs.musicBed === "anthem"} label="ANTHEM" onClick={() => setMusicBed("anthem")} />
+            <Toggle on={prefs.musicBed === "rancid"} label="RANCID" onClick={() => setMusicBed("rancid")} />
+            <Toggle on={prefs.musicBed === "hellfire"} label="HELLFIRE" onClick={() => setMusicBed("hellfire")} />
+            <Toggle on={prefs.musicBed === "void"} label="VOID" onClick={() => setMusicBed("void")} />
           </div>
           <button
             type="button"
