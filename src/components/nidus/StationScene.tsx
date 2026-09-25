@@ -168,11 +168,21 @@ function EngineGlow({ glow, surging }: { glow: number; surging: boolean }) {
           </mesh>
         </group>
       ))}
-      <pointLight position={[0, 0, -3.3]} color="#ff9a6a" intensity={surging ? 3 : 1.6} distance={3.2} decay={2} />
+      <pointLight position={[0, 0, -3.3]} color="#ff9a6a" intensity={surging ? 4.2 : 2.15} distance={6.4} decay={2} />
     </group>
   );
 }
 
+function rimLight(shader: { fragmentShader: string }) {
+  shader.fragmentShader = shader.fragmentShader.replace(
+    "#include <opaque_fragment>",
+    /* Gilt edge so the hull separates from the black. View-facing faces stay the plate. */
+    `float rimFace = saturate(dot(normalize(normal), normalize(vViewPosition)));
+     float rim = pow(1.0 - rimFace, 3.0);
+     outgoingLight += vec3(0.86, 0.48, 0.28) * rim * 0.5;
+     #include <opaque_fragment>`,
+  );
+}
 const PLUME_VERT = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`;
 const PLUME_FRAG = `uniform float uHeat; uniform float uTime; varying vec2 vUv;
 void main(){
@@ -282,6 +292,7 @@ function Hull() {
   const stationRef = useRef<Group>(null);
   const fighters = useRef<InstancedMesh>(null);
   const glass = useRef<MeshStandardMaterial>(null);
+  const bandsMat = useRef<MeshStandardMaterial>(null);
   const bloodC = useMemo(() => new Color(BLOOD), []);
   const fit = Math.min(1, Math.max(0.62, (size.width / Math.max(1, size.height)) * 1.35));
 
@@ -302,6 +313,7 @@ function Hull() {
       ship.position.y = REDUCE ? 0 : Math.sin(t * 0.21) * 0.04;
     }
     if (glass.current) glass.current.emissiveIntensity = 0.9 + glow * 0.4 + (surging ? 0.35 : 0);
+    if (bandsMat.current) bandsMat.current.emissiveIntensity = REDUCE ? 0.06 : 0.05 + Math.sin(t * 0.65) * 0.035;
     const now = Date.now();
     const fighting = raidEnds > now;
     const u = fighting ? (now - raidStart) / Math.max(1, raidEnds - raidStart) : 0;
@@ -342,13 +354,13 @@ function Hull() {
     <group>
       <group ref={stationRef}>
         <mesh geometry={geo.nave}>
-          <meshStandardMaterial map={tex.nave} bumpMap={tex.nave} bumpScale={1.1} roughnessMap={tex.naveRough} color={BONE_IRON} vertexColors metalness={0.5} roughness={0.52} envMapIntensity={0.7} dithering />
+          <meshStandardMaterial map={tex.nave} bumpMap={tex.nave} bumpScale={1.1} roughnessMap={tex.naveRough} color={BONE_IRON} vertexColors metalness={0.5} roughness={0.52} envMapIntensity={0.85} dithering onBeforeCompile={rimLight} customProgramCacheKey={() => "nidus-rim"} />
         </mesh>
         <mesh geometry={geo.roof}>
-          <meshStandardMaterial map={tex.lead} bumpMap={tex.lead} bumpScale={0.5} color="#6f6862" vertexColors metalness={0.55} roughness={0.5} envMapIntensity={0.6} dithering />
+          <meshStandardMaterial map={tex.lead} bumpMap={tex.lead} bumpScale={0.5} color="#6f6862" vertexColors metalness={0.55} roughness={0.5} envMapIntensity={0.75} dithering onBeforeCompile={rimLight} customProgramCacheKey={() => "nidus-rim"} />
         </mesh>
         <mesh geometry={geo.wing}>
-          <meshStandardMaterial map={tex.wing} bumpMap={tex.wing} bumpScale={0.7} color="#a79c8e" vertexColors metalness={0.55} roughness={0.46} envMapIntensity={0.65} dithering />
+          <meshStandardMaterial map={tex.wing} bumpMap={tex.wing} bumpScale={0.7} color="#a79c8e" vertexColors metalness={0.55} roughness={0.46} envMapIntensity={0.8} dithering onBeforeCompile={rimLight} customProgramCacheKey={() => "nidus-rim"} />
         </mesh>
         <mesh geometry={geo.machine}>
           <meshStandardMaterial map={tex.iron} color="#8a8078" vertexColors metalness={0.72} roughness={0.4} envMapIntensity={0.7} side={DoubleSide} dithering />
@@ -357,7 +369,7 @@ function Hull() {
           <meshStandardMaterial color="#9a8e80" metalness={0.65} roughness={0.4} envMapIntensity={0.8} dithering />
         </mesh>
         <mesh geometry={geo.bands}>
-          <meshStandardMaterial color={GILT} metalness={0.9} roughness={0.28} envMapIntensity={1.1} dithering />
+          <meshStandardMaterial ref={bandsMat} color={GILT} emissive={GILT} emissiveIntensity={0.06} metalness={0.9} roughness={0.28} envMapIntensity={1.2} dithering />
         </mesh>
         <mesh geometry={geo.keel}>
           <meshStandardMaterial
@@ -379,6 +391,10 @@ function Hull() {
         <RoomModules plate={tex.roof} glass={tex.glass} />
         <Hardpoints railgun={railgun} cannon={cannon} railRank={railgunRank} canRank={cannonRank} />
       </group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.25, 0.15]}>
+        <circleGeometry args={[2.6, 28]} />
+        <meshBasicMaterial map={glowTexture()} color="#140e0c" transparent opacity={0.55} depthWrite={false} />
+      </mesh>
       <Harvest dart={geo.dart} shipScale={1.34 * fit} />
       <instancedMesh ref={fighters} args={[geo.dart, undefined, 8]} visible={false}>
         <meshStandardMaterial color="#9a9186" metalness={0.5} roughness={0.5} emissive={bloodC} emissiveIntensity={0.35} />
@@ -705,12 +721,18 @@ function Dust() {
   const geo = useMemo(() => {
     const g = new BufferGeometry();
     const a = new Float32Array(n * 3);
+    const c = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
       a[i * 3] = (Math.sin(i * 91.7) * 0.5 + 0.5) * 16 - 8;
       a[i * 3 + 1] = (Math.sin(i * 47.3) * 0.5 + 0.5) * 10 - 5;
       a[i * 3 + 2] = (Math.sin(i * 13.1) * 0.5 + 0.5) * 24 - 10;
+      const ember = i % 7 === 0;
+      c[i * 3] = ember ? 0.78 : 0.85;
+      c[i * 3 + 1] = ember ? 0.32 : 0.78;
+      c[i * 3 + 2] = ember ? 0.18 : 0.7;
     }
     g.setAttribute("position", new Float32BufferAttribute(a, 3));
+    g.setAttribute("color", new Float32BufferAttribute(c, 3));
     return g;
   }, [n]);
   useEffect(() => () => geo.dispose(), [geo]);
@@ -728,7 +750,7 @@ function Dust() {
   });
   return (
     <points ref={pts} geometry={geo}>
-      <pointsMaterial color="#d8cbb8" size={0.035} sizeAttenuation transparent opacity={0.45} depthWrite={false} />
+      <pointsMaterial color="#ffffff" vertexColors size={0.04} sizeAttenuation transparent opacity={0.55} depthWrite={false} />
     </points>
   );
 }
@@ -747,7 +769,12 @@ void main(){
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-// Planet limb: its own light so the crescent always faces the ship, whatever the key does.
+const AIR_FRAG = `varying vec3 vN; varying vec3 vW;
+void main(){
+  vec3 v = normalize(cameraPosition - vW);
+  float rim = pow(1.0 - max(dot(normalize(vN), v), 0.0), 2.5);
+  gl_FragColor = vec4(0.62, 0.18, 0.14, rim * 0.62);
+}`;
 function Planet() {
   const uniforms = useMemo(
     () => ({
@@ -759,21 +786,41 @@ function Planet() {
     [],
   );
   return (
-    <mesh position={[-64, -2, 72]}>
-      <sphereGeometry args={[13, 64, 40]} />
-      <shaderMaterial vertexShader={PLANET_VERT} fragmentShader={PLANET_FRAG} uniforms={uniforms} fog={false} />
-    </mesh>
+    <group>
+      <mesh position={[-64, -2, 72]}>
+        <sphereGeometry args={[13, 64, 40]} />
+        <shaderMaterial vertexShader={PLANET_VERT} fragmentShader={PLANET_FRAG} uniforms={uniforms} fog={false} />
+      </mesh>
+      <mesh position={[-64, -2, 72]} scale={1.05}>
+        <sphereGeometry args={[13, 40, 24]} />
+        <shaderMaterial vertexShader={PLANET_VERT} fragmentShader={AIR_FRAG} transparent depthWrite={false} blending={AdditiveBlending} fog={false} />
+      </mesh>
+    </group>
   );
 }
 
 function Backdrop() {
   const arch = useTexture("/nidus/sky-arch.jpg");
+  const neb = useTexture("/nidus/tex-nebula.jpg");
   arch.colorSpace = SRGBColorSpace;
+  neb.colorSpace = SRGBColorSpace;
+  const sky = useRef<Group>(null);
+  useFrame((_, delta) => {
+    if (sky.current && !REDUCE) sky.current.rotation.y += Math.min(delta, 0.05) * 0.01;
+  });
   return (
-    <group>
+    <group ref={sky}>
       <mesh rotation={[0, 0.18, 0.04]}>
         <cylinderGeometry args={[150, 150, 320, 32, 1, true]} />
         <meshBasicMaterial map={arch} color="#2a2328" side={BackSide} depthWrite={false} fog={false} />
+      </mesh>
+      <mesh position={[-22, 6, 46]} rotation={[0.15, 0.5, 0.08]}>
+        <planeGeometry args={[54, 30]} />
+        <meshBasicMaterial map={neb} color="#7a3040" transparent opacity={0.2} depthWrite={false} blending={AdditiveBlending} fog={false} side={DoubleSide} />
+      </mesh>
+      <mesh position={[24, -3, 52]} rotation={[0.05, -0.4, 0.2]}>
+        <planeGeometry args={[40, 22]} />
+        <meshBasicMaterial map={neb} color="#3c2a48" transparent opacity={0.16} depthWrite={false} blending={AdditiveBlending} fog={false} side={DoubleSide} />
       </mesh>
       <mesh position={[26, 6, 60]} rotation={[0.35, 0.3, 0.12]}>
         <torusGeometry args={[7.5, 0.08, 8, 64]} />
@@ -1053,7 +1100,7 @@ export function StationScene() {
         const pmrem = new PMREMGenerator(gl);
         const env = pmrem.fromScene(new RoomEnvironment(), 0.04);
         scene.environment = env.texture;
-        scene.environmentIntensity = 0.5;
+        scene.environmentIntensity = 0.68;
       }}
     >
       <PerformanceMonitor
