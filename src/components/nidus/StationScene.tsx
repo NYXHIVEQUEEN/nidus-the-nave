@@ -8,6 +8,7 @@ import {
   BackSide,
   BufferGeometry,
   Color,
+  CylinderGeometry,
   DoubleSide,
   Float32BufferAttribute,
   LatheGeometry,
@@ -167,11 +168,21 @@ function EngineGlow({ glow, surging }: { glow: number; surging: boolean }) {
           </mesh>
         </group>
       ))}
-      <pointLight position={[0, 0, -3.3]} color="#ff9a6a" intensity={surging ? 3 : 1.6} distance={3.2} decay={2} />
+      <pointLight position={[0, 0, -3.3]} color="#ff9a6a" intensity={surging ? 4.2 : 2.15} distance={6.4} decay={2} />
     </group>
   );
 }
 
+function rimLight(shader: { fragmentShader: string }) {
+  shader.fragmentShader = shader.fragmentShader.replace(
+    "#include <opaque_fragment>",
+    /* Gilt edge so the hull separates from the black. View-facing faces stay the plate. */
+    `float rimFace = saturate(dot(normalize(normal), normalize(vViewPosition)));
+     float rim = pow(1.0 - rimFace, 3.0);
+     outgoingLight += vec3(0.86, 0.48, 0.28) * rim * 0.5;
+     #include <opaque_fragment>`,
+  );
+}
 const PLUME_VERT = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`;
 const PLUME_FRAG = `uniform float uHeat; uniform float uTime; varying vec2 vUv;
 void main(){
@@ -281,6 +292,7 @@ function Hull() {
   const stationRef = useRef<Group>(null);
   const fighters = useRef<InstancedMesh>(null);
   const glass = useRef<MeshStandardMaterial>(null);
+  const bandsMat = useRef<MeshStandardMaterial>(null);
   const bloodC = useMemo(() => new Color(BLOOD), []);
   const fit = Math.min(1, Math.max(0.62, (size.width / Math.max(1, size.height)) * 1.35));
 
@@ -301,6 +313,7 @@ function Hull() {
       ship.position.y = REDUCE ? 0 : Math.sin(t * 0.21) * 0.04;
     }
     if (glass.current) glass.current.emissiveIntensity = 0.9 + glow * 0.4 + (surging ? 0.35 : 0);
+    if (bandsMat.current) bandsMat.current.emissiveIntensity = REDUCE ? 0.06 : 0.05 + Math.sin(t * 0.65) * 0.035;
     const now = Date.now();
     const fighting = raidEnds > now;
     const u = fighting ? (now - raidStart) / Math.max(1, raidEnds - raidStart) : 0;
@@ -341,13 +354,13 @@ function Hull() {
     <group>
       <group ref={stationRef}>
         <mesh geometry={geo.nave}>
-          <meshStandardMaterial map={tex.nave} bumpMap={tex.nave} bumpScale={1.1} roughnessMap={tex.naveRough} color={BONE_IRON} vertexColors metalness={0.5} roughness={0.52} envMapIntensity={0.7} dithering />
+          <meshStandardMaterial map={tex.nave} bumpMap={tex.nave} bumpScale={1.1} roughnessMap={tex.naveRough} color={BONE_IRON} vertexColors metalness={0.5} roughness={0.52} envMapIntensity={0.85} dithering onBeforeCompile={rimLight} customProgramCacheKey={() => "nidus-rim"} />
         </mesh>
         <mesh geometry={geo.roof}>
-          <meshStandardMaterial map={tex.lead} bumpMap={tex.lead} bumpScale={0.5} color="#6f6862" vertexColors metalness={0.55} roughness={0.5} envMapIntensity={0.6} dithering />
+          <meshStandardMaterial map={tex.lead} bumpMap={tex.lead} bumpScale={0.5} color="#6f6862" vertexColors metalness={0.55} roughness={0.5} envMapIntensity={0.75} dithering onBeforeCompile={rimLight} customProgramCacheKey={() => "nidus-rim"} />
         </mesh>
         <mesh geometry={geo.wing}>
-          <meshStandardMaterial map={tex.wing} bumpMap={tex.wing} bumpScale={0.7} color="#a79c8e" vertexColors metalness={0.55} roughness={0.46} envMapIntensity={0.65} dithering />
+          <meshStandardMaterial map={tex.wing} bumpMap={tex.wing} bumpScale={0.7} color="#a79c8e" vertexColors metalness={0.55} roughness={0.46} envMapIntensity={0.8} dithering onBeforeCompile={rimLight} customProgramCacheKey={() => "nidus-rim"} />
         </mesh>
         <mesh geometry={geo.machine}>
           <meshStandardMaterial map={tex.iron} color="#8a8078" vertexColors metalness={0.72} roughness={0.4} envMapIntensity={0.7} side={DoubleSide} dithering />
@@ -356,7 +369,7 @@ function Hull() {
           <meshStandardMaterial color="#9a8e80" metalness={0.65} roughness={0.4} envMapIntensity={0.8} dithering />
         </mesh>
         <mesh geometry={geo.bands}>
-          <meshStandardMaterial color={GILT} metalness={0.9} roughness={0.28} envMapIntensity={1.1} dithering />
+          <meshStandardMaterial ref={bandsMat} color={GILT} emissive={GILT} emissiveIntensity={0.06} metalness={0.9} roughness={0.28} envMapIntensity={1.2} dithering />
         </mesh>
         <mesh geometry={geo.keel}>
           <meshStandardMaterial
@@ -378,6 +391,10 @@ function Hull() {
         <RoomModules plate={tex.roof} glass={tex.glass} />
         <Hardpoints railgun={railgun} cannon={cannon} railRank={railgunRank} canRank={cannonRank} />
       </group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.25, 0.15]}>
+        <circleGeometry args={[2.6, 28]} />
+        <meshBasicMaterial map={glowTexture()} color="#140e0c" transparent opacity={0.55} depthWrite={false} />
+      </mesh>
       <Harvest dart={geo.dart} shipScale={1.34 * fit} />
       <instancedMesh ref={fighters} args={[geo.dart, undefined, 8]} visible={false}>
         <meshStandardMaterial color="#9a9186" metalness={0.5} roughness={0.5} emissive={bloodC} emissiveIntensity={0.35} />
@@ -387,16 +404,32 @@ function Hull() {
 }
 
 const ROCKS = 14;
+const SHARDS = 5;
+const DROPS = 4;
 const FIELD = new Vector3(-2.4, 1.0, 7.6);
+const COLD = new Color("#6d564a");
+const HOT = new Color("#ffd2a4");
+const MAGMA = new Color("#ff4a16");
+const ASH = new Color("#241c1a");
+const SLAG = new Color("#e7a07a");
+const tint = new Color();
+const heated = new Uint8Array(ROCKS);
 
 function Harvest({ dart, shipScale }: { dart: BufferGeometry; shipScale: number }) {
   const miners = useNidus((s) => Math.min(22, 2 + s.swarm.miner));
   const raiding = useNidus((s) => Boolean(s.raid));
   const rough = useTexture("/nidus/tex-rough.jpg");
   const rock = useMemo(() => rockGeo(), []);
+  const beamGeo = useMemo(() => new CylinderGeometry(1, 1, 1, 5, 1), []);
   const rocks = useRef<InstancedMesh>(null);
+  const cores = useRef<InstancedMesh>(null);
+  const shards = useRef<InstancedMesh>(null);
+  const drops = useRef<InstancedMesh>(null);
+  const beams = useRef<InstancedMesh>(null);
   const drones = useRef<InstancedMesh>(null);
+  const maw = useRef<Mesh>(null);
   const field = useRef<Group>(null);
+  const flare = useRef(0);
   const seats = useMemo(
     () =>
       Array.from({ length: ROCKS }, (_, i) => {
@@ -410,7 +443,26 @@ function Harvest({ dart, shipScale }: { dart: BufferGeometry; shipScale: number 
       }),
     [],
   );
-  useEffect(() => () => rock.dispose(), [rock]);
+  const dirs = useMemo(
+    () =>
+      Array.from({ length: ROCKS * SHARDS }, (_, n) => {
+        const i = Math.floor(n / SHARDS);
+        const k = n % SHARDS;
+        const a = i * 2.4 + k * 2.513;
+        const y = ((k * 2 + (i % 3)) / 6) * 2 - 0.6;
+        const rad = Math.sqrt(Math.max(0.05, 1 - y * y));
+        return new Vector3(Math.cos(a) * rad, y, Math.sin(a) * rad).normalize();
+      }),
+    [],
+  );
+  const life = useRef(seats.map(() => ({ heat: 0, mode: 0, age: 0 })));
+  useEffect(
+    () => () => {
+      rock.dispose();
+      beamGeo.dispose();
+    },
+    [rock, beamGeo],
+  );
   useEffect(() => {
     const m = rocks.current;
     if (!m) return;
@@ -420,14 +472,18 @@ function Harvest({ dart, shipScale }: { dart: BufferGeometry; shipScale: number 
       dummy.scale.setScalar(k.s);
       dummy.updateMatrix();
       m.setMatrixAt(i, dummy.matrix);
+      m.setColorAt(i, COLD);
     });
     m.instanceMatrix.needsUpdate = true;
+    if (m.instanceColor) m.instanceColor.needsUpdate = true;
   }, [seats]);
 
   const from = useMemo(() => new Vector3(), []);
   const to = useMemo(() => new Vector3(), []);
   const mid = useMemo(() => new Vector3(), []);
   const ahead = useMemo(() => new Vector3(), []);
+  const rockW = useMemo(() => new Vector3(), []);
+  const droneAt = useMemo(() => new Vector3(), []);
   const at = (a: Vector3, c: Vector3, b: Vector3, u: number, out: Vector3) => {
     const v = 1 - u;
     return out.set(v * v * a.x + 2 * v * u * c.x + u * u * b.x, v * v * a.y + 2 * v * u * c.y + u * u * b.y, v * v * a.z + 2 * v * u * c.z + u * u * b.z);
@@ -435,44 +491,221 @@ function Harvest({ dart, shipScale }: { dart: BufferGeometry; shipScale: number 
 
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
-    if (field.current && !REDUCE) field.current.rotation.y += Math.min(delta, 0.1) * 0.03;
-    const m = drones.current;
-    if (!m) return;
-    m.visible = !raiding;
-    if (raiding) return;
+    const step = Math.min(delta, 0.05);
+    if (field.current && !REDUCE) field.current.rotation.y += step * 0.03;
+    const yaw = field.current?.rotation.y ?? 0;
+    const mesh = rocks.current;
+    const core = cores.current;
+    const shard = shards.current;
+    const slag = drops.current;
+    const hit = life.current;
+    heated.fill(0);
+
     from.set(0, -0.32 * shipScale, -0.8 * shipScale);
-    for (let i = 0; i < 22; i++) {
-      if (i >= miners) {
-        dummy.position.set(0, -80, 0);
-        dummy.scale.setScalar(0.001);
-      } else {
-        const seat = seats[i % ROCKS];
-        to.copy(seat.p).applyAxisAngle(Y_AXIS, field.current?.rotation.y ?? 0).add(FIELD);
-        mid.addVectors(from, to).multiplyScalar(0.5);
-        mid.x += (i % 2 ? 1 : -1) * (1.2 + (i % 3) * 0.4);
-        mid.y += 0.9 + (i % 4) * 0.2;
-        const phase = (t * (0.045 + (i % 5) * 0.006) + i / miners) % 1;
-        const out = phase < 0.5;
-        const raw = out ? phase * 2 : 1 - (phase - 0.5) * 2;
-        const u = raw * raw * (3 - 2 * raw);
-        at(from, mid, to, u, dummy.position);
-        at(from, mid, to, Math.min(1, Math.max(0, u + (out ? 0.01 : -0.01))), ahead);
-        dummy.lookAt(ahead);
-        dummy.scale.setScalar(1.7);
+    const dronesMesh = drones.current;
+    if (dronesMesh) {
+      dronesMesh.visible = !raiding;
+      for (let i = 0; i < 22; i++) {
+        if (raiding || i >= miners) {
+          dummy.position.set(0, -80, 0);
+          dummy.scale.setScalar(0.001);
+        } else {
+          const seat = seats[i % ROCKS]!;
+          to.copy(seat.p).applyAxisAngle(Y_AXIS, yaw).add(FIELD);
+          mid.addVectors(from, to).multiplyScalar(0.5);
+          mid.x += (i % 2 ? 1 : -1) * (1.2 + (i % 3) * 0.4);
+          mid.y += 0.9 + (i % 4) * 0.2;
+          const phase = (t * (0.045 + (i % 5) * 0.006) + i / miners) % 1;
+          const out = phase < 0.5;
+          const raw = out ? phase * 2 : 1 - (phase - 0.5) * 2;
+          const u = raw * raw * (3 - 2 * raw);
+          at(from, mid, to, u, dummy.position);
+          at(from, mid, to, Math.min(1, Math.max(0, u + (out ? 0.01 : -0.01))), ahead);
+          dummy.lookAt(ahead);
+          dummy.scale.setScalar(1.7);
+          if (!REDUCE && out && u > 0.8 && hit[i % ROCKS]?.mode === 0) heated[i % ROCKS] = 1;
+        }
+        dummy.updateMatrix();
+        dronesMesh.setMatrixAt(i, dummy.matrix);
       }
-      dummy.updateMatrix();
-      m.setMatrixAt(i, dummy.matrix);
+      dronesMesh.instanceMatrix.needsUpdate = true;
     }
-    m.instanceMatrix.needsUpdate = true;
+
+    let arrived = 0;
+    for (let i = 0; i < ROCKS; i++) {
+      const seat = seats[i]!;
+      const st = hit[i]!;
+      if (!REDUCE) {
+        if (st.mode === 0) {
+          st.heat = heated[i] ? Math.min(1.25, st.heat + step * 2.4) : Math.max(0, st.heat - step * 0.45);
+          if (st.heat >= 1) {
+            st.mode = 1;
+            st.age = 0;
+          }
+        } else if (st.mode === 1) {
+          st.age += step;
+          if (st.age > 1.5) {
+            st.mode = 2;
+            st.age = 0;
+            st.heat = 0;
+          }
+        } else {
+          st.age += step;
+          if (st.age > 1.2) st.mode = 0;
+        }
+      }
+      rockW.copy(seat.p).applyAxisAngle(Y_AXIS, yaw).add(FIELD);
+      if (mesh) {
+        dummy.position.copy(seat.p);
+        dummy.rotation.set(seat.rot.x + t * 0.15, seat.rot.y + t * 0.22, seat.rot.z);
+        if (st.mode === 1) {
+          dummy.scale.setScalar(seat.s * Math.max(0, 1 - st.age / 0.16));
+          tint.copy(MAGMA);
+        } else if (st.mode === 2) {
+          const e = Math.min(1, st.age / 1.2);
+          const s = e * e * (3 - 2 * e);
+          dummy.scale.setScalar(seat.s * s);
+          tint.copy(ASH).lerp(COLD, s);
+        } else {
+          const h = Math.min(1, st.heat);
+          dummy.scale.setScalar(seat.s * (1 + h * 0.14));
+          tint.copy(COLD).lerp(HOT, h);
+        }
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+        mesh.setColorAt(i, tint);
+      }
+      if (core) {
+        const h = st.mode === 0 ? Math.min(1, st.heat) : st.mode === 1 && st.age < 0.2 ? 1 - st.age / 0.2 : 0;
+        dummy.position.copy(seat.p);
+        dummy.rotation.set(0, t, 0);
+        dummy.scale.setScalar(h > 0.04 ? seat.s * (0.22 + h * 0.7) : 0.001);
+        dummy.updateMatrix();
+        core.setMatrixAt(i, dummy.matrix);
+      }
+      for (let k = 0; k < SHARDS; k++) {
+        const n = i * SHARDS + k;
+        const dir = dirs[n]!;
+        const live = st.mode === 1;
+        const u = live ? Math.min(1, st.age / 0.85) : 1;
+        dummy.position.copy(seat.p).addScaledVector(dir, live ? u * 0.85 : 0);
+        dummy.position.y -= live ? u * u * 0.35 : 0;
+        dummy.rotation.set(t * (1.4 + k * 0.3), t * 1.1, k);
+        dummy.scale.setScalar(live ? seat.s * 0.42 * (1 - u) : 0.001);
+        dummy.updateMatrix();
+        shards.current?.setMatrixAt(n, dummy.matrix);
+        if (live) {
+          tint.copy(HOT).lerp(ASH, u);
+          shards.current?.setColorAt(n, tint);
+        }
+      }
+      for (let k = 0; k < DROPS; k++) {
+        const n = i * DROPS + k;
+        const live = st.mode === 1 && st.age > 0.12 + k * 0.05;
+        const u = live ? Math.min(1, (st.age - 0.12 - k * 0.05) / 1.15) : 0;
+        if (u > 0.92) arrived += 1;
+        const arc = Math.sin(Math.PI * u) * (0.35 + (k % 3) * 0.08);
+        dummy.position.lerpVectors(rockW, from, u);
+        dummy.position.y += arc;
+        dummy.position.x += (k - 1.5) * 0.05 * (1 - u);
+        dummy.rotation.set(t + k, t * 0.6, 0);
+        dummy.scale.setScalar(live ? 0.045 * (1 - u * 0.65) : 0.001);
+        dummy.updateMatrix();
+        slag?.setMatrixAt(n, dummy.matrix);
+        if (live) {
+          tint.copy(HOT).lerp(SLAG, u);
+          slag?.setColorAt(n, tint);
+        }
+      }
+    }
+    if (mesh) {
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+    if (shards.current) {
+      shards.current.instanceMatrix.needsUpdate = true;
+      if (shards.current.instanceColor) shards.current.instanceColor.needsUpdate = true;
+    }
+    if (slag) {
+      slag.instanceMatrix.needsUpdate = true;
+      if (slag.instanceColor) slag.instanceColor.needsUpdate = true;
+    }
+    if (core) core.instanceMatrix.needsUpdate = true;
+    flare.current = Math.max(0, flare.current - step * 1.4) + Math.min(1, arrived * 0.35);
+    if (maw.current) {
+      const pulse = 0.55 + flare.current * 1.4 + Math.sin(t * 6) * 0.06;
+      maw.current.scale.setScalar(pulse);
+    }
+
+    const beam = beams.current;
+    if (beam) {
+      if (!dronesMesh || raiding || REDUCE) {
+        for (let i = 0; i < 22; i++) {
+          dummy.position.set(0, -80, 0);
+          dummy.scale.setScalar(0.001);
+          dummy.updateMatrix();
+          beam.setMatrixAt(i, dummy.matrix);
+        }
+      } else {
+        for (let i = 0; i < 22; i++) {
+          if (i >= miners || hit[i % ROCKS]?.mode !== 0) {
+            dummy.position.set(0, -80, 0);
+            dummy.scale.setScalar(0.001);
+          } else {
+            const seat = seats[i % ROCKS]!;
+            rockW.copy(seat.p).applyAxisAngle(Y_AXIS, yaw).add(FIELD);
+            const phase = (t * (0.045 + (i % 5) * 0.006) + i / miners) % 1;
+            const out = phase < 0.5;
+            const raw = out ? phase * 2 : 1 - (phase - 0.5) * 2;
+            const u = raw * raw * (3 - 2 * raw);
+            if (!(out && u > 0.78 && (hit[i % ROCKS]?.heat ?? 0) > 0.15)) {
+              dummy.position.set(0, -80, 0);
+              dummy.scale.setScalar(0.001);
+            } else {
+              to.copy(rockW);
+              dummy.position.set(0, -0.32 * shipScale, -0.8 * shipScale);
+              // Recompute the miner tip so the beam meets the drone, not the bay.
+              mid.addVectors(from, to).multiplyScalar(0.5);
+              mid.x += (i % 2 ? 1 : -1) * (1.2 + (i % 3) * 0.4);
+              mid.y += 0.9 + (i % 4) * 0.2;
+              at(from, mid, to, u, droneAt);
+              dummy.position.copy(droneAt).add(to).multiplyScalar(0.5);
+              dummy.lookAt(to);
+              dummy.rotateX(Math.PI / 2);
+              dummy.scale.set(0.012, droneAt.distanceTo(to), 0.012);
+            }
+          }
+          dummy.updateMatrix();
+          beam.setMatrixAt(i, dummy.matrix);
+        }
+      }
+      beam.instanceMatrix.needsUpdate = true;
+    }
   });
 
   return (
     <group>
       <group ref={field} position={FIELD}>
-        <instancedMesh ref={rocks} args={[rock, undefined, ROCKS]}>
-          <meshStandardMaterial map={rough} color="#8a7466" roughness={0.9} metalness={0.05} dithering />
+        <instancedMesh ref={rocks} args={[rock, undefined, ROCKS]} frustumCulled={false}>
+          <meshStandardMaterial map={rough} color="#ffffff" roughness={0.86} metalness={0.12} dithering />
+        </instancedMesh>
+        <instancedMesh ref={cores} args={[rock, undefined, ROCKS]} frustumCulled={false}>
+          <meshBasicMaterial color="#ff5a22" toneMapped={false} transparent opacity={0.92} depthWrite={false} />
+        </instancedMesh>
+        <instancedMesh ref={shards} args={[rock, undefined, ROCKS * SHARDS]} frustumCulled={false}>
+          <meshStandardMaterial color="#ffffff" emissive="#ff6a2a" emissiveIntensity={0.45} roughness={0.55} metalness={0.2} />
         </instancedMesh>
       </group>
+      <instancedMesh ref={drops} args={[rock, undefined, ROCKS * DROPS]} frustumCulled={false}>
+        <meshBasicMaterial color="#ffb27a" toneMapped={false} />
+      </instancedMesh>
+      <instancedMesh ref={beams} args={[beamGeo, undefined, 22]} frustumCulled={false}>
+        <meshBasicMaterial color="#ffc59a" transparent opacity={0.72} toneMapped={false} depthWrite={false} />
+      </instancedMesh>
+      <mesh ref={maw} position={[0, -0.32 * shipScale, -0.8 * shipScale]}>
+        <sphereGeometry args={[0.07, 10, 8]} />
+        <meshBasicMaterial color="#ffb070" transparent opacity={0.8} toneMapped={false} depthWrite={false} />
+      </mesh>
       <instancedMesh ref={drones} args={[dart, undefined, 22]}>
         <meshStandardMaterial color="#6e655c" metalness={0.65} roughness={0.4} emissive="#c45a4a" emissiveIntensity={0.55} envMapIntensity={0.8} />
       </instancedMesh>
@@ -488,12 +721,18 @@ function Dust() {
   const geo = useMemo(() => {
     const g = new BufferGeometry();
     const a = new Float32Array(n * 3);
+    const c = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
       a[i * 3] = (Math.sin(i * 91.7) * 0.5 + 0.5) * 16 - 8;
       a[i * 3 + 1] = (Math.sin(i * 47.3) * 0.5 + 0.5) * 10 - 5;
       a[i * 3 + 2] = (Math.sin(i * 13.1) * 0.5 + 0.5) * 24 - 10;
+      const ember = i % 7 === 0;
+      c[i * 3] = ember ? 0.78 : 0.85;
+      c[i * 3 + 1] = ember ? 0.32 : 0.78;
+      c[i * 3 + 2] = ember ? 0.18 : 0.7;
     }
     g.setAttribute("position", new Float32BufferAttribute(a, 3));
+    g.setAttribute("color", new Float32BufferAttribute(c, 3));
     return g;
   }, [n]);
   useEffect(() => () => geo.dispose(), [geo]);
@@ -511,7 +750,7 @@ function Dust() {
   });
   return (
     <points ref={pts} geometry={geo}>
-      <pointsMaterial color="#d8cbb8" size={0.035} sizeAttenuation transparent opacity={0.45} depthWrite={false} />
+      <pointsMaterial color="#ffffff" vertexColors size={0.04} sizeAttenuation transparent opacity={0.55} depthWrite={false} />
     </points>
   );
 }
@@ -530,7 +769,12 @@ void main(){
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-// Planet limb: its own light so the crescent always faces the ship, whatever the key does.
+const AIR_FRAG = `varying vec3 vN; varying vec3 vW;
+void main(){
+  vec3 v = normalize(cameraPosition - vW);
+  float rim = pow(1.0 - max(dot(normalize(vN), v), 0.0), 2.5);
+  gl_FragColor = vec4(0.62, 0.18, 0.14, rim * 0.62);
+}`;
 function Planet() {
   const uniforms = useMemo(
     () => ({
@@ -542,21 +786,41 @@ function Planet() {
     [],
   );
   return (
-    <mesh position={[-64, -2, 72]}>
-      <sphereGeometry args={[13, 64, 40]} />
-      <shaderMaterial vertexShader={PLANET_VERT} fragmentShader={PLANET_FRAG} uniforms={uniforms} fog={false} />
-    </mesh>
+    <group>
+      <mesh position={[-64, -2, 72]}>
+        <sphereGeometry args={[13, 64, 40]} />
+        <shaderMaterial vertexShader={PLANET_VERT} fragmentShader={PLANET_FRAG} uniforms={uniforms} fog={false} />
+      </mesh>
+      <mesh position={[-64, -2, 72]} scale={1.05}>
+        <sphereGeometry args={[13, 40, 24]} />
+        <shaderMaterial vertexShader={PLANET_VERT} fragmentShader={AIR_FRAG} transparent depthWrite={false} blending={AdditiveBlending} fog={false} />
+      </mesh>
+    </group>
   );
 }
 
 function Backdrop() {
   const arch = useTexture("/nidus/sky-arch.jpg");
+  const neb = useTexture("/nidus/tex-nebula.jpg");
   arch.colorSpace = SRGBColorSpace;
+  neb.colorSpace = SRGBColorSpace;
+  const sky = useRef<Group>(null);
+  useFrame((_, delta) => {
+    if (sky.current && !REDUCE) sky.current.rotation.y += Math.min(delta, 0.05) * 0.01;
+  });
   return (
-    <group>
+    <group ref={sky}>
       <mesh rotation={[0, 0.18, 0.04]}>
         <cylinderGeometry args={[150, 150, 320, 32, 1, true]} />
         <meshBasicMaterial map={arch} color="#2a2328" side={BackSide} depthWrite={false} fog={false} />
+      </mesh>
+      <mesh position={[-22, 6, 46]} rotation={[0.15, 0.5, 0.08]}>
+        <planeGeometry args={[54, 30]} />
+        <meshBasicMaterial map={neb} color="#7a3040" transparent opacity={0.2} depthWrite={false} blending={AdditiveBlending} fog={false} side={DoubleSide} />
+      </mesh>
+      <mesh position={[24, -3, 52]} rotation={[0.05, -0.4, 0.2]}>
+        <planeGeometry args={[40, 22]} />
+        <meshBasicMaterial map={neb} color="#3c2a48" transparent opacity={0.16} depthWrite={false} blending={AdditiveBlending} fog={false} side={DoubleSide} />
       </mesh>
       <mesh position={[26, 6, 60]} rotation={[0.35, 0.3, 0.12]}>
         <torusGeometry args={[7.5, 0.08, 8, 64]} />
@@ -836,7 +1100,7 @@ export function StationScene() {
         const pmrem = new PMREMGenerator(gl);
         const env = pmrem.fromScene(new RoomEnvironment(), 0.04);
         scene.environment = env.texture;
-        scene.environmentIntensity = 0.5;
+        scene.environmentIntensity = 0.68;
       }}
     >
       <PerformanceMonitor
